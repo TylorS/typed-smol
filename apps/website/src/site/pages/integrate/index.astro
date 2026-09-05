@@ -2,13 +2,8 @@
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import { siteHref } from "../../../SiteHref.js";
-const recipes = (await getCollection("recipes")).sort((a, b) =>
-  a.id === "astro"
-    ? -1
-    : b.id === "astro"
-      ? 1
-      : a.data.title.localeCompare(b.data.title),
-);
+import { groupRecipes } from "../../Recipes.js";
+const families = groupRecipes(await getCollection("recipes"));
 ---
 
 <Base
@@ -25,21 +20,30 @@ const recipes = (await getCollection("recipes")).sort((a, b) =>
         it, and who cleans it up.
       </p>
     </header>
-    <div class="path-grid">
-      {
-        recipes.map((entry) => (
-          <article class="path-card">
+    {
+      families.map(({ title, description, entries }) => (
+        <section class="home-section">
+          <div class="section-heading">
             <>
-              <p class="eyebrow">{entry.data.slug}</p>
-              <h3>{entry.data.title}</h3>
-              <p>{entry.data.summary}</p>
-              <a href={siteHref(`/integrate/${entry.data.slug}`)}>
-                Open the integration →
-              </a>
+              <div>
+                <h2>{title}</h2>
+              </div>
+              <p>{description}</p>
             </>
-          </article>
-        ))
-      }
-    </div>
+          </div>
+          <div class="path-grid">
+            {entries.map((entry) => (
+              <article class="path-card">
+                <h3>{entry.data.title}</h3>
+                <p>{entry.data.summary}</p>
+                <a href={siteHref(`/integrate/${entry.data.slug}`)}>
+                  Open the integration →
+                </a>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))
+    }
   </main>
 </Base>

@@ -6,26 +6,16 @@ kind: "guide"
 order: 1.6
 ---
 
-Imagine an import screen receiving a stream of raw status lines. It should ignore blank lines,
-show the next two useful messages after its initial banner, and stop as soon as the import reaches
-its terminal record. Those are three different decisions: *is this value useful?*, *where does the
-window begin and end?*, and *which boundary value belongs in the result?* Keeping them separate
-makes the pipeline easy to change without accidentally changing when it stops.
+An import screen receives raw status lines. It should omit malformed records, show the next two
+useful messages after a banner, and include the final “complete” record before stopping. These are
+three decisions: admission, a counted window, and a terminal boundary. Treating them as one filter
+makes it easy to stop at the wrong moment.
 
-## Admit, omit, or transform
+[Transforming Fx](/explore/transforming-fx) introduced zero-or-one output. Here we connect that choice
+to how long the producer remains subscribed. A source can be active while every value is rejected;
+“nothing visible” does not mean “nothing running.”
 
-Use `Fx.filter` when the value stays the same and a synchronous predicate decides whether it
-continues. Use `Fx.filterEffect` when that decision needs an `Effect`; its failures and services
-become part of the resulting `Fx`.
-
-When a value must be parsed or reshaped as it is admitted, reach for `Fx.filterMap`. `Option.some`
-emits the new value and `Option.none` omits it. `Fx.filterMapEffect` is the same choice when parsing
-or validation itself is effectful. This is a useful boundary: `filter` answers “keep this value?”,
-while `filterMap` answers “can this value become the next value?”
-
-For a producer that delivers values concurrently, effectful per-value checks can finish in a
-different order than their inputs. Preserve or control that ordering at the producer boundary when
-the order itself is part of the contract.
+## Parse useful records before counting them
 
 ```ts
 import { Option } from "effect";
@@ -40,6 +30,10 @@ const messages = Fx.fromIterable(["", "notice: connected", "ready", "done"]).pip
 // Emits: ["connected"]
 ```
 
+`filterMap` emits `Some` and omits `None`; the example extracts only the structured notice. If the
+original value should remain unchanged, use `filter`. An Effectful admission rule exposes its
+failures and service requirements:
+
 ```ts
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
@@ -51,12 +45,11 @@ const visible = Fx.fromIterable([
 // Emits only the allowed message.
 ```
 
-## Select a window, then decide where it closes
+An Effect returning `false` omits one value. An Effect failure reports a Cause instead; it is not a
+negative predicate result. On a concurrent producer, Effectful checks may finish out of input order,
+so choose an explicit serialized boundary if record order is part of the contract.
 
-`Fx.skip(n)` discards a fixed prefix and then forwards everything else. `Fx.take(n)` forwards a
-fixed prefix and completes. For a page or a window, `Fx.slice({ skip, take })` expresses both in one
-place. `takeEffect`, `skipEffect`, and `sliceEffect` are for bounds that must be obtained at run
-time; their Effect runs before the source is subscribed.
+## Select the useful window
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -75,6 +68,8 @@ operator: skip(1)
 output: . connected indexing |
 ```
 
+`skip` removes a fixed prefix while keeping the source live afterward.
+
 ```fx-marble
 title: take completes after its fixed prefix
 covers: take, takeEffect
@@ -82,6 +77,8 @@ input: banner connected indexing |
 operator: take(2)
 output: banner connected | .
 ```
+
+`take` closes after its accepted prefix; later source values are no longer useful work.
 
 ```fx-marble
 title: slice keeps one bounded index window and then completes
@@ -91,13 +88,16 @@ operator: slice({ skip: 1, take: 2 })
 output: . connected indexing | . .
 ```
 
-For a content boundary, choose the operator by what happens to the matching value:
+[`slice`](/reference/symbols/QHR5cGVkL2Z4L0Z4I3NsaWNl) combines both counters. In this run,
+`banner` is skipped, `connected` and `indexing` are emitted, then upstream stops. The Effect variants
+obtain their bounds before subscribing to the source.
 
-- `Fx.skipWhile(predicate)` drops the true prefix; its exact alias is `Fx.dropWhile`.
-- `Fx.dropUntil(predicate)` drops up to the first true value, then includes it and the rest.
-- `Fx.takeWhile(predicate)` keeps the true prefix; `Fx.takeUntil(predicate)` keeps values before
-  the first true sentinel.
-- `Fx.dropAfter(predicate)` keeps the first true sentinel, then stops.
+Operator order changes the count. For `blank, connected, indexing`, filtering blanks before `take(2)`
+returns both useful messages. Taking two raw records before filtering returns only `connected`.
+Choose whether the bound means “inspect two inputs” or “show two useful outputs.” This is an event
+window, not server-side pagination unless the producer supplies that dataset and ordering contract.
+
+## Include or exclude the terminal record
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -121,6 +121,9 @@ operator: skipWhile(isBanner)
 output: . . connected indexing |
 ```
 
+`skipWhile`/`dropWhile` omit the true prefix. After the gate opens, later matching values are no
+longer part of that prefix.
+
 ```fx-marble
 title: dropUntil includes the boundary that opens its gate
 covers: dropUntil, dropUntilEffect
@@ -128,6 +131,8 @@ input: banner banner connected indexing |
 operator: dropUntil(isConnected)
 output: . . connected indexing |
 ```
+
+`dropUntil` includes the value that first satisfies its predicate and all later values.
 
 ```fx-marble
 title: takeWhile stops before its first false value
@@ -137,6 +142,8 @@ operator: takeWhile(isInProgress)
 output: connected indexing | . .
 ```
 
+`takeWhile` excludes the first false value and stops.
+
 ```fx-marble
 title: takeUntil excludes its matching sentinel
 covers: takeUntil, takeUntilEffect
@@ -144,6 +151,8 @@ input: connected indexing complete ignored |
 operator: takeUntil(isComplete)
 output: connected indexing | . .
 ```
+
+`takeUntil` excludes its true sentinel. Here the completion marker is control-only.
 
 ```fx-marble
 title: dropAfter includes its matching sentinel
@@ -153,18 +162,17 @@ operator: dropAfter(isComplete)
 output: connected indexing complete | .
 ```
 
-The `While` forms describe a prefix rule; the `Until`/`After` forms make a named sentinel explicit.
-That distinction matters when the terminal record is itself useful: use `dropAfter` for a final
-status the user should see, and `takeUntil` when it is only a control marker. The `*Effect` forms
-use the same output boundary after each check succeeds, while also exposing the check's failures
-and services. `skipWhileEffect` and `dropUntilEffect` still run their predicate after the gate has
-opened, so use a pure predicate when later checks should not happen.
+`dropAfter` includes that sentinel before closing. Use this for the import screen's final visible
+status. Read the last occupied output slot, not merely the method name: “until” and “after” make
+opposite promises about that boundary value.
 
-## Open, close, or hold a gate with another Fx
+Effectful variants use the same boundary after resolving their checks, and add the checks' errors
+and requirements. `skipWhileEffect` and `dropUntilEffect` still evaluate after their gate opens;
+choose a pure predicate when later service calls would be unintended work.
 
-`Fx.since(events, start)` drops events until `start` first emits. `Fx.until(events, stop)` forwards
-events until `stop` emits, then interrupts the event run. `Fx.during(events, starts)` is the full
-window: the first `starts` value is itself an Fx whose first value closes the gate.
+## Let another producer open or close the window
+
+A separate user action can own the window independently of record content:
 
 ```fx-marble
 title: since opens when its named start signal emits
@@ -175,6 +183,9 @@ operator: since(events, start)
 output: . . . saved |
 ```
 
+`since(events, start)` already runs the event source, discarding values until `start` emits. It does
+not buffer `draft` for later. A failed start signal leaves the event source alive.
+
 ```fx-marble
 title: until stops when its named stop signal emits
 covers: until
@@ -183,6 +194,9 @@ input stop: . . . stop |
 operator: until(events, stop)
 output: draft . saved | . .
 ```
+
+`until(events, stop)` closes when the stop lane emits. Its control value never reaches output, and
+its failure propagates because the signal owns stopping work.
 
 ```fx-marble
 title: during forwards only while its named window is active
@@ -194,11 +208,11 @@ inner stop: . ^ . . . up |
 output: . . move . after | .
 ```
 
-The signal values are control-only: none appear in the result. `since` keeps the event source alive
-if its start signal fails; `until` and `during` instead propagate signal failures because their
-signals own stopping work.
+`during(events, starts)` uses the first start value as an inner stop Fx. Read the inner `up` token as
+the end of that selected window. Signal failures propagate. For repeated drag windows carrying start
+coordinates, use the explicit `switchMap`/`until` composition in [Time and rate](/explore/fx-time-and-rate).
 
-## Choose a value when a boolean changes
+A boolean chooses branch values rather than directly counting or gating source events:
 
 ```fx-marble
 title: when selects a value for each spaced condition
@@ -208,12 +222,11 @@ operator: when(condition, { onTrue, onFalse })
 output: . open . closed |
 ```
 
-With closely spaced boolean values, `when` can emit fewer values than condition pushes: a new value
-may replace the previous constant branch before it emits.
+`when` selects the corresponding constant branch. Closely spaced conditions can replace a branch
+before it emits, so this is not guaranteed one output per pushed boolean.
 
-Every counter and gate belongs to one run. Reaching `take`, `slice`, `takeWhile`, `takeUntil`, or
-`dropAfter` completes downstream early and stops upstream work; it does not retain the whole source.
-That early exit is not a replacement for resource ownership: a callback, socket, or other live
-producer still needs its normal scoped cleanup. Put admission before a cardinality bound when the
-bound means “useful messages,” and reverse them when it means “inspect at most this many raw
-messages.”
+The import is finished when its terminal rule is met, even if the underlying listener could keep
+producing. Its callback cleanup still needs a real subscription owner. Test an absent start signal,
+an absent stop signal, and a signal failure as well as the happy path. A silent gate can remain live
+forever; use [a timeout](/explore/fx-time-and-rate) only when the product defines a time limit.
+For one optional answer instead of a bounded Fx, continue with [Fx.first](/explore/consuming-fx).

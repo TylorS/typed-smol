@@ -51,7 +51,7 @@ import { switchMap } from "./switchMap.js";
  * @param f - A function that maps an element `A` to an `Effect<B>`.
  * @returns An `Fx` that emits the results of the latest effect.
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const switchMapEffect: FlatMapEffectLike = dual(
   2,

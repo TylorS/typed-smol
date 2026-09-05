@@ -26,7 +26,7 @@ const STRING_LENGTH = 27;
  * import { Schema } from "effect"
  * const id = Schema.decodeUnknownSync(Ksuid)("0ujtsYcgvSTl8PAuAdqWYSMnLOv")
  * ```
- * @category Schemas
+ * @category ID schemas
  * @since 1.0.0
  */
 export const Ksuid = Schema.String.pipe(
@@ -47,7 +47,7 @@ export type Ksuid = typeof Ksuid.Type;
  * import { isKsuid } from "@typed/id/Ksuid"
  * isKsuid("0ujtsYcgvSTl8PAuAdqWYSMnLOv")
  * ```
- * @category Refinements
+ * @category ID validation
  * @since 1.0.0
  */
 export const isKsuid: (value: string) => value is Ksuid = Schema.is(Ksuid);
@@ -71,7 +71,7 @@ type KsuidSeed = Uint8Array & { length: 16 };
  * import { Effect, Layer } from "effect"
  * const id = Effect.provide(ksuid, Layer.merge(DateTimes.Default, RandomValues.Default))
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const ksuid: Effect.Effect<Ksuid, Cause.IllegalArgumentError, DateTimes | RandomValues> =

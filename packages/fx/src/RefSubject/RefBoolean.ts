@@ -26,7 +26,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefBoolean<in out E = never, out R = never> extends RefSubject.RefSubject<
   boolean,
@@ -61,7 +61,7 @@ export interface RefBoolean<in out E = never, out R = never> extends RefSubject.
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<E = never, R = never>(
   initial: boolean | Effect.Effect<boolean, E, R> | Fx.Fx<boolean, E, R>,
@@ -84,7 +84,7 @@ export function make<E = never, R = never>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const toggle = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E, R> =>
   RefSubject.update(ref, Boolean_.not);
@@ -103,7 +103,7 @@ export const toggle = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E, R
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setTrue = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E, R> =>
   RefSubject.set(ref, true);
@@ -122,7 +122,7 @@ export const setTrue = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E, 
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setFalse = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E, R> =>
   RefSubject.set(ref, false);
@@ -145,7 +145,7 @@ export const setFalse = <E, R>(ref: RefBoolean<E, R>): Effect.Effect<boolean, E,
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const and: {
   (that: boolean): <E, R>(ref: RefBoolean<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -168,7 +168,7 @@ export const and: {
  * follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const or: {
   (that: boolean): <E, R>(ref: RefBoolean<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -191,7 +191,7 @@ export const or: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const not = <E, R>(ref: RefBoolean<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, Boolean_.not);
@@ -210,7 +210,7 @@ export const not = <E, R>(ref: RefBoolean<E, R>): RefSubject.Computed<boolean, E
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const xor: {
   (that: boolean): <E, R>(ref: RefBoolean<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -233,7 +233,7 @@ export const xor: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const nand: {
   (that: boolean): <E, R>(ref: RefBoolean<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -256,7 +256,7 @@ export const nand: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const nor: {
   (that: boolean): <E, R>(ref: RefBoolean<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -279,7 +279,7 @@ export const nor: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const eqv: {
   (that: boolean): <E, R>(ref: RefBoolean<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -302,7 +302,7 @@ export const eqv: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const implies: {
   (that: boolean): <E, R>(ref: RefBoolean<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -325,7 +325,7 @@ export const implies: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isTrue = <E, R>(ref: RefBoolean<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, (self) => self === true);
@@ -344,7 +344,7 @@ export const isTrue = <E, R>(ref: RefBoolean<E, R>): RefSubject.Computed<boolean
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isFalse = <E, R>(ref: RefBoolean<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, (self) => self === false);

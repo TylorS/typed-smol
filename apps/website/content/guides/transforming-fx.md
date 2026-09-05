@@ -6,9 +6,14 @@ kind: "guide"
 order: 1.2
 ---
 
-Suppose a product feed pushes every catalog change, but the page only needs active products with a
-display price. The source already decides when each update arrives. Transformation decides what
-each update means.
+A catalog feed contains records the page cannot display directly: inactive products, raw cents, and
+prices that need a currency service. The source already decides when records arrive. This lesson
+turns each record into useful page data without changing who owns the source.
+
+Start with [Building Fx](/explore/building-fx). We first make decisions from one input alone, then
+introduce a service, and finally add just enough history and time for repeated user input.
+
+## Admit a product and build its display value
 
 ```ts
 import { Effect, Option } from "effect";
@@ -39,19 +44,22 @@ const result = await Effect.runPromise(Fx.collectAll(cards));
 // [{ id: "desk", title: "Standing desk", price: "$499.00" }]
 ```
 
-`map` emits one output for every input, and `as` replaces each input with one constant output.
-`filter` keeps or drops the original value. `filterMap` combines those decisions: `Option.some`
-emits a transformed value and `Option.none` emits nothing. `mapBoth` keeps one-for-one successes
-while also mapping typed failures. These synchronous, pure transforms preserve the source's order,
-service requirements, and lifetime.
+The active desk becomes a card; the inactive lamp produces no output. `filterMap` combines admission
+and transformation through `Option`: `Some` emits, `None` omits. Use `filter` when the original value
+should remain unchanged and `map` when every input always has one output. `as` replaces each value
+with a constant; `compact` unwraps a producer that already emits Options.
 
 ```fx-marble
 title: map and as emit once for every input
 covers: map, as
 input: a . b . c |
 operator: map(f) / as(value)
-output: value . value . value |
+output map: f(a) . f(b) . f(c) |
+output as: value . value . value |
 ```
+
+Read vertically: the `map` output depends on its input; `as` has the same value in every occupied
+slot. Neither removes events.
 
 ```fx-marble
 title: filter keeps admitted values in their input slots
@@ -69,9 +77,6 @@ operator: filterMap(toOption)
 output: . 20 . 40 |
 ```
 
-`compact` is the Option-shaped version of the same omission rule: it drops `None` and unwraps
-`Some`, without changing the slots of retained values.
-
 ```fx-marble
 title: compact drops None and unwraps Some
 covers: compact
@@ -79,6 +84,13 @@ input: Some(a) None Some(b) |
 operator: compact
 output: a . b |
 ```
+
+The empty output slots are omissions, not work delayed until later. In the catalog pipeline, the
+lamp is rejected before formatting. Swapping a filter with expensive formatting changes which work
+runs even when the displayed cards happen to match.
+
+`mapBoth` additionally translates the expected failure channel while mapping successful records.
+It does not recover the source or restart its work:
 
 ```fx-marble
 title: mapBoth keeps one success output while also mapping typed failures
@@ -88,14 +100,14 @@ operator: mapBoth(success, failure)
 output: OK !OfflineError
 ```
 
-Use these operators when the answer is already in memory. Do not put a Promise, thrown parse error,
-or service lookup inside `map`; those behaviors belong in Effect.
+Here `ok` becomes `OK`, and a later `offline` failure becomes `OfflineError`. A thrown decoder error
+inside `map` is a defect, not a typed parse result. Move expected failure into Effect rather than
+using a pure callback as an untracked request or exception boundary.
 
-## Add Effect when transformation can fail or needs a service
+## Introduce the currency service where it is needed
 
-Now the page must display prices in the shopper's currency. Looking up an exchange rate can fail and
-depends on a service supplied by the application. `mapEffect` makes both facts part of the resulting
-Fx type.
+Converting prices requires a rate and can fail when a currency is unsupported. The Effect callback
+makes those requirements visible on the output Fx:
 
 ```ts
 import { Context, Data, Effect } from "effect";
@@ -147,32 +159,9 @@ const result = await Effect.runPromise(Fx.collectAll(runnable));
 // [459.08, 70.31]
 ```
 
-The annotation exposes what TypeScript inferred: values are `number`, expected failures are
-`MissingRate`, and running the unprovided Fx requires `ExchangeRates`. `provideService` removes that
-requirement at this example's application boundary. A real application would usually provide a
-Layer shared by the rest of its Effect program.
-
-Choose the Effectful operator that matches the output:
-
-- `mapEffect` runs one Effect and emits its successful value.
-- `filterEffect` runs an Effectful predicate and keeps the original value when it returns `true`.
-- `filterMapEffect` runs one Effect that may return `Option.none` instead of emitting.
-- `tap` runs an Effect for logging, metrics, or another observation, then emits the original value.
-
-The callback's failures and requirements join the source's `E` and `R` channels. Handle a known
-error with `catchTag`, or translate it with `mapError`; do not catch defects or interruption as if
-they were ordinary domain failures. Effect's guides to
-[services](https://www.effect.website/docs/v4/requirements-management/services/) and
-[expected errors](https://www.effect.website/docs/v4/error-management/expected-errors/) describe
-the same channels used here.
-
-An Effectful transform also preserves the producer's concurrency. If the source delivers values
-concurrently, callback Effects may overlap and finish out of order. `mapEffect` does not silently
-add a queue. Choose a serialized producer or an explicit higher-order concurrency policy when order
-matters.
-
-The simple timelines below assume sequential delivery; concurrent producers may complete Effectful
-callbacks out of order as described above.
+[`mapEffect`](/reference/symbols/QHR5cGVkL2Z4L0Z4I21hcEVmZmVjdA) combines the source and callback
+error/service channels. `converted` therefore requires `ExchangeRates` and can report `MissingRate`.
+Providing the service chooses the application's rates; it does not silently catch missing ones.
 
 ```fx-marble
 title: mapEffect emits one successful result for each input
@@ -206,11 +195,19 @@ operator: tap(record)
 output: 1 . 2 . 3 |
 ```
 
-## Add state or time only when the behavior needs it
+These rows assume sequential delivery. `mapEffect` forwards the callback's result; `filterEffect`
+forwards the original value only for `true`; `filterMapEffect` forwards only `Some`; `tap` forwards
+the original after its observation Effect. A failed predicate is not `false`: it enters the failure
+channel. [Recovery](/explore/fx-errors-and-recovery) decides whether that stops the feature.
 
-A search box needs two behaviors that pure mapping cannot express: ignore the same normalized query
-twice in a row, and wait until typing settles. `skipRepeats` retains one previous value for each run;
-`debounce` owns one replaceable timer in the subscription's Scope.
+Effectful transformation inherits producer concurrency. If two callback deliveries overlap, the
+second lookup may finish first. No queue is added here. Choose an explicit
+[higher-order policy](/explore/fx-higher-order-and-concurrency) when the requirement is “finish every
+conversion in order” or “discard obsolete work.”
+
+## Normalize before comparing repeated input
+
+A search field demonstrates why operator order is product behavior:
 
 ```ts
 import { Effect } from "effect";
@@ -227,14 +224,13 @@ const result = await Effect.runPromise(Effect.scoped(Fx.collectAll(queries)));
 // ["typed"]
 ```
 
-State and timing belong to one run. A second run gets a fresh previous value and a fresh timer;
-interrupting the run cancels its pending timing work. Use `scan` when every accumulated state should
-be emitted, `loop` when the emitted value differs from the next state, and `throttle` when the goal
-is to bound frequency rather than wait for silence. Test time-dependent pipelines with Effect's
-[TestClock](https://www.effect.website/docs/v4/testing/testclock/) instead of real sleeps.
+Trim first so `"typed"` and `"typed "` become the same query. Reject short queries before they reach
+the request boundary. `skipRepeats` remembers the last emitted value for this run; debounce then
+waits for quiet. Reversing normalization and comparison can launch a duplicate request for a
+whitespace-only edit. Reversing `tap` and the filter similarly changes whether a metric counts raw
+keystrokes or accepted queries.
 
-The practical rule is small: begin with `map`, `filter`, or `filterMap`; move to an Effectful variant
-when work can fail or needs services; add per-run state or timing only when it is observable product
-behavior. Continue with [Composing Fx](/explore/composing-fx) when one value starts another Fx and
-cancellation or concurrency becomes the decision. The [Fx API reference](/reference/modules/%40typed%2Ffx)
-contains the complete signatures.
+A second observation gets fresh comparison state and a fresh timer. This pipeline has not created
+shared writable state. Continue with [stateful transforms](/explore/fx-stateful-transforms) for
+accumulators and transitions, [time and rate](/explore/fx-time-and-rate) for clock tests, or
+[Composing Fx](/explore/composing-fx) to combine the normalized query with a category filter.

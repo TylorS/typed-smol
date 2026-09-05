@@ -1,9 +1,9 @@
 ---
 title: "Using HtmlRenderEvent"
 summary: "Carry ordered, trusted renderer-owned HTML chunks through Typed SSR while keeping completion and the trust boundary explicit."
-section: "DOM and platform"
+section: "Template internals"
 kind: "guide"
-order: 5.4
+order: 2.5
 ---
 
 `HtmlRenderEvent(html, last)` is the terminal HTML transport value. Use it when another renderer

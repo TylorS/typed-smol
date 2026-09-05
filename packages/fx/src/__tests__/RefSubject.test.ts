@@ -34,6 +34,26 @@ class TransactionTrigger extends RefSubject.Service<TransactionTrigger, number>(
 ) {}
 
 describe("RefSubject", () => {
+  it("samples service values consistently through Effect and computed views", () =>
+    Effect.gen(function* () {
+      class Items extends RefSubject.Service<Items, ReadonlyArray<string>>()(
+        "@typed/fx/test/Items",
+      ) {}
+
+      for (const initial of [["first"], Effect.succeed(["first"])] as const) {
+        yield* Effect.gen(function* () {
+          const count = RefSubject.map(Items, (items) => items.length);
+          expect(yield* Items).toEqual(["first"]);
+          expect(yield* Effect.map(Items, (items) => items.length)).toBe(1);
+          expect(yield* count).toBe(1);
+          expect(yield* Fx.collectAll(Fx.take(count, 1))).toEqual([1]);
+          yield* RefSubject.set(Items, ["first", "second"]);
+          expect(yield* count).toBe(2);
+          expect(yield* Effect.map(Items, (items) => items.length)).toBe(2);
+        }).pipe(Effect.provide(Items.make(initial)));
+      }
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("tracks an initial value", () =>
     Effect.gen(function* () {
       const ref = yield* RefSubject.make(0);

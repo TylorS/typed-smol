@@ -1,78 +1,117 @@
 ---
 title: "Using DomRenderEvent"
 summary: "Carry exact Nodes, DocumentFragments, Wires, and nested rendered values through a Typed dynamic range without cloning them."
-section: "DOM and platform"
+section: "Template internals"
 kind: "guide"
-order: 5.3
+order: 2
 ---
 
-`DomRenderEvent(content)` is the terminal DOM output value. It says: these exact rendered objects are
-ready to enter a Typed-owned dynamic range. It is not a mount API, a virtual node, or a lifecycle
-container.
+Embedding a canvas should keep the canvas object a chart actually draws into. Rebuilding equivalent
+markup would produce another object and lose its drawing context, listeners, or foreign renderer
+state. `DomRenderEvent` transports the exact rendered objects into a Typed-owned position.
 
-## Emit the exact node you created
+Read [RenderEvent: any UI can participate](/explore/render-event-substrate) for representation choice.
+This page builds a browser adapter whose output and resource lifetime are both explicit.
+
+## Carry the object, not a description of how to recreate it
 
 ```ts
 import { Fx } from "@typed/fx";
 import { html } from "@typed/template";
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 
-const chart = Fx.sync(() => {
+const canvasOutput = Fx.sync(() => {
   const canvas = document.createElement("canvas");
-  canvas.width = 640;
-  canvas.height = 320;
+  canvas.width = 320;
+  canvas.height = 120;
   return DomRenderEvent(canvas);
 });
-
-const page = html`<section aria-label="Price chart">${chart}</section>`;
+export const activity = html`<section aria-label="Article activity">${canvasOutput}</section>`;
 ```
 
-`Fx.sync` is lazy and creates one canvas for each run. If the node already exists, use
-`Fx.succeed(DomRenderEvent(node))`. If a foreign system pushes replacements, use `Fx.callback` and
-return its cleanup Effect. The producer contract and the output representation are separate choices.
+Each run creates one canvas lazily. A producer that already has a node can return
+`Fx.succeed(DomRenderEvent(node))`, but must account for where that same object may be mounted.
+The event neither clones it nor establishes exclusive lifetime ownership by itself.
 
-## Supported content
+Its content type is `Rendered`: a Node, DocumentFragment, Wire, or nested readonly collection of
+those values. `valueOf()` returns that exact content. A fragment's children move into the document
+when inserted; use a persistent range when a multi-node result must remain addressable afterward.
 
-`content` is `Rendered`: a `Node`, `DocumentFragment`, `Wire`, or nested readonly collection of those
-values. `valueOf()` returns that exact content. `toString()` serializes its current DOM for an
-explicit non-streaming boundary; serialization does not change the event into HTML transport. For a
-`Wire`, serialization calls its consuming `valueOf()` conversion and gathers the range into a
-fragment. Do not call it as a harmless diagnostic on mounted Wire output; see
-[Preserve multi-node DOM output](/explore/wire-and-rendered-dom-output).
+## Acquire the running resource beside the output
 
-A `DocumentFragment` is consumed by DOM insertion, as the platform specifies. Use a `Wire` when a
-multi-node value must retain a stable identity after insertion. Use nested collections when one
-emission intentionally represents several rendered values.
+A real chart adapter should acquire its chart instance in a scope and call that library's actual
+teardown. This smaller example makes the same relationship testable with a drawing timer:
 
-## What the receiving range owns
+```ts
+import { Effect } from "effect";
+import { component } from "@typed/ui/Component";
+import { DomRenderEvent } from "@typed/template/RenderEvent";
 
-The receiving dynamic part may insert, move, or remove the represented nodes inside its comment
-boundary. It does not claim their descendants from the foreign renderer, rewrite their classes,
-replace their listeners, or remove siblings outside the range.
+export const ClockCanvas = component(function* (document: Document) {
+  const canvas = yield* Effect.sync(() => document.createElement("canvas"));
+  canvas.width = 320;
+  canvas.height = 60;
 
-When a represented node is already connected and must change position, the renderer prefers
-`ParentNode.moveBefore`; `insertBefore` is the compatibility fallback. The same node identity keeps
-browser-owned state such as focus, selection, animation, custom-element state, dialog/popover state,
-and iframe state whenever the platform move preserves it.
+  yield* Effect.acquireRelease(
+    Effect.sync(() => {
+      const paint = () => {
+        const context = canvas.getContext("2d");
+        if (context === null) return;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.fillText(new Date().toLocaleTimeString(), 8, 30);
+      };
+      paint();
+      return setInterval(paint, 1000);
+    }),
+    (timer) => Effect.sync(() => clearInterval(timer)),
+  );
 
-## Lifecycle belongs to the producing component
+  return DomRenderEvent(canvas);
+});
+```
 
-Creating a `DomRenderEvent` acquires nothing. A chart, editor, or framework root still needs a
-scoped producer that pairs mount with teardown. For Template/UI setup, use
-`component(function* (...args?) { ... })` from `@typed/ui/Component`; yield
-`Effect.acquireRelease` inside that generator when a resource needs explicit setup and teardown. The
-component is lazy, and the running Effect [Scope](https://effect.website/docs/v4/resource-management/scope/)
-owns resources until the render is interrupted or its scope closes. For a lower-level
-listener/unsubscribe API, use `Fx.callback` and return its cleanup Effect. Do not attach disposal to
-the event and do not watch DOM removal as a second lifecycle system.
+The component returns the event directly. Timer ticks redraw the same canvas without emitting
+replacement nodes. Interruption closes the component's
+[Effect scope](https://github.com/Effect-TS/effect/blob/main/packages/effect/src/Scope.ts) and clears
+the timer. The canvas has
+no magic disposer attached by `DomRenderEvent`; the resource finalizer is explicit in the producer.
 
-## Test identity, not an implementation story
+This component deliberately depends on a browser Document. Canvas pixels do not serialize into an
+equivalent server HTML view. A cross-target library should supply a distinct server representation
+through its service boundary rather than pretend the browser resource can run on the server.
 
-At the adapter boundary, assert `event.valueOf() === node`. At the integration boundary, push a
-second state value and assert the host node remains `===` while its foreign-owned descendants update.
-Finally interrupt the receiving Scope and assert the foreign teardown runs once. Those assertions
-cover the cooperative contract without duplicating the foreign renderer's own tests.
+## Divide placement from foreign internals
 
-For a full foreign renderer adapter, continue with the
-[DOM output recipe](/integrate/dom-output). For string transport, use
-[HtmlRenderEvent](/explore/html-render-event) instead of serializing live nodes.
+The containing template owns the position where the canvas appears. Its dynamic range can insert,
+move, or remove the represented output. It does not redraw the canvas, rewrite foreign descendants,
+or remove unrelated siblings outside that range.
+
+A chart library that changes descendants within its host remains responsible for them. A parent
+that replaces the host's `innerHTML` would violate that division. A chart requiring a connected host
+also needs explicit mount coordination; creating its node during component setup does not prove it
+is connected or laid out yet.
+
+For callback-based producers, `Fx.callback` can model the actual subscribe/unsubscribe API and
+return a cleanup Effect. Avoid inventing another lifetime based solely on observing DOM removal:
+a moved or detached object is not necessarily a stopped resource.
+
+## Be careful when inspecting mounted ranges
+
+`DomRenderEvent.toString()` serializes current output; it does not turn a DOM event into HTML
+transport. For Wire content, serialization can consume `valueOf()` and gather nodes into a fragment.
+Do not use that conversion as an innocent logging statement on mounted output.
+
+Inspect known node identities and properties instead. [Preserve multi-node DOM output](/explore/wire-and-rendered-dom-output)
+explains the persistent range representation and consuming conversions.
+
+## Test the adapter's promises
+
+At construction, assert `event.valueOf() === canvas`. After an internal update, assert that the
+host still contains the same canvas. At interruption, assert the timer or foreign teardown stops
+exactly once. If placement can reorder output, separately test native state required by the product;
+node identity and state-preserving platform movement are different guarantees.
+
+Those assertions cover output transport, ongoing ownership, and resource release. A screenshot of
+the final pixels covers none of the cleanup contract. Continue with the
+[DOM output recipe](/integrate/dom-output) for a fuller adapter and the
+[RenderEvent reference](/reference/modules/%40typed%2Ftemplate%2FRenderEvent) for the public carrier.

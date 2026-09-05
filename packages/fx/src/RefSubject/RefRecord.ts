@@ -27,7 +27,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefRecord<
   in out K extends string,
@@ -50,7 +50,7 @@ export interface RefRecord<
  * and cleanup; source failures and services stay on reads and pushes.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<K extends string, V, E = never, R = never>(
   initial:
@@ -79,7 +79,7 @@ export function make<K extends string, V, E = never, R = never>(
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const set: {
   <K extends string, V>(
@@ -109,7 +109,7 @@ export const set: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const remove: {
   <K extends string>(
@@ -137,7 +137,7 @@ export const remove: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const modify: {
   <K extends string, V>(
@@ -172,7 +172,7 @@ export const modify: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const replace: {
   <K extends string, V>(
@@ -207,7 +207,7 @@ export const replace: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const clear = <K extends string, V, E, R>(
   ref: RefRecord<K, V, E, R>,
@@ -228,7 +228,7 @@ export const clear = <K extends string, V, E, R>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const union: {
   <K extends string, V>(
@@ -268,7 +268,7 @@ export const union: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const intersection: {
   <K extends string, V>(
@@ -308,7 +308,7 @@ export const intersection: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const difference: {
   <K extends string, V>(
@@ -340,7 +340,7 @@ export const difference: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed Record and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filter: {
   <K extends string, V>(
@@ -372,7 +372,7 @@ export const filter: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed Record and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const map: {
   <K extends string, V>(
@@ -409,7 +409,7 @@ export const map: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <K extends string, V, E, R>(
   ref: RefRecord<K, V, E, R>,
@@ -429,7 +429,7 @@ export const size = <K extends string, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <K extends string, V, E, R>(
   ref: RefRecord<K, V, E, R>,
@@ -449,7 +449,7 @@ export const isEmpty = <K extends string, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNonEmpty = <K extends string, V, E, R>(
   ref: RefRecord<K, V, E, R>,
@@ -469,7 +469,7 @@ export const isNonEmpty = <K extends string, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const has: {
   <K extends string>(
@@ -497,7 +497,7 @@ export const has: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const keys = <K extends string, V, E, R>(
   ref: RefRecord<K, V, E, R>,
@@ -518,7 +518,7 @@ export const keys = <K extends string, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const values = <K extends string, V, E, R>(
   ref: RefRecord<K, V, E, R>,
@@ -538,7 +538,7 @@ export const values = <K extends string, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const entries = <K extends string, V, E, R>(
   ref: RefRecord<K, V, E, R>,
@@ -558,7 +558,7 @@ export const entries = <K extends string, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapValues: {
   <K extends string, V, B>(
@@ -592,7 +592,7 @@ export const mapValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapKeys: {
   <K extends string, K2 extends string>(
@@ -628,7 +628,7 @@ export const mapKeys: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapEntries: {
   <K extends string, V, K2 extends string, B>(
@@ -663,7 +663,7 @@ export const mapEntries: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filterValues: {
   <K extends string, V>(
@@ -696,7 +696,7 @@ export const filterValues: {
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filterMapValues: {
   <K extends string, V, B>(
@@ -733,7 +733,7 @@ export const filterMapValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const partition: {
   <K extends string, V>(
@@ -774,7 +774,7 @@ export const partition: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const some: {
   <K extends string, V>(
@@ -807,7 +807,7 @@ export const some: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const every: {
   <K extends string, V>(
@@ -840,7 +840,7 @@ export const every: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduce: {
   <K extends string, V, B>(
@@ -880,7 +880,7 @@ export const reduce: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const get: {
   <K extends string>(key: K): <V, E, R>(ref: RefRecord<K, V, E, R>) => RefSubject.Filtered<V, E, R>;
@@ -903,7 +903,7 @@ export const get: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const findFirst: {
   <K extends string, V>(
@@ -936,7 +936,7 @@ export const findFirst: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const pop: {
   <K extends string>(

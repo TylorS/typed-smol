@@ -26,7 +26,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefBigInt<in out E = never, out R = never> extends RefSubject.RefSubject<
   bigint,
@@ -61,7 +61,7 @@ export interface RefBigInt<in out E = never, out R = never> extends RefSubject.R
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<E = never, R = never>(
   initial: bigint | Effect.Effect<bigint, E, R> | Fx.Fx<bigint, E, R>,
@@ -88,7 +88,7 @@ export function make<E = never, R = never>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const add: {
   (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>;
@@ -111,7 +111,7 @@ export const add: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const subtract: {
   (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>;
@@ -134,7 +134,7 @@ export const subtract: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const multiply: {
   (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>;
@@ -157,7 +157,7 @@ export const multiply: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const divide: {
   (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint | undefined, E, R>;
@@ -180,7 +180,7 @@ export const divide: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const mod: {
   (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<bigint, E, R>;
@@ -203,7 +203,7 @@ export const mod: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const abs = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, E, R> =>
   RefSubject.map(ref, BigInt_.abs);
@@ -222,7 +222,7 @@ export const abs = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, E, 
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const negate = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, E, R> =>
   RefSubject.map(ref, (self) => -self);
@@ -241,7 +241,7 @@ export const negate = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bigint, 
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isZero = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, (self) => self === BigInt_.BigInt(0));
@@ -260,7 +260,7 @@ export const isZero = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<boolean,
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNegative = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, (self) => self < BigInt_.BigInt(0));
@@ -279,7 +279,7 @@ export const isNegative = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bool
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isPositive = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, (self) => self > BigInt_.BigInt(0));
@@ -298,7 +298,7 @@ export const isPositive = <E, R>(ref: RefBigInt<E, R>): RefSubject.Computed<bool
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isLessThan: {
   (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -321,7 +321,7 @@ export const isLessThan: {
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isGreaterThan: {
   (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -344,7 +344,7 @@ export const isGreaterThan: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const equals: {
   (that: bigint): <E, R>(ref: RefBigInt<E, R>) => RefSubject.Computed<boolean, E, R>;

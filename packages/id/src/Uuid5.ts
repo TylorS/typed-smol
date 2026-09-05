@@ -18,7 +18,7 @@ import { uuidStringify } from "./_uuid-stringify.js";
  * import { Schema } from "effect"
  * const id = Schema.decodeUnknownSync(Uuid5)("21f7f8de-8051-5b89-8680-0195ef798b6a")
  * ```
- * @category Schemas
+ * @category ID schemas
  * @since 1.0.0
  */
 export const Uuid5 = Schema.String.pipe(
@@ -39,7 +39,7 @@ export type Uuid5 = typeof Uuid5.Type;
  * import { isUuid5 } from "@typed/id/Uuid5"
  * isUuid5("21f7f8de-8051-5b89-8680-0195ef798b6a")
  * ```
- * @category Refinements
+ * @category ID validation
  * @since 1.0.0
  */
 export const isUuid5: (value: string) => value is Uuid5 = Schema.is(Uuid5);
@@ -51,7 +51,7 @@ export const isUuid5: (value: string) => value is Uuid5 = Schema.is(Uuid5);
  * Namespace bytes are part of deterministic identity; caller canonicalization of names and namespace selection must remain explicit.
  * ## Ownership and lifetime
  * This type acquires no resources. Callers own and may mutate their byte array; generation reads exactly 16 bytes.
- * @category Models
+ * @category ID types
  * @since 1.0.0
  */
 export type Uuid5Namespace = Uint8Array;
@@ -84,7 +84,7 @@ const X500 = new Uint8Array([
  * import { Uuid5Namespace } from "@typed/id/Uuid5"
  * const namespace = Uuid5Namespace.DNS
  * ```
- * @category Namespaces
+ * @category Name-based identity
  * @since 1.0.0
  */
 export const Uuid5Namespace: {
@@ -95,7 +95,7 @@ export const Uuid5Namespace: {
    * DNS names need a stable namespace distinct from URLs, OIDs, and X.500 names.
    * ## Ownership and lifetime
    * Each access allocates a mutable byte array owned by the caller.
-   * @category Namespaces
+   * @category Name-based identity
    * @since 1.0.0
    */
   readonly DNS: Uint8Array<ArrayBuffer>;
@@ -106,7 +106,7 @@ export const Uuid5Namespace: {
    * URL names need a stable namespace distinct from DNS, OID, and X.500 names.
    * ## Ownership and lifetime
    * Each access allocates a mutable byte array owned by the caller.
-   * @category Namespaces
+   * @category Name-based identity
    * @since 1.0.0
    */
   readonly URL: Uint8Array<ArrayBuffer>;
@@ -117,7 +117,7 @@ export const Uuid5Namespace: {
    * Object identifiers need a stable namespace distinct from DNS, URL, and X.500 names.
    * ## Ownership and lifetime
    * Each access allocates a mutable byte array owned by the caller.
-   * @category Namespaces
+   * @category Name-based identity
    * @since 1.0.0
    */
   readonly OID: Uint8Array<ArrayBuffer>;
@@ -128,7 +128,7 @@ export const Uuid5Namespace: {
    * X.500 names need a stable namespace distinct from DNS, URL, and OID names.
    * ## Ownership and lifetime
    * Each access allocates a mutable byte array owned by the caller.
-   * @category Namespaces
+   * @category Name-based identity
    * @since 1.0.0
    */
   readonly X500: Uint8Array<ArrayBuffer>;
@@ -159,7 +159,7 @@ export const Uuid5Namespace: {
  * import { uuid5, Uuid5Namespace } from "@typed/id/Uuid5"
  * const id = uuid5("example.com", Uuid5Namespace.DNS)
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const uuid5: {
@@ -213,7 +213,7 @@ export const uuid5: {
  * import { dnsUuid5 } from "@typed/id/Uuid5"
  * const id = dnsUuid5("example.com")
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const dnsUuid5 = uuid5(Uuid5Namespace.DNS);
@@ -229,7 +229,7 @@ export const dnsUuid5 = uuid5(Uuid5Namespace.DNS);
  * import { urlUuid5 } from "@typed/id/Uuid5"
  * const id = urlUuid5("https://example.com")
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const urlUuid5 = uuid5(Uuid5Namespace.URL);
@@ -245,7 +245,7 @@ export const urlUuid5 = uuid5(Uuid5Namespace.URL);
  * import { oidUuid5 } from "@typed/id/Uuid5"
  * const id = oidUuid5("1.3.6.1.4.1")
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const oidUuid5 = uuid5(Uuid5Namespace.OID);
@@ -261,7 +261,7 @@ export const oidUuid5 = uuid5(Uuid5Namespace.OID);
  * import { x500Uuid5 } from "@typed/id/Uuid5"
  * const id = x500Uuid5("CN=example")
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const x500Uuid5 = uuid5(Uuid5Namespace.X500);

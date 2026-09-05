@@ -27,7 +27,7 @@ import { make as makeSink } from "../../Sink/Sink.js";
  * @param predicate - The predicate function.
  * @returns An `Fx` that emits once the predicate first fails.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const skipWhile: {
   <A>(predicate: (a: A) => boolean): <E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;
@@ -84,7 +84,7 @@ export const skipWhile: {
  * @param predicate - Effectful predicate function.
  * @returns An `Fx` that emits once the predicate first fails.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const skipWhileEffect: {
   <A, E2, R2>(
@@ -139,7 +139,7 @@ export const skipWhileEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const dropWhile = skipWhile;
 
@@ -161,6 +161,6 @@ export const dropWhile = skipWhile;
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const dropWhileEffect = skipWhileEffect;

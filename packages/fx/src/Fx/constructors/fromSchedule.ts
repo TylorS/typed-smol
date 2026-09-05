@@ -12,7 +12,9 @@ import { make } from "./make.js";
  *
  * Effect [Schedule](https://effect.website/docs/v4/api/effect/Schedule) values already
  * encode recurrence, delay, and typed schedule failures. `fromSchedule` exposes
- * those decisions as producer-driven ticks without another timing model.
+ * those decisions as producer-driven ticks without another timing model. The
+ * schedule governs all ticks: `Schedule.recurs(2)` emits twice here. In contrast,
+ * `repeat(source, Schedule.recurs(2))` runs an initial source plus two repeats.
  *
  * ## Ownership and lifetime
  *
@@ -26,14 +28,14 @@ import { make } from "./make.js";
  * import { Schedule } from "effect"
  * import { collectAll, fromSchedule } from "@typed/fx/Fx"
  *
- * const threeTicks = fromSchedule(Schedule.recurs(2))
- * const program = collectAll(threeTicks)
+ * const twoTicks = fromSchedule(Schedule.recurs(2))
+ * const program = collectAll(twoTicks) // [undefined, undefined]
  * ```
  *
  * @param schedule - The schedule to follow.
  * @returns An `Fx` that emits periodically according to the schedule.
  * @since 1.0.0
- * @category constructors
+ * @category Time and rate
  */
 export const fromSchedule = <Error, Env>(
   schedule: Schedule<unknown, unknown, Error, Env>,

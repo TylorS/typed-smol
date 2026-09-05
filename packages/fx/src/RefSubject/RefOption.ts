@@ -26,7 +26,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefOption<in out A, in out E = never, out R = never> extends RefSubject.RefSubject<
   Option.Option<A>,
@@ -61,7 +61,7 @@ export interface RefOption<in out A, in out E = never, out R = never> extends Re
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<A, E = never, R = never>(
   initial: Option.Option<A> | Effect.Effect<Option.Option<A>, E, R> | Fx.Fx<Option.Option<A>, E, R>,
@@ -84,7 +84,7 @@ export function make<A, E = never, R = never>(
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setSome: {
   <A>(value: A): <E, R>(ref: RefOption<A, E, R>) => Effect.Effect<Option.Option<A>, E, R>;
@@ -107,7 +107,7 @@ export const setSome: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setNone = <A, E, R>(ref: RefOption<A, E, R>): Effect.Effect<Option.Option<A>, E, R> =>
   RefSubject.set(ref, Option.none());
@@ -130,7 +130,7 @@ export const setNone = <A, E, R>(ref: RefOption<A, E, R>): Effect.Effect<Option.
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const map: {
   <A, B>(
@@ -158,7 +158,7 @@ export const map: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const flatMap: {
   <A, B>(
@@ -186,7 +186,7 @@ export const flatMap: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filter: {
   <A>(
@@ -214,7 +214,7 @@ export const filter: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const getOrElse: {
   <A>(fallback: () => A): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<A, E, R>;
@@ -237,7 +237,7 @@ export const getOrElse: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isSome = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, Option.isSome);
@@ -256,7 +256,7 @@ export const isSome = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<bo
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNone = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, Option.isNone);
@@ -275,7 +275,7 @@ export const isNone = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Computed<bo
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const contains: {
   <A>(value: A): <E, R>(ref: RefOption<A, E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -298,7 +298,7 @@ export const contains: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const exists: {
   <A>(
@@ -330,7 +330,7 @@ export const exists: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const getValue = <A, E, R>(ref: RefOption<A, E, R>): RefSubject.Filtered<A, E, R> =>
   RefSubject.compact(ref);

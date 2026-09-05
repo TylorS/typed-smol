@@ -36,7 +36,7 @@ import type {
  * {@link makeNavigationCore} owns successive snapshots for its provider Scope.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Backend history state
  */
 export type NavigationState = {
   /**
@@ -51,7 +51,7 @@ export type NavigationState = {
    * mutating the array while a transition is running.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Backend history state
    */
   readonly entries: ReadonlyArray<Destination>;
   /**
@@ -66,7 +66,7 @@ export type NavigationState = {
    * replacement snapshot. Callers must keep it within the `entries` bounds.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Backend history state
    */
   readonly index: number;
   /**
@@ -81,7 +81,7 @@ export type NavigationState = {
    * identity before clearing it so an interrupted older transition cannot erase a newer one.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Backend history state
    */
   readonly transition: Option.Option<Transition>;
 };
@@ -119,7 +119,7 @@ const MAX_DEPTH = 10;
  * const NavigationLive = makeNavigationCore("https://example.com", "/", state, commit)
  * ```
  * @since 1.0.0
- * @category advanced
+ * @category Backend history state
  */
 export const makeNavigationCore = Effect.fn(function* (
   origin: string,
@@ -535,7 +535,7 @@ function makeRedirectEvent(
  * const url = getUrl("https://example.com", "/account")
  * ```
  * @since 1.0.0
- * @category advanced
+ * @category URL resolution
  */
 export const getUrl = (origin: string, urlOrPath: string | URL): URL =>
   typeof urlOrPath === "string" ? new URL(urlOrPath, origin) : urlOrPath;

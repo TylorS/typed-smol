@@ -25,7 +25,7 @@ import { getHydrationRoot, type HydrationNode } from "./internal/hydration.js";
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category Hydration context
  * @stability internal-but-published
  */
 export type HydrateContext = {
@@ -63,7 +63,7 @@ export type HydrateContext = {
  * ```
  *
  * @since 1.0.0
- * @category services
+ * @category Hydration context
  * @stability internal-but-published
  */
 export const HydrateContext = Context.Service<HydrateContext>("@typed/html/HydrateContext");
@@ -98,7 +98,7 @@ export const HydrateContext = Context.Service<HydrateContext>("@typed/html/Hydra
  * @param rootElement - The root DOM element where hydration should begin.
  * @returns A `ServiceMap` containing the `HydrateContext`.
  * @since 1.0.0
- * @category constructors
+ * @category Hydration context
  */
 export const makeHydrateContext = (rootElement: HTMLElement): Context.Context<never> => {
   try {

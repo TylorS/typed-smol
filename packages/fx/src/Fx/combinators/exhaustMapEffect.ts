@@ -44,7 +44,7 @@ import type { FlatMapEffectLike } from "./flatMapEffect.js";
  * @param f - A function that maps an element `A` to an `Effect<B>`.
  * @returns An `Fx` that emits the results of the active effect.
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const exhaustMapEffect: FlatMapEffectLike = dual(
   2,

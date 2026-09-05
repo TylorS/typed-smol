@@ -1,134 +1,138 @@
 ---
 title: "What a template can render"
 summary: "See how ordinary values, Effect values, streams, arrays, and renderer output become one template part without losing errors or requirements."
-section: "Templates"
+section: "Template authoring"
 kind: "concept"
-order: 3.2
+order: 3
 ---
 
-An interpolation accepts ordinary data, nested structure, an Effect value, a Stream, an `Fx`, a
-`RefSubject`, or already-rendered output. The part where you interpolate it decides how it becomes
-output; the template does not turn it into a component instance first.
+A saved-article page needs several kinds of output: a fixed heading, a query that changes, data
+loaded through a service, a group of links, and perhaps an empty state. They do not need to be
+converted into one special component-object format. Typed accepts ordinary values and Effect
+producers, then interprets them according to the position where they are rendered.
+
+Start with [Authoring Typed templates](/explore/authoring-typed-templates). This article answers the
+next design question: what should a component return, or pass into an interpolation, when its data
+isn't simply a string?
+
+## Distinguish a value from the producer of that value
+
+A string already exists. An Effect describes work that can obtain a value once. An Fx or Stream
+describes values arriving over time. The following view puts each into a different part:
 
 ```ts
 import { Effect, Stream } from "effect";
 import { Fx } from "@typed/fx";
 import { html } from "@typed/template";
 
-const greeting = Effect.succeed("Welcome back");
-const notices = Fx.fromIterable(["First sync complete", "All changes saved"]);
-const regions = Stream.fromIterable(["us-east", "eu-west"]);
+const owner = Effect.succeed("Ada");
+const query = Fx.fromIterable(["", "scope"]);
+const syncStatus = Stream.fromIterable(["Checking", "Up to date"]);
 
-export const statusPanel = html`<section>
-  <h1>${greeting}</h1>
-  <p>${notices}</p>
-  <p>Replicas: ${regions}</p>
-</section>`;
+export const header = html`<header>
+  <h1>${owner}'s saved articles</h1>
+  <p>Query: ${query}</p>
+  <output>${syncStatus}</output>
+</header>`;
 ```
 
-## The normalization matrix
+In a DOM render, each `query` emission updates its own position; it does not append another paragraph.
+The Effect runs when rendering starts, not when the module defines `owner`. A real `RefSubject` can
+replace the short demonstration Fx without changing the template's interpolation syntax.
 
-The same value means different work in a node position and a named element part.
+A server response needs a finite result. Its HTML renderer takes initial ordinary producer values
+rather than waiting forever for future changes. A source with no initial value can therefore stall
+server output. [Rendering HTML on the server](/explore/rendering-html-on-the-server) explains that
+boundary and the distinct protocol for ordered renderer-owned HTML chunks.
 
-| Interpolated value | Node position | Attribute, property, class, or data part |
+## Let the position decide the interpretation
+
+A value accepted by the broad `Renderable` contract is not meaningful in every position. An object
+can describe `.data` keys or a DOM property; that does not turn an arbitrary record into child markup.
+
+| Input | In a child position | In a named element part |
 | --- | --- | --- |
-| string, number, bigint | text | serialized value or direct property value |
-| `boolean` | text (`"true"` or `"false"`) | string for attributes; truthiness for a boolean part |
-| `null`, `undefined` | empty range | remove an attribute; direct assignment for a property |
-| array | combine normalized entries in source order | part-specific: class tokens or the property's array value |
-| `Option<A>` | `None` is empty; `Some` normalizes its value | normalize the selected value for the part |
-| `Effect<A, E, R>` | run once, then normalize `A` | run once, then update the field |
-| `Stream<A, E, R>` or `Fx<A, E, R>` | replace the local part per emission | update the named field per emission |
-| `RefSubject<A, E, R>` | live state source | live state source |
-| nested template / `RenderEvent` | render into this local range | use the matching part contract, not a generic attribute |
+| string, number, bigint | text | serialized attribute or direct property value |
+| boolean | text, including `"false"` | attribute string or boolean-part truthiness |
+| null or undefined | empty output | attribute removal or direct property assignment |
+| array | ordered normalized entries | class collection or the property's array value |
+| `Option` | `None` is empty; `Some` selects its contained value | interpreted by the chosen part |
+| Effect | obtain its result, then normalize it | obtain the field's value |
+| Fx, Stream, RefSubject | update the local output as values arrive | update the captured field |
+| nested template or RenderEvent | renderer output in this position | not a generic attribute value |
 
-The first emitted `notices` value appears in the `<p>`, then the second replaces that same local
-part. No sibling or parent tree is walked to find it. On an HTML target, a response needs a finite
-answer, so live sources are read as response data rather than kept open indefinitely; see
-[Rendering HTML on the server](/explore/rendering-html-on-the-server).
+Unlike conditional JSX conventions, a boolean child is displayed data. Return `null` or the desired
+view when a condition should hide content. Arrays are recognized; arbitrary Sets, generators, and
+iterables are not implicitly rendered collections. Convert a fixed iterable to an array deliberately.
 
-A boolean in a node position is data, not conditional JSX. If a condition should choose a view,
-map it to the intended output, such as a nested template or `null`. Arrays are supported directly;
-a Set, generator, or arbitrary JavaScript iterable is not implicitly a rendered collection. Convert
-it to an array before interpolating it.
+## Return the output that fits the component
 
-A record is useful for `.data`, a spread, or a property that expects an object. That does not make
-an arbitrary object valid node output. Return a nested template or a `DomRenderEvent` when the value
-represents structure. At a root, array, Option, or Effect boundary the renderer can lift nested
-values; an ordinary Fx's emissions are its update payloads. Do not assume every emitted value is
-recursively subscribed as a new child Fx. Compose higher-order producers explicitly with the
-appropriate Fx switching operator before handing the result to a part.
-
-## Errors and requirements compose
-
-An `Effect` is a value that can succeed, fail with an expected error, and require a service. Those
-channels remain in the template's inferred type. This matters because a caller can decide at the
-composition edge which real service to provide and how an expected failure becomes UI.
+A helper does not need an extra element merely to return several pieces, and a helper with no
+setup does not need a component generator:
 
 ```ts
-import { Context, Data, Effect, Layer } from "effect";
 import { html } from "@typed/template";
 
-class ProfileUnavailable extends Data.TaggedError("ProfileUnavailable")<{
-  readonly userId: string;
+export const EmptyResults = (query: string, canSave: boolean) => {
+  return [
+    html`<h2>No saved articles match ${query}</h2>`,
+    canSave ? html`<p>Save an article to include it in future searches.</p>` : null,
+  ];
+};
+
+export const ReadOnlyNotice = "This collection is read-only.";
+```
+
+Interpolate `EmptyResults(query, canSave)` as an ordered group. No wrapper is added around the
+heading and paragraph. When setup does need a generator, `component` accepts these same return
+forms directly: a template, ordinary data, an Effect, or native output. Returning a DOM node
+deliberately makes that component browser-specific; renderer
+neutrality depends on its actual values and services, not on the constructor alone.
+
+An array describes order, not the enduring identity of domain records. If saved articles can be
+inserted, removed, or reordered, use [keyed collections](/explore/keyed-template-collections).
+
+## Keep errors and service requirements attached to the view
+
+Loading a collection name can fail or require a service. Preserve those facts instead of starting
+an untracked Promise while constructing the template:
+
+```ts
+import { Context, Data, Effect } from "effect";
+import { component } from "@typed/ui/Component";
+import { html } from "@typed/template";
+
+class CollectionMissing extends Data.TaggedError("CollectionMissing")<{
+  readonly id: string;
 }> {}
 
-interface Profiles {
-  readonly displayName: (userId: string) => Effect.Effect<string, ProfileUnavailable>;
+interface Collections {
+  readonly title: (id: string) => Effect.Effect<string, CollectionMissing>;
 }
+const Collections = Context.Service<Collections>("Collections");
 
-const Profiles = Context.Service<Profiles>("Profiles");
-
-const displayName = Effect.gen(function* () {
-  const profiles = yield* Profiles;
-  return yield* profiles.displayName("ada");
-});
-
-export const accountBadge = html`<p>Signed in as ${displayName}</p>`;
-
-export const ProfilesLive = Layer.succeed(Profiles)({
-  displayName: (userId) =>
-    userId === "ada"
-      ? Effect.succeed("Ada Lovelace")
-      : Effect.fail(new ProfileUnavailable({ userId })),
+export const CollectionHeading = component(function* (id: string) {
+  const collections = yield* Collections;
+  return html`<h1>${collections.title(id)}</h1>`;
 });
 ```
 
-`accountBadge` retains `ProfileUnavailable` and `Profiles`, rather than converting either to an
-untyped promise or a hidden render-time global. Provide `ProfilesLive` with the DOM or HTML renderer
-at the application boundary, not inside the template module. Effect's [services guide](https://effect.website/docs/v4/requirements-management/services/)
-explains this dependency channel in depth.
+The inferred component output retains both `CollectionMissing` and the `Collections` requirement.
+Effect's [service contract](https://github.com/Effect-TS/effect/blob/main/migration/services.md)
+defines how `Context.Service` makes that dependency explicit.
+Its caller decides which service to provide and how failure becomes a recovery view. The component
+neither hides a global client nor promises that every render succeeds. See the
+[Renderable reference](/reference/modules/%40typed%2Ftemplate%2FRenderable) for channel inference.
 
-## Arrays describe output; streams describe change
+## Flatten producer relationships before rendering
 
-An array is recursively normalized once in its source order. It is ideal for a fixed group of child
-templates. An `Fx` says a producer decides when a new value exists, so each emission updates the
-one part that owns it. Mixing the two is normal: an Fx can emit an array, and the current array can
-describe the current local range.
+An ordinary Fx's emitted values are update payloads. Do not assume that emitting another Fx causes
+the template to recursively subscribe to a new nested producer. If the query selects a request
+stream, choose the intended switching/concurrency operator first and give the part the resulting
+output stream. Returning an Effect whose result is normalized is a different boundary from emitting
+arbitrary higher-order streams.
 
-```ts
-import { Fx } from "@typed/fx";
-import { html } from "@typed/template";
-
-const shortcuts = ["Open command palette", "Toggle sidebar", "Search docs"];
-const activeShortcut = Fx.fromIterable([shortcuts[0], shortcuts[1]]);
-
-const shortcutList = shortcuts.map((shortcut) => html`<li>${shortcut}</li>`);
-
-export const help = html`<aside>
-  <p>Current shortcut: ${activeShortcut}</p>
-  <ul>${shortcutList}</ul>
-</aside>`;
-```
-
-The list's individual `<li>` templates are normal nested output. The current-shortcut paragraph
-has one captured text part, so each `Fx` emission changes that target directly. If the list itself
-can add, remove, or reorder items while mounted, use stable keys rather than treating array indexes
-as identity.
-
-## Behavior and testing
-
-Calling `html` is inert: it starts neither an Effect nor a stream subscription. The rendering Scope
-owns those subscriptions and closes them on interruption. Test the `Profiles` operation as ordinary
-Effect logic first; use a DOM test only to assert that a particular part received the expected browser
-value. The next guide covers the live collection case where identity—not merely a new value—matters.
+When a view displays an unexpected object, inspect the payload and its destination part. When it
+never appears, inspect whether its producer emits and whether required services were supplied.
+When a stale request wins, inspect the producer's concurrency policy. Those are different failures;
+adding another template wrapper does not solve them.

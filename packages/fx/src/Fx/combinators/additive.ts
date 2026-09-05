@@ -45,7 +45,7 @@ import { zip } from "./zip.js";
  * @param that - The second Fx stream.
  * @returns An Fx that emits values from both streams.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const merge: {
   <A2, E2, R2>(that: Fx<A2, E2, R2>): <A, E, R>(self: Fx<A, E, R>) => Fx<A | A2, E | E2, R | R2>;
@@ -97,7 +97,7 @@ export const merge: {
  * @param that - The second Fx stream (run after the first completes).
  * @returns An Fx that emits values from the first stream, then the second.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const concat: {
   <A2, E2, R2>(that: Fx<A2, E2, R2>): <A, E, R>(self: Fx<A, E, R>) => Fx<A | A2, E | E2, R | R2>;
@@ -143,7 +143,7 @@ export const concat: {
  * @param that - The second Fx stream.
  * @returns An Fx that emits values from the left stream only.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const zipLeft: {
   <A2, E2, R2>(that: Fx<A2, E2, R2>): <A, E, R>(self: Fx<A, E, R>) => Fx<A, E | E2, R | R2>;
@@ -182,7 +182,7 @@ export const zipLeft: {
  * @param that - The second Fx stream.
  * @returns An Fx that emits values from the right stream only.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const zipRight: {
   <A2, E2, R2>(that: Fx<A2, E2, R2>): <A, E, R>(self: Fx<A, E, R>) => Fx<A2, E | E2, R | R2>;
@@ -227,7 +227,7 @@ type TaggedRight<A2> = { readonly _tag: "Right"; readonly value: A2 };
  * @param that - The second Fx stream (values are dropped).
  * @returns An Fx that emits only values from the left stream.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const mergeLeft: {
   <A2, E2, R2>(that: Fx<A2, E2, R2>): <A, E, R>(self: Fx<A, E, R>) => Fx<A, E | E2, R | R2>;
@@ -274,7 +274,7 @@ export const mergeLeft: {
  * @param that - The second Fx stream.
  * @returns An Fx that emits only values from the right stream.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const mergeRight: {
   <A2, E2, R2>(that: Fx<A2, E2, R2>): <A, E, R>(self: Fx<A, E, R>) => Fx<A2, E | E2, R | R2>;

@@ -14,7 +14,7 @@ import { RandomValues } from "./RandomValues.js";
  * import { NanoId } from "@typed/id/NanoId"
  * const id = NanoId.make("V1StGXR8_Z5jdHi6B-myT")
  * ```
- * @category Schemas
+ * @category ID schemas
  * @since 1.0.0
  */
 export const NanoId = Schema.String.pipe(
@@ -35,7 +35,7 @@ export type NanoId = typeof NanoId.Type;
  * import { isNanoId } from "@typed/id/NanoId"
  * isNanoId("V1StGXR8_Z5jdHi6B-myT")
  * ```
- * @category Refinements
+ * @category ID validation
  * @since 1.0.0
  */
 export const isNanoId: (value: string) => value is NanoId = Schema.is(NanoId);
@@ -56,7 +56,7 @@ type NanoIdSeed = Uint8Array & { length: 21 };
  * import { Effect } from "effect"
  * const id = Effect.provide(nanoId, RandomValues.Default)
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const nanoId: Effect.Effect<NanoId, never, RandomValues> = Effect.map(

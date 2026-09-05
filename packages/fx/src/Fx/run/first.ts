@@ -35,7 +35,7 @@ import { collectUpTo } from "./collect.js";
  * @param fx - The `Fx` stream.
  * @returns An `Effect` that produces `Some(firstValue)` or `None`.
  * @since 1.0.0
- * @category runners
+ * @category Collecting values
  */
 export function first<A, E, R>(fx: Fx<A, E, R>): Effect<Option<A>, E, R> {
   return pipe(fx, collectUpTo(1), map(head));

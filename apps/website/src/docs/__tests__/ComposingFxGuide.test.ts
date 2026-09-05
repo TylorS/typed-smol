@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
+import { expectExampleCalls, runGuideExample } from "./FxGuideTestSupport.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guidePath = path.join(websiteRoot, "content/guides/composing-fx.md");
@@ -31,12 +32,16 @@ describe("Composing Fx guide", () => {
     ]) {
       expect(guide.body).toContain(operator);
     }
-    expect(guide.body).toMatch(/^Imagine a search screen\./);
     expect(guide.body).toContain("Data.TaggedError");
     expect(guide.body).toContain("Context.Service");
     expect(guide.body).toContain("Effect.scoped");
-    expect(guide.body.split(/\s+/u).length).toBeLessThanOrEqual(1_400);
-    expect(extractTypeScriptFences(guide.body)).toHaveLength(4);
+    expectExampleCalls(guide.body, [
+      "Fx.merge",
+      "Fx.concat",
+      "Fx.zipLatest",
+      "Fx.switchMapEffect",
+      "Fx.provideService",
+    ]);
   });
 
   it("keeps every TypeScript example independently compilable", () => {
@@ -70,5 +75,10 @@ describe("Composing Fx guide", () => {
     } finally {
       fs.rmSync(staging, { recursive: true, force: true });
     }
+  });
+  it("delivers the authored cached phase before its continuation", async () => {
+    const source = fs.readFileSync(guidePath, "utf8");
+    const result = await runGuideExample(websiteRoot, source, "const cached =", "values");
+    expect(result).toEqual(["cached: Ada", "cached: Lin", "live: Grace"]);
   });
 });

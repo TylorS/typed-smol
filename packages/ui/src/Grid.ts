@@ -8,6 +8,8 @@
  * the state and pure operations without mounting UI, or supply custom hosts without replacing native
  * events and browser-owned focus.
  *
+ * Learn the interaction in the [Grid guide](/explore/ui-grid).
+ *
  * @since 1.0.0
  * @category modules
  * @packageDocumentation
@@ -29,31 +31,17 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /**
- * Complete renderer-independent state for Grid.
+ * The cell ID exposed by the root through `aria-activedescendant`.
+ * Native focus stays on the root; selected cells and editing state are not stored here.
  *
- * @remarks
- * ## Why
- *
- * Applications can inspect, update, and test Grid behavior without mounting or coupling the state
- * to a renderer.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { State } from "@typed/ui/Grid";` Extend the [Grid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FGrid%23makeState). Inside the linked program,
- * `const snapshot: State = yield* state` exposes the active grid-cell id.
  * @since 1.0.0
- * @category models
+ * @category Cell focus
  */
 export interface State {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly activeId: string | null;
 }
@@ -61,29 +49,14 @@ export interface State {
 /**
  * Initial Grid values. activeId defaults to null.
  *
- * @remarks
- * ## Why
- *
- * Making initialization explicit documents hydration-sensitive defaults and lets servers and
- * clients construct matching state.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InitialState } from "@typed/ui/Grid";` Extend the [Grid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FGrid%23makeState). Construct state with
- * `const initial: InitialState = { activeId: "r1c1" }; const state = yield* Grid.makeState(initial)`.
  * @since 1.0.0
- * @category models
+ * @category Cell focus
  */
 export interface InitialState {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly activeId?: string | null;
 }
@@ -92,15 +65,6 @@ export interface InitialState {
  * Effect Schema used by makeState to encode, decode, and hydrate Grid state.
  *
  * @remarks
- * ## Why
- *
- * A public schema makes hydration and serialized state use the same runtime validation as direct
- * construction.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
  * @example
  * ```ts
  * import * as Schema from "effect/Schema";
@@ -109,7 +73,7 @@ export interface InitialState {
  * const decodeState = Schema.decodeUnknownEffect(Grid.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Cell focus
  */
 export const StateSchema = Schema.Struct({ activeId: Schema.NullOr(Schema.String) });
 
@@ -117,12 +81,6 @@ export const StateSchema = Schema.Struct({ activeId: Schema.NullOr(Schema.String
  * Creates hydrated Grid state. activeId defaults to null.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect creates the RefSubject when run. That state is renderer-independent;
  * collection registrations belong to the separate Scope that runs register or ref, not to state
  * creation.
@@ -141,7 +99,7 @@ export const StateSchema = Schema.Struct({ activeId: Schema.NullOr(Schema.String
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Cell focus
  */
 export function makeState(initial: InitialState = {}) {
   return RefSubject.hydrate(StateSchema, { activeId: initial.activeId ?? null });
@@ -151,36 +109,24 @@ export function makeState(initial: InitialState = {}) {
  * Logical coordinates stored with each registered Grid cell.
  *
  * @remarks
- * ## Why
- *
  * The public model lets custom composites reuse Grid's deterministic policy without copying an
  * internal shape.
  *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { CellPosition } from "@typed/ui/Grid";` Extend the [Grid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FGrid%23makeState). A registered cell identifies its
- * logical row and one-based column:
- * `const position: CellPosition = { rowId: "r1", columnIndex: 1 }`.
  * @since 1.0.0
- * @category models
+ * @category Cell registration
  */
 export interface CellPosition {
   /**
    * Stable logical row identity used by vertical grid movement.
    * @since 1.0.0
-   * @category models
+   * @category Row identity
    */
   readonly rowId: string;
   /**
    * Caller-supplied column index used for movement and emitted unchanged as aria-colindex; ARIA
    * indexes are one-based.
    * @since 1.0.0
-   * @category models
+   * @category Cell position
    */
   readonly columnIndex: number;
 }
@@ -189,12 +135,6 @@ export interface CellPosition {
  * Creates a scoped Collection for Grid items.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
  * owned by the Scope that runs register, independently of this construction Effect.
  *
@@ -211,7 +151,7 @@ export interface CellPosition {
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Cell registration
  */
 export const makeCollection = Collection.makeState<CellPosition>;
 
@@ -219,24 +159,11 @@ export const makeCollection = Collection.makeState<CellPosition>;
  * Sets activeId, including null to clear virtual focus.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes Grid's transition directly so callers can compose it in Effect programs
  * and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { activate } from "@typed/ui/Grid";` Extend the [Grid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FGrid%23makeState). Inside the linked Effect program invoke
- * `yield* activate(state, "item-2")`, then read the state snapshot to observe the transition
- * described above.
  * @since 1.0.0
- * @category combinators
+ * @category Cell focus
  */
 export function activate<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -248,53 +175,38 @@ export function activate<E, R>(
 /**
  * Inputs accepted by Grid.Root in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { RootOptions } from "@typed/ui/Grid";` Extend the [Grid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FGrid%23makeState). Wire keyboard navigation with
- * `const options: RootOptions = { state, collection, label: "Schedule", content: "Rows" }`.
  * @since 1.0.0
- * @category models
+ * @category Grid surface
  */
 export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<CellPosition>>;
   /**
    * Accessible label rendered through aria-label.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly label: Renderable.Any<string | null | undefined>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Whether aria-multiselectable is announced on the grid.
    * @since 1.0.0
-   * @category models
+   * @category Selection state
    */
   readonly multiselectable?: Renderable.Any<boolean | null | undefined>;
 }
@@ -338,25 +250,12 @@ type RootInternalProps<Options extends RootOptions> = ReturnType<
  * focus.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Root } from "@typed/ui/Grid";` Extend the [Grid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FGrid%23makeState). Replace the linked program's final snapshot
- * read with `Root({ state, label: "Schedule", content: "Rows" })`; render that Fx before the same
- * Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Grid surface
  */
 export function Root<const Options extends RootOptions, const Host extends HostResult = never>(
   options: Options,
@@ -384,35 +283,20 @@ export function Root<const Options extends RootOptions, const Host extends HostR
 /**
  * Inputs accepted by Grid.Row in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { RowOptions } from "@typed/ui/Grid";` Extend the [Grid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FGrid%23makeState). Expose optional ARIA position with
- * `const options: RowOptions = { rowIndex: 1, content: "Cells" }`.
  * @since 1.0.0
- * @category models
+ * @category Rows
  */
 export interface RowOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Optional one-based aria-rowindex value supplied by the caller.
    * @since 1.0.0
-   * @category models
+   * @category Cell position
    */
   readonly rowIndex?: Renderable.Any<number | null | undefined>;
 }
@@ -428,13 +312,6 @@ type RowInternalProps<Options extends RowOptions> = ReturnType<typeof rowInterna
  * Renders an ARIA row and forwards an optional one-based aria-rowindex.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
@@ -446,7 +323,7 @@ type RowInternalProps<Options extends RowOptions> = ReturnType<typeof rowInterna
  * const view = Grid.Row({ rowIndex: 1, content: "Cells" });
  * ```
  * @since 1.0.0
- * @category components
+ * @category Rows
  */
 export function Row<const Options extends RowOptions, const Host extends HostResult = never>(
   options: Options,
@@ -478,72 +355,57 @@ export function Row<const Options extends RowOptions, const Host extends HostRes
 /**
  * Inputs accepted by Grid.Cell in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { CellOptions } from "@typed/ui/Grid";` Extend the [Grid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FGrid%23makeState). A navigable cell is
- * `const options: CellOptions = { state, collection, id: "r1c1", rowId: "r1", columnIndex: 1, content: "Monday" }`.
  * @since 1.0.0
- * @category models
+ * @category Cells and headers
  */
 export interface CellOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<CellPosition>>;
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Stable logical row identity used by vertical grid movement.
    * @since 1.0.0
-   * @category models
+   * @category Row identity
    */
   readonly rowId: string;
   /**
    * Caller-supplied column index used for movement and emitted unchanged as aria-colindex; ARIA
    * indexes are one-based.
    * @since 1.0.0
-   * @category models
+   * @category Cell position
    */
   readonly columnIndex: number;
   /**
    * Optional one-based aria-rowindex value supplied by the caller.
    * @since 1.0.0
-   * @category models
+   * @category Cell position
    */
   readonly rowIndex?: number;
   /**
    * Optional selected state exposed through aria-selected.
    * @since 1.0.0
-   * @category models
+   * @category Selection state
    */
   readonly selected?: Renderable.Any<boolean | null | undefined>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -602,25 +464,12 @@ function cell<const Options extends CellOptions, const Host extends HostResult>(
  * Renders and optionally registers a gridcell with row and column coordinates.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Cell } from "@typed/ui/Grid";` Extend the [Grid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FGrid%23makeState). Replace the linked program's final snapshot
- * read with `Cell({ state, id: "r1c1", rowId: "r1", columnIndex: 1, content: "Monday" })`; render
- * that Fx before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Cells and headers
  */
 export function Cell<const Options extends CellOptions, const Host extends HostResult = never>(
   options: Options,
@@ -637,25 +486,12 @@ export function Cell<const Options extends CellOptions, const Host extends HostR
  * Renders the Cell contract with the columnheader role.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { ColumnHeader } from "@typed/ui/Grid";` Extend the [Grid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FGrid%23makeState). Replace the linked program's final snapshot
- * read with `ColumnHeader({ state, id: "day", rowId: "headers", columnIndex: 1, content: "Day" })`;
- * render that Fx before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Cells and headers
  */
 export function ColumnHeader<
   const Options extends CellOptions,
@@ -675,25 +511,12 @@ export function ColumnHeader<
  * Renders the Cell contract with the rowheader role.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { RowHeader } from "@typed/ui/Grid";` Extend the [Grid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FGrid%23makeState). Replace the linked program's final snapshot
- * read with `RowHeader({ state, id: "week-1", rowId: "week-1", columnIndex: 1, content: "Week 1"
- * })`; render that Fx before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Cells and headers
  */
 export function RowHeader<const Options extends CellOptions, const Host extends HostResult = never>(
   options: Options,
@@ -725,12 +548,8 @@ function onKeyDown(
  * in-column, and Ctrl+Home/End reaches grid endpoints.
  *
  * @remarks
- * ## Why
- *
  * Separating this deterministic policy from event wiring lets applications test it directly and
  * reuse it in custom composites.
- *
- * ## Ownership and lifetime
  *
  * This is a synchronous calculation. It acquires no resources and does not mutate the input array,
  * state, event, or DOM.
@@ -742,7 +561,7 @@ function onKeyDown(
  * const nextId = Grid.moveActiveId([{ id: "a", value: { rowId: "r1", columnIndex: 1 } }], "a", { key: "ArrowRight", ctrlKey: false });
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Spatial navigation
  */
 export function moveActiveId(
   items: readonly Collection.Item<CellPosition>[],

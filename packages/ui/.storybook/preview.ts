@@ -1,5 +1,9 @@
 import type { Preview } from "@storybook/html-vite";
 import "./preview.css";
+import { observeTheme } from "./theme.js";
+
+const stop = observeTheme(() => {});
+if (import.meta.hot) import.meta.hot.dispose(stop);
 
 const preview = {
   parameters: {

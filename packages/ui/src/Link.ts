@@ -1,3 +1,14 @@
+/**
+ * Native anchors with selective same-origin Navigation interception.
+ * Modified clicks, external links, downloads, and non-self targets retain native behavior.
+ *
+ * Read the [Link guide](/explore/ui-link) for a complete example.
+ *
+ * [APG interaction reference](https://www.w3.org/WAI/ARIA/apg/patterns/link/).
+ * @since 1.0.0
+ * @category Overview
+ * @packageDocumentation
+ */
 import * as Effect from "effect/Effect";
 import type { Scope } from "effect/Scope";
 import * as Stream from "effect/Stream";
@@ -17,19 +28,11 @@ import type { HostResult } from "./Dom/Types.js";
  * Native anchor options plus Typed navigation behavior.
  *
  * @remarks
- * ## Why
- *
  * `href` and content remain renderable, while `replace` selects history policy.
  * Ordinary anchor options—including target, download, rel, and user click
  * handlers—stay available through the DOM host model.
- *
- * ## Ownership and lifetime
- *
- * Options are inert. Rendering owns subscriptions to renderable values and the
- * click listener for its Effect Scope; the `Navigation` service owns history.
- *
  * @since 1.0.0
- * @category models
+ * @category Component options
  */
 export type LinkOptions = Dom.HostOptions<HTMLAnchorElement> &
   Dom.ElementOptions<HTMLAnchorElement> & {
@@ -133,14 +136,10 @@ function internalProps<const Options extends LinkOptions>(options: Options) {
  * internal navigation decision.
  *
  * @remarks
- * ## Why
- *
  * `Link` keeps the anchor as the integration boundary: native opening, copying,
  * status previews, modifier keys, downloads, and external navigation continue
  * to work. Only an unmodified primary click to same-origin HTTP(S) is handed to
  * Typed's Effect-native `Navigation` service.
- *
- * ## Ownership and lifetime
  *
  * Calling `Link` starts no work. Running the returned Fx subscribes to dynamic
  * href/content and installs a real, non-passive DOM click listener in its
@@ -151,17 +150,25 @@ function internalProps<const Options extends LinkOptions>(options: Options) {
  *
  * @example
  * ```ts
- * import { Link } from "@typed/ui/Link"
+ * import { html } from "@typed/template";
+ * import { Link } from "@typed/ui/Link";
  *
- * const profile = Link({
- *   href: "/account/profile",
- *   content: "Profile",
- *   replace: false
- * })
+ * export const AccountLinks = html`<nav aria-label="Account">
+ *     ${Link({ href: "/account/profile", content: "Edit profile" })}
+ *     ${Link({
+ *       href: "/account/security",
+ *       content: "Security settings",
+ *       replace: false,
+ *     })}
+ *     ${Link({
+ *       href: "https://www.w3.org/WAI/",
+ *       content: "Accessibility resources (opens in a new tab)",
+ *       props: { target: "_blank", rel: "noopener" },
+ *     })}
+ *   </nav>`;
  * ```
- *
  * @since 1.0.0
- * @category components
+ * @category Native controls
  */
 export function Link<const Options extends object>(
   options: Options,

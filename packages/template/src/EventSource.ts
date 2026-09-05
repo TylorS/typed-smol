@@ -60,7 +60,7 @@ type Handler<Ev extends Event> = EventHandler<Ev>;
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Delegated event sources
  */
 export interface EventSource {
   /**
@@ -78,7 +78,7 @@ export interface EventSource {
    * mount Scope independently owns its native attachments.
    *
    * @since 1.0.0
-   * @category methods
+   * @category Delegated registrations
    */
   readonly addEventListener: <Ev extends Event>(
     element: EventTarget,
@@ -101,7 +101,7 @@ export interface EventSource {
    * The supplied Scope removes listeners and interrupts handler fibers.
    *
    * @since 1.0.0
-   * @category methods
+   * @category Delegated mount lifetime
    */
   readonly setup: (rendered: Rendered, scope: Scope.Scope) => Effect.Effect<void>;
 }
@@ -161,7 +161,7 @@ const dispose = (d: Disposable): void => d[Symbol.dispose]();
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Delegated event sources
  */
 export function makeEventSource(): EventSource {
   const listeners = new Map<EventName, Set<Entry>>();

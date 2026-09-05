@@ -64,7 +64,7 @@ import type { EventHandlerInput, EventHandlerProperty } from "./Types.js";
  * ```
  *
  * @since 1.0.0
- * @category events
+ * @category Event composition
  */
 export function chainEvent<Ev extends Event, E1 = never, R1 = never, E2 = never, R2 = never>(
   user: EventHandlerInput<Ev, E1, R1>,
@@ -150,7 +150,7 @@ function trackPreventDefault<Ev extends Event>(
  * Pure predicate; it installs no listener and retains no key.
  *
  * @since 1.0.0
- * @category predicates
+ * @category Event inspection
  */
 export function isEventKey(key: string): key is EventHandlerProperty {
   return key[0] === "@" || (key[0] === "o" && key[1] === "n");
@@ -177,7 +177,7 @@ export function isEventKey(key: string): key is EventHandlerProperty {
  * ```
  *
  * @since 1.0.0
- * @category events
+ * @category Event inspection
  */
 export function currentTarget<Target extends EventTarget>(event: Event): Target {
   if (event.currentTarget === null) {
@@ -200,7 +200,7 @@ export function currentTarget<Target extends EventTarget>(event: Event): Target 
  * Pure read of the current event; no state or listener is retained.
  *
  * @since 1.0.0
- * @category events
+ * @category Event inspection
  */
 export function toggleState(event: Event): "open" | "closed" | undefined {
   const value = Reflect.get(event, "newState");

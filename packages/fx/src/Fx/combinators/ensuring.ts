@@ -40,7 +40,7 @@ import type { Fx } from "../Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Resource lifetime
  */
 export const ensuring: {
   <R2>(finalizer: Effect.Effect<void, never, R2>): <A, E, R>(self: Fx<A, E, R>) => Fx<A, E, R | R2>;

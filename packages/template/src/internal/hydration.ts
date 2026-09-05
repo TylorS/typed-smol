@@ -34,7 +34,6 @@ export function findHydrationTemplateByHash(
   return findHydrationTemplate(getChildNodes(many), hash);
 }
 
-
 export function getHydrationRoot(root: HTMLElement): HydrationElement {
   let hydrationNodes = getHydrationNodes(root.childNodes);
 
@@ -413,40 +412,27 @@ export const findHydratePath = (node: HydrationNode, path: ReadonlyArray<number>
     return getNodesExcludingStartComment(node)[0];
   }
 
-  // Get initial node without creating full array if possible
-  let current: Node;
-  const firstIndex = path[0];
-  if (node._tag === "element") {
-    current = node.parentNode;
-  } else if (node._tag === "literal") {
-    current = node.node;
-  } else {
-    // For holes, templates, many - need to get nodes array
-    const nodes = getNodesExcludingStartComment(node);
-    current = nodes[firstIndex];
+  // Parsed paths count each dynamic child position once, regardless of how
+  // many concrete nodes its server output contains. The captured hydration
+  // tree preserves those positions; walking childNodes would count that
+  // output and its template markers as additional static siblings.
+  let current = node;
+  const start = node._tag === "element" || node._tag === "literal" ? 1 : 0;
+  for (let i = start; i < path.length; i++) {
+    const child = getChildNodes(current)[path[i]];
+    if (child === undefined) throw new CouldNotFindRootElement(path[i]);
+    current = child;
   }
 
-  // Traverse remaining path indices
-  for (let i = 1; i < path.length; i++) {
-    const index = path[i];
-    // Use secondary index to skip start comments without creating intermediate arrays
-    let targetIndex = 0;
-
-    for (let j = 0; j < current.childNodes.length; j++) {
-      const child = current.childNodes[j];
-      if (isNotStartComment(child)) {
-        if (targetIndex === index) {
-          current = child;
-          break;
-        }
-        targetIndex++;
-      }
-    }
+  switch (current._tag) {
+    case "element":
+      return current.parentNode;
+    case "literal":
+      return current.node;
+    case "hole":
+      return current.endComment;
+    case "many":
+    case "template":
+      return getNodesExcludingStartComment(current)[0];
   }
-
-  return current;
 };
-
-function isNotStartComment(node: Node) {
-  return !isComment(node) || !node.data.startsWith("n_");
-}

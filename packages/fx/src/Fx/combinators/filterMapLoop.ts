@@ -31,7 +31,7 @@ import type { Fx } from "../Fx.js";
  * @param f - The loop function returning `Option<C>` and the new state.
  * @returns An `Fx` emitting the transformed values.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const filterMapLoop: {
   <B, A, C>(

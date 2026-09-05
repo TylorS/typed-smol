@@ -9,7 +9,7 @@
  * events and browser-owned focus.
  *
  * @since 1.0.0
- * @category modules
+ * @category Architecture overview
  * @packageDocumentation
  */
 import * as Effect from "effect/Effect";
@@ -38,43 +38,43 @@ import * as Equivalence from "effect/Equivalence";
  * its real DOM identity:
  * `const item: Item<string> = { id: "save", value: "save", element: document.createElement("button") }`.
  * @since 1.0.0
- * @category models
+ * @category Item metadata
  */
 export interface Item<Value = unknown, Element extends object = globalThis.Element> {
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Mounted element handle used for DOM ordering, focus, and scrolling.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly element?: Element;
   /**
    * Flag used by collection movement and widget handlers to skip activation by default.
    * @since 1.0.0
-   * @category models
+   * @category Availability
    */
   readonly disabled?: boolean;
   /**
    * Whether the item participates as a submenu entry.
    * @since 1.0.0
-   * @category models
+   * @category Nested menus
    */
   readonly submenu?: boolean;
   /**
    * Search text used by typeahead independently of rendered markup.
    * @since 1.0.0
-   * @category models
+   * @category Typeahead
    */
   readonly textValue?: string;
   /**
    * Current semantic value selected or edited by the widget.
    * @since 1.0.0
-   * @category models
+   * @category Item metadata
    */
   readonly value?: Value;
 }
@@ -98,7 +98,7 @@ export interface Item<Value = unknown, Element extends object = globalThis.Eleme
  * runnable setup](/reference/%40typed%2Fui%2FCollection%23makeState). Collection state is an
  * immutable sequence: `const snapshot: State<string> = [{ id: "save", value: "save" }]`.
  * @since 1.0.0
- * @category models
+ * @category Collection state
  */
 export type State<Value = unknown, Element extends object = globalThis.Element> = readonly Item<
   Value,
@@ -133,7 +133,7 @@ export type State<Value = unknown, Element extends object = globalThis.Element> 
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Collection state
  */
 export function makeState<Value = unknown, Element extends object = globalThis.Element>(
   initial: State<Value, Element> = [],
@@ -164,7 +164,7 @@ export function makeState<Value = unknown, Element extends object = globalThis.E
  * program invoke `yield* register(collection, { id: "save", value: "save" })`, then read the
  * collection to observe the inserted item.
  * @since 1.0.0
- * @category combinators
+ * @category Item registration
  */
 export function register<Value, Element extends object, E, R>(
   collection: RefSubject.RefSubject<State<Value, Element>, E, R>,
@@ -207,7 +207,7 @@ export function register<Value, Element extends object, E, R>(
  * program create `const attach = ref(collection, { id: "save", value: "save" })`, then run `yield*
  * attach(document.createElement("button"))` and read the collection before Scope close.
  * @since 1.0.0
- * @category combinators
+ * @category Item registration
  */
 
 export function ref<Value, Element extends object, E, R>(
@@ -238,7 +238,7 @@ export function ref<Value, Element extends object, E, R>(
  * program first register `"save"`, run `yield* unregister(collection, "save")`, then read the
  * collection to observe that only the matching id was removed.
  * @since 1.0.0
- * @category combinators
+ * @category Item registration
  */
 export function unregister<Value, Element extends object, E, R>(
   collection: RefSubject.RefSubject<State<Value, Element>, E, R>,
@@ -270,7 +270,7 @@ export function unregister<Value, Element extends object, E, R>(
  * const enabled = Collection.enabledItems([{ id: "a" }, { id: "b", disabled: true }]);
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Collection ordering
  */
 export function enabledItems<ItemType extends Item<unknown, object>>(
   items: readonly ItemType[],
@@ -300,7 +300,7 @@ export function enabledItems<ItemType extends Item<unknown, object>>(
  * const ordered = Collection.byDomOrder([{ id: "body", element: document.body }]);
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Collection ordering
  */
 export function byDomOrder<ItemType extends Item<unknown, object>>(
   items: readonly ItemType[],

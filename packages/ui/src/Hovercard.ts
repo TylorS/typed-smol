@@ -22,7 +22,7 @@ import * as NativePopover from "./NativePopover.js";
  * ## Ownership and lifetime
  * Plain data retains no resources; RefSubject observation is Scope-owned.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface State {
   /** Stable id used by `aria-controls` and content.
@@ -32,7 +32,7 @@ export interface State {
    * ## Ownership and lifetime
    * Plain data acquires no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly id: string;
   /** Whether the hovercard is open.
@@ -42,7 +42,7 @@ export interface State {
    * ## Ownership and lifetime
    * Plain data acquires no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open: boolean;
 }
@@ -54,7 +54,7 @@ export interface State {
  * ## Ownership and lifetime
  * Configuration is inert.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface InitialState {
   /** Stable content id.
@@ -64,7 +64,7 @@ export interface InitialState {
    * ## Ownership and lifetime
    * Plain data retains no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly id: string;
   /** Initial visibility, defaulting to false.
@@ -74,7 +74,7 @@ export interface InitialState {
    * ## Ownership and lifetime
    * Plain data retains no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open?: boolean;
 }
@@ -86,7 +86,7 @@ export interface InitialState {
  * ## Ownership and lifetime
  * The immutable schema acquires no resources.
  * @since 1.0.0
- * @category schemas
+ * @category Open state
  */
 export const StateSchema = Schema.Struct({ id: Schema.String, open: Schema.Boolean });
 
@@ -106,7 +106,7 @@ export const StateSchema = Schema.Struct({ id: Schema.String, open: Schema.Boole
  * })
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Open state
  */
 export function makeState(initial: InitialState) {
   return RefSubject.hydrate(StateSchema, { id: initial.id, open: initial.open ?? false });
@@ -129,7 +129,7 @@ export function makeState(initial: InitialState) {
  * })
  * ```
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export function setOpen<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -160,7 +160,7 @@ const scheduleOpen = Effect.fn(function* <E, R>(
  * ## Ownership and lifetime
  * Options are inert; rendering owns handlers/delayed effects by Scope.
  * @since 1.0.0
- * @category models
+ * @category Pointer and focus anchors
  */
 export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
   /** Hydrated state shared with hovercard content.
@@ -170,7 +170,7 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
    * ## Ownership and lifetime
    * The anchor borrows state; its original Scope owns it.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /** Anchor content.
@@ -181,7 +181,7 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the anchor Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /** Milliseconds before opening.
@@ -191,7 +191,7 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
    * ## Ownership and lifetime
    * New schedules invalidate older delayed updates.
    * @since 1.0.0
-   * @category timing
+   * @category Interaction delays
    */
   readonly showDelay?: number;
   /** Milliseconds before closing.
@@ -201,7 +201,7 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
    * ## Ownership and lifetime
    * New schedules invalidate older delayed updates.
    * @since 1.0.0
-   * @category timing
+   * @category Interaction delays
    */
   readonly hideDelay?: number;
 }
@@ -261,7 +261,7 @@ type AnchorInternalProps<Options extends AnchorOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Pointer and focus anchors
  */
 export function Anchor<const Options extends AnchorOptions, const Host extends HostResult = never>(
   options: Options,
@@ -319,7 +319,7 @@ type AccessibleName =
  * ## Ownership and lifetime
  * Options are inert; rendering owns content/listeners/native ref by Scope.
  * @since 1.0.0
- * @category models
+ * @category Native content host
  */
 export type ContentOptions = ContentOptionsBase & AccessibleName;
 
@@ -389,7 +389,7 @@ type ContentInternalProps<Options extends ContentOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Native content host
  */
 export function Content<
   const Options extends ContentOptions,
@@ -424,6 +424,6 @@ export function Content<
  * ## Ownership and lifetime
  * It has exactly the same Scope and native popover ownership as `Content`.
  * @since 1.0.0
- * @category aliases
+ * @category Native content host
  */
 export const Hovercard = Content;

@@ -31,7 +31,7 @@ import { make } from "./make.js";
  * @param iterable - The iterable to emit values from.
  * @returns An `Fx` that emits the values from the iterable.
  * @since 1.0.0
- * @category constructors
+ * @category Value sources
  */
 export const fromIterable = <A>(iterable: Iterable<A>): Fx<A> =>
   make<A>((sink) => forEach(iterable, sink.onSuccess, { discard: true }));

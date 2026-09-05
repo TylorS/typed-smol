@@ -6,16 +6,18 @@ kind: "guide"
 order: 1.1
 ---
 
-An `Fx<A, E, R>` can push zero or more `A` values, fail with `E`, and require services `R`.
-Construction is lazy: work begins when an Effect such as `Fx.observe` or `Fx.collectAll` runs it.
+A status panel can show a computed label, request the server's status once, or remain subscribed to
+changes. Those are different sources even when each emits a string. Pick a constructor that tells
+the truth about when work starts, how many values may arrive, and how the work stops.
 
-Start with the smallest constructor that tells the truth about the source.
+Read [Fx: work arrives](/explore/fx-push-reactivity) first. Here, every example builds a source and
+leaves its execution with an Effect consumer; construction alone starts nothing.
 
-## Start with one value
+## Capture a value or compute it when observed
 
-Use `Fx.succeed` when the value already exists. Use `Fx.sync` when it should be computed once for
-each run. A thrown exception in `sync` is a defect; expected failure belongs in `Effect.try` and
-`Fx.fromEffect`.
+[`Fx.succeed`](/reference/symbols/QHR5cGVkL2Z4L0Z4I3N1Y2NlZWQ) emits an existing value once.
+`Fx.sync` computes a value once per subscription. A status panel's fixed label can use `succeed`;
+a “requested at” timestamp should use `sync` if it means the time observation actually started.
 
 ```ts
 import { Effect } from "effect";
@@ -27,13 +29,13 @@ const requestedAt = Fx.sync(() => new Date());
 const program = Fx.collectAll(requestedAt).pipe(Effect.map(([date]) => date.toISOString()));
 ```
 
-Both Fx values emit exactly once and complete. Calling `Fx.collectAll(requestedAt)` still starts
-nothing; the date is created only when the resulting Effect runs.
+`succeed(new Date())` would capture construction time instead. This timing difference also applies
+to reading a mutable configuration object or the current selection. A thrown exception in `sync`
+is a defect; expected decoding failure belongs in `Effect.try`, lifted with `fromEffect`.
 
-## Emit a finite collection
+## Turn a finite batch into ordered delivery
 
-`Fx.fromIterable` gets a fresh iterator for each run, emits its values in order, and completes.
-Arrays, sets, and generators fit here. They are finite input, not live state.
+A list of known workspace IDs can be delivered without inventing a callback protocol:
 
 ```ts
 import { Effect } from "effect";
@@ -45,13 +47,15 @@ const program: Effect.Effect<ReadonlyArray<string>> = Fx.collectAll(ids);
 const result = await Effect.runPromise(program);
 ```
 
-`collectAll` is suitable because this source completes. Do not use it for an open event source: it
-retains every value until completion.
+`fromIterable` obtains an iterator per run and awaits each delivery before proceeding. `collectAll`
+is safe here because the source completes. Be careful with an already-created generator iterator:
+obtaining it again does not rewind it. If each run must enumerate from the beginning, construct the
+iterator inside [lazy setup](/explore/fx-dynamic-producers).
 
-## Lift an Effect
+## Make a cancelable one-shot request
 
-`Fx.fromEffect` runs one Effect per subscription. A success becomes one value; its full failure
-Cause goes downstream; its error and service channels remain in the Fx type.
+A network read is an Effect because it can fail and requires configuration. Lifting it should
+preserve both facts:
 
 ```ts
 import { Context, Data, Effect, Layer } from "effect";
@@ -70,7 +74,10 @@ const ApiConfig = Context.Service<ApiConfig>("docs/ApiConfig");
 const request = Effect.gen(function* () {
   const config = yield* ApiConfig;
   return yield* Effect.tryPromise({
-    try: () => fetch(config.endpoint).then((response) => response.text()),
+    try: (signal) => fetch(config.endpoint, { signal }).then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.text();
+    }),
     catch: (cause) => new RequestFailed({ cause }),
   });
 });
@@ -80,14 +87,20 @@ const ApiConfigLive = Layer.succeed(ApiConfig)({ endpoint: "/api/status" });
 const program = Fx.first(response).pipe(Effect.provide(ApiConfigLive));
 ```
 
-Use `Fx.fail(error)` for an immediate expected failure and `Fx.die(defect)` only for an unexpected
-invariant violation. Effect's [error guide](https://www.effect.website/docs/v4/error-management/expected-errors/)
-covers that distinction.
+The `ApiConfig` requirement remains until the application provides its Layer. The returned Fx emits
+one successful response or reports `RequestFailed`; a failed request is not an empty successful
+source. `Fx.first` stops after the first value and returns an Option, so callers still distinguish
+absence from failure.
 
-## Bring an Effect Stream across the boundary
+The request passes Effect's cancellation signal to `fetch`. Without that bridge, interrupting local
+observation would not cancel the underlying request. It also checks `response.ok`: the
+[fetch contract](https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch) resolves HTTP error
+responses normally, so status validation belongs in the adapter. `Fx.fail` constructs an expected
+failure directly; use `Fx.die` only for an unexpected invariant violation.
 
-Use `Fx.fromStream` when the producer already is an Effect Stream. It preserves values, failures,
-services, finalizers, and the delivery options supplied to Stream's `mapEffect`.
+## Reuse an existing Stream or Effect clock
+
+If a library already supplies an Effect Stream, keep its source contract and adapt it:
 
 ```ts
 import { Effect, Stream } from "effect";
@@ -99,13 +112,12 @@ const program = Fx.collectAll(source).pipe(
 );
 ```
 
-Use `Fx.toStream` in the other direction when an existing consumer needs Stream's pull model or
-buffering policies. The adapter is lazy in both directions; the consumer owns the run.
+`fromStream` preserves errors, requirements, and finalizers. `toStream` is the reverse boundary for
+an existing Stream consumer. Neither adapter starts work until its consumer runs.
 
-## Use Effect's clock
-
-`Fx.at(value, delay)` emits once after a delay. `Fx.periodic(period)` emits `void` after every period.
-For a complete recurrence policy, use `Fx.fromSchedule`. All three use Effect's interruptible clock.
+For timed status updates, use Effect's clock rather than an unowned interval. `Fx.at(value, delay)`
+emits once after a delay, `periodic(period)` emits `void` after each full period, and `fromSchedule`
+uses a recurrence policy:
 
 ```ts
 import { Effect, Fiber, Schedule } from "effect";
@@ -121,12 +133,15 @@ const test = Effect.gen(function* () {
 });
 ```
 
-There is no detached `setInterval`: interrupting the owner stops the wait and future ticks.
+The test fragment forks a bounded observation, advances the test clock, and joins its result.
+`Schedule.recurs(2)` produces two ticks through `fromSchedule`; it is not the same count as repeating
+an initial source twice. [Time and rate](/explore/fx-time-and-rate) supplies a complete test and
+explains debounce, throttle, and silence detection.
 
-## Adapt a callback
+## Register the live browser boundary
 
-`Fx.callback` is for DOM events, sockets, observers, and libraries that call a listener. Registration
-runs once per subscription. Return an Effect that removes exactly what it installed.
+A keyboard shortcut source has no natural last value. Its constructor must return the exact cleanup
+for the listener installed by that subscription:
 
 ```ts
 import { Effect } from "effect";
@@ -145,13 +160,14 @@ const shortcuts = keydowns.pipe(
 );
 ```
 
-Creating `keydowns` installs nothing. Running an observer installs the listener; completion or
-interruption removes it. `emit.succeed` starts asynchronous delivery immediately and returns the
-running delivery Fiber. It is not a Promise, and `void` is not required. If ordering or completion
-matters, coordinate that Fiber; otherwise the foreign callback may ignore its return value.
-`Fx.callback` does not invent a queue or backpressure policy, so deliveries may overlap.
+The listener does not exist until observation starts. Closing that observation removes it.
+`emit.succeed(event)` starts delivery and returns a Fiber; the browser does not await that Fiber.
+Rapid callbacks can therefore overlap even if each observer does asynchronous work. A Subject or
+explicit queue can serialize publications when the feature needs it; `callback` does not invent a
+queue or backpressure mechanism.
 
-When setup acquires a resource that must remain alive with the callback, put both in `Fx.genScoped`.
+A resourceful adapter has one further requirement: its connection must remain alive throughout
+listener delivery, not only during registration:
 
 ```ts
 import { Context, Effect } from "effect";
@@ -179,6 +195,11 @@ const messages: Fx.Fx<string, never, Connections> = Fx.genScoped(function* () {
 });
 ```
 
-Each run opens one connection. Callback cleanup removes its listener, then the subscription Scope
-closes the connection. `genScoped` removes `Scope` from the public requirements while retaining the
-real `Connections` requirement.
+`genScoped` encloses acquisition and the selected callback source. On exit, callback cleanup removes
+the listener and the connection finalizer closes the handle. On acquisition failure, there is no
+listener to install. On interruption while silent, both registered cleanups still run.
+
+Test those three paths before relying on the adapter: first value with `take(1)`, acquisition
+failure, and interruption before any value. A successful value assertion alone cannot reveal a
+listener leak. Continue with [dynamic producers](/explore/fx-dynamic-producers) when configuration
+selects the source, or [consumers](/explore/consuming-fx) to give a live source its owning execution.

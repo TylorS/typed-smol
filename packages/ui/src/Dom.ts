@@ -8,6 +8,6 @@
  * running Effect Scope.
  *
  * @since 1.0.0
- * @category dom
+ * @category DOM host contracts
  */
 export * from "./Dom/index.js";

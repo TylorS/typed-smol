@@ -19,7 +19,7 @@ import type { Guard, GuardInput } from "./index.js";
  * ```
  *
  * @since 1.0.0
- * @category Constructors
+ * @category Library adapters
  */
 export const getGuard = <I, O, E = never, R = never>(
   guard: GuardInput<I, O, E, R>,

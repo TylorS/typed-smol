@@ -25,7 +25,7 @@ import { takeUntil, takeUntilEffect } from "./takeUntil.js";
  * @param predicate - The predicate function.
  * @returns An `Fx` that emits while the predicate holds.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const takeWhile: {
   <A>(predicate: (a: A) => boolean): <E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;
@@ -57,7 +57,7 @@ export const takeWhile: {
  * @param predicate - Effectful predicate function.
  * @returns An `Fx` that emits while the predicate holds.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const takeWhileEffect: {
   <A, E2, R2>(

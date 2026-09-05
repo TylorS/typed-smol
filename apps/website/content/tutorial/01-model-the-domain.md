@@ -6,67 +6,54 @@ order: 1
 architecture: ["domain"]
 ---
 
-The domain names data and rules without knowing how the browser renders or stores them.
-Effect Schema gives the boundary one runtime codec and one inferred TypeScript type. Pure list
-functions make the rule independently testable and keep mutation policy out of event handlers.
+Two todos can have the same title. Give each one an ID so editing, moving, or deleting one never selects the other.
 
-## src/domain.ts
+## Describe a Todo in src/domain.ts
+
+```ts
+// @source examples/todo-1/src/domain.ts#L1-L15
+// @expect export const TodoId
+// @expect export const Todo =
+// @expect export const TodoList
+```
+
+`TodoId` brands a string: TypeScript can distinguish an ID from a title. `Todo` describes the fields we accept, and its inferred type keeps the runtime schema and TypeScript model together. The timestamp codec reads a string into a UTC value; we will use it when loading saved data.
+
+Keep committed text here. An unfinished edit belongs to the row, because cancelling it should leave this value alone.
+
+## Find an item by ID
+
+```ts
+// @source examples/todo-1/src/domain.ts#L20-L26
+// @expect export const updateTodo
+// @expect export const editText
+```
+
+`updateTodo` returns a new array, changing only the matching item. Items with other IDs keep their object identity. `editText` supplies the particular change without repeating the lookup.
+
+## Give another action the same rule
+
+```ts
+// @source examples/todo-1/src/domain.ts#L32-L40
+// @expect export const toggleCompleted
+// @expect export const deleteTodo
+```
+
+Toggling changes one completion flag. Deleting removes one ID. Neither function needs a DOM, a state container, or a browser event, so both are easy to test with ordinary values.
+
+**Check your understanding:** make two todos with identical text and different IDs. Toggle one. Which item should change, and which object should remain the same? We will turn this into a test in the final chapter.
+
+The full file also includes the count and filter helpers we will introduce when their controls appear. Next, give the application a place to hold the current list.
+
+## Complete files
+
+Keep the files from the previous step and replace or add these. Each full file is the source used by this milestone; the excerpts above select lines from it.
+
+<details class="curriculum-file">
+<summary>src/domain.ts</summary>
 
 ```ts file="src/domain.ts"
-import * as Schema from "effect/Schema"
-
-export const TodoId = Schema.String.pipe(Schema.brand("TodoId"))
-export type TodoId = typeof TodoId.Type
-
-export const Todo = Schema.Struct({
-  id: TodoId,
-  text: Schema.String,
-  completed: Schema.Boolean,
-  timestamp: Schema.DateTimeUtcFromString,
-})
-export type Todo = typeof Todo.Type
-export const TodoList = Schema.Array(Todo)
-export type TodoList = typeof TodoList.Type
-
-export const FilterState = Schema.Literals(["all", "active", "completed"])
-export type FilterState = typeof FilterState.Type
-
-export const updateTodo = (id: TodoId, f: (todo: Todo) => Todo) =>
-  (list: TodoList): TodoList =>
-    list.map((todo) => todo.id === id ? f(todo) : todo)
-
-export const editText = (id: TodoId, text: string) =>
-  updateTodo(id, (todo) => ({ ...todo, text }))
-
-export const updateText = (text: string) => (todo: Todo): Todo => ({ ...todo, text })
-
-export const toggleCompleted = (id: TodoId) => (list: TodoList): TodoList =>
-  updateTodo(id, (todo) => ({ ...todo, completed: !todo.completed }))(list)
-
-export const deleteTodo = (id: TodoId) => (list: TodoList): TodoList =>
-  list.filter((todo) => todo.id !== id)
-
-export const clearCompleted = (list: TodoList): TodoList =>
-  list.filter((todo) => !todo.completed)
-
-export const activeCount = (list: TodoList): number =>
-  list.filter((todo) => !todo.completed).length
-
-export const someAreCompleted = (list: TodoList): boolean =>
-  list.some((todo) => todo.completed)
-
-export const allAreCompleted = (list: TodoList): boolean =>
-  list.length > 0 && list.every((todo) => todo.completed)
-
-export const toggleAllCompleted = (list: TodoList): TodoList => {
-  const completed = list.some((todo) => !todo.completed)
-  return list.map((todo) => ({ ...todo, completed }))
-}
-
-export const filterTodoList = ({ list, state }: { list: TodoList; state: FilterState }) =>
-  state === "active"
-    ? list.filter((todo) => !todo.completed)
-    : state === "completed"
-      ? list.filter((todo) => todo.completed)
-      : list
+// @source examples/todo-1/src/domain.ts
 ```
+
+</details>

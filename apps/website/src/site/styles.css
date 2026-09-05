@@ -1,72 +1,9 @@
 @import "tailwindcss";
+@import "../../../../styles/matrix.css";
+@import "../../../../examples/todomvc/src/app.css";
 @source "./**/*.{astro,ts}";
 @source "../tutorial/Demos.ts";
-
-@plugin "daisyui" {
-  themes: false;
-}
-@plugin "daisyui/theme" {
-  name: "matrix";
-  default: true;
-  prefersdark: true;
-  color-scheme: dark;
-  --color-base-100: #030806;
-  --color-base-200: #08110d;
-  --color-base-300: #183226;
-  --color-base-content: #f3f8f5;
-  --color-primary: #4ee58b;
-  --color-primary-content: #00180a;
-  --color-secondary: #9fb4a6;
-  --color-secondary-content: #030806;
-  --color-accent: #83f5b1;
-  --color-accent-content: #00180a;
-  --color-neutral: #0c1912;
-  --color-neutral-content: #d1ddd5;
-  --color-info: #84cfff;
-  --color-info-content: #062234;
-  --color-success: #4ee58b;
-  --color-success-content: #00180a;
-  --color-warning: #f4ce83;
-  --color-warning-content: #332501;
-  --color-error: #ff9292;
-  --color-error-content: #350909;
-  --radius-selector: 0.35rem;
-  --radius-field: 0.35rem;
-  --radius-box: 0.65rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
-}
-@plugin "daisyui/theme" {
-  name: "matrix-light";
-  color-scheme: light;
-  --color-base-100: #f5faf6;
-  --color-base-200: #e9f3ec;
-  --color-base-300: #d5e5da;
-  --color-base-content: #102118;
-  --color-primary: #007a47;
-  --color-primary-content: #ffffff;
-  --color-secondary: #526d5d;
-  --color-secondary-content: #ffffff;
-  --color-accent: #005b34;
-  --color-accent-content: #ffffff;
-  --color-neutral: #dcebe0;
-  --color-neutral-content: #30493a;
-  --color-info: #095887;
-  --color-info-content: #ffffff;
-  --color-success: #007a47;
-  --color-success-content: #ffffff;
-  --color-warning: #815e03;
-  --color-warning-content: #ffffff;
-  --color-error: #a21b1b;
-  --color-error-content: #ffffff;
-  --radius-selector: 0.35rem;
-  --radius-field: 0.35rem;
-  --radius-box: 0.65rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
-}
+@source "../tutorial/examples/**/*.{ts,css}";
 
 @font-face {
   font-family: "JetBrains Mono";
@@ -161,6 +98,39 @@ kbd {
 }
 .brand span {
   color: var(--color-primary);
+}
+.brand-animated {
+  inline-size: 6ch;
+  min-inline-size: 6ch;
+  letter-spacing: -0.04em;
+}
+.brand-animated .typewriter {
+  color: var(--color-base-content);
+}
+.typewriter::after {
+  content: "Typed";
+  border-right: 0.3em solid var(--color-primary);
+  padding-right: 0.12em;
+  animation: logo-typing 7.5s step-end infinite, logo-caret 0.5s step-end infinite;
+  animation-delay: 0.5s;
+}
+@keyframes logo-typing {
+  0%, 89%, 100% { content: ""; }
+  5%, 86% { content: "T"; }
+  10%, 83% { content: "Ty"; }
+  15%, 80% { content: "Typ"; }
+  20%, 78% { content: "Type"; }
+  25%, 75% { content: "Typed"; }
+}
+@keyframes logo-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: var(--color-primary); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typewriter::after {
+    content: "Typed";
+    animation: none;
+  }
 }
 .site-nav {
   display: flex;
@@ -531,12 +501,25 @@ kbd {
   margin-top: 1.5rem;
 }
 .sidebar-group h2,
+.sidebar-group summary,
 .toc h2 {
   font: 0.66rem var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted);
   margin: 0 0 0.65rem;
+}
+.sidebar-group summary {
+  cursor: pointer;
+  padding-block: 0.35rem;
+}
+.sidebar-group summary span {
+  float: right;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+.sidebar-group[open] summary {
+  color: var(--color-primary);
 }
 .sidebar-group a {
   display: block;
@@ -770,6 +753,14 @@ html[data-theme="matrix-light"] .astro-code span {
   gap: 3rem;
   align-items: start;
 }
+.reference-page {
+  overflow-wrap: anywhere;
+}
+.reference-page .breadcrumbs li,
+.reference-page .reference-facts > div {
+  min-width: 0;
+  max-width: 100%;
+}
 .reference-article {
   min-width: 0;
   max-width: 86ch;
@@ -812,64 +803,6 @@ html[data-theme="matrix-light"] .astro-code span {
 .export-list h3 a {
   color: var(--color-primary);
 }
-.search-dialog {
-  position: fixed;
-  margin: 12vh auto auto;
-  width: min(620px, calc(100vw - 2rem));
-  max-height: 76vh;
-  border: 1px solid var(--line);
-  border-radius: 0.6rem;
-  padding: 1.5rem;
-  background: var(--color-base-100);
-  color: var(--color-base-content);
-  overflow-y: auto;
-}
-.search-dialog::backdrop {
-  background: #0009;
-  backdrop-filter: blur(3px);
-}
-.search-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-.search-dialog h2 {
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-.search-label {
-  display: block;
-  font-size: 0.8rem;
-  margin-bottom: 0.5rem;
-  color: var(--muted);
-}
-.search-results {
-  margin-top: 1rem;
-}
-.search-results > p {
-  color: var(--muted);
-  font-size: 0.85rem;
-  padding-block: 0.5rem;
-}
-.search-results a {
-  display: block;
-  padding: 0.9rem;
-  border-radius: 0.3rem;
-}
-.search-results a:hover {
-  background: var(--color-base-200);
-}
-.search-results strong {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-.search-results small {
-  display: block;
-  color: var(--muted);
-  font: 0.65rem var(--mono);
-  margin-top: 0.4rem;
-}
 .curriculum-demo {
   border: 1px solid var(--line);
   border-radius: 0.5rem;
@@ -894,6 +827,12 @@ html[data-theme="matrix-light"] .astro-code span {
   padding: 0.5rem;
   background: var(--color-base-100);
   max-width: 100%;
+}
+.counter-demo > h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  letter-spacing: normal;
 }
 .counter-demo__controls {
   display: flex;
@@ -931,115 +870,6 @@ html[data-theme="matrix-light"] .astro-code span {
   font-size: 0.8rem;
   color: var(--muted);
 }
-.fx-marble {
-  --fx-marble-slot-width: 3.25rem;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 0.4rem;
-  margin-block: 1.5rem;
-  font: 0.7rem/1.7 var(--mono);
-}
-.fx-marble figcaption {
-  display: grid;
-  gap: 0.35rem;
-  padding: 1rem;
-  border-bottom: 1px solid var(--line);
-}
-.fx-marble__eyebrow {
-  color: var(--color-primary);
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-.fx-marble__caption {
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-.fx-marble__coverage {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--muted);
-}
-.fx-marble__viewport {
-  overflow-x: auto;
-  padding: 1rem;
-  max-width: 100%;
-}
-.fx-marble__diagram {
-  display: grid;
-  gap: 0.5rem;
-  min-width: max(100%, calc(5rem + var(--fx-marble-steps) * var(--fx-marble-slot-width)));
-}
-.fx-marble__row,
-.fx-marble__operator-row {
-  display: grid;
-  grid-template-columns: 5rem minmax(0, 1fr);
-  align-items: center;
-  min-height: 3rem;
-}
-.fx-marble__label {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  padding: 0.25rem;
-  color: var(--muted);
-  background: var(--color-base-100);
-}
-.fx-marble__track,
-.fx-marble__operator-track {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(var(--fx-marble-steps), minmax(var(--fx-marble-slot-width), 1fr));
-  align-items: center;
-  min-height: 3rem;
-}
-.fx-marble__track::before {
-  content: "";
-  position: absolute;
-  width: 100%;
-  border-top: 1px solid var(--line);
-}
-.fx-marble__track::after {
-  content: "›";
-  position: absolute;
-  right: 0;
-  color: var(--muted);
-}
-.fx-marble__event {
-  z-index: 1;
-  grid-column: var(--fx-marble-slot);
-  grid-row: 1;
-  justify-self: center;
-  display: grid;
-  place-items: center;
-  min-width: 2rem;
-  min-height: 2rem;
-  padding-inline: 0.25rem;
-  color: var(--color-primary);
-  background: var(--color-base-100);
-}
-.fx-marble__event--value {
-  border: 1px solid var(--color-primary);
-  border-radius: 50%;
-}
-.fx-marble__event--error {
-  color: var(--color-error);
-}
-.fx-marble__event--cancelled {
-  color: var(--color-warning);
-}
-.fx-marble__operator {
-  grid-column: 1 / -1;
-  justify-self: center;
-  padding: 0.3rem 1rem;
-  color: var(--color-primary);
-  background: var(--color-base-200);
-  border: 1px solid var(--line);
-  border-radius: 0.3rem;
-}
-
 @media (max-width: 1150px) {
   .docs-layout {
     grid-template-columns: 205px minmax(0, 1fr);
@@ -1169,6 +999,9 @@ html[data-theme="matrix-light"] .astro-code span {
   }
 }
 @media (max-width: 420px) {
+  .header-inner {
+    gap: 0.4rem;
+  }
   .site-nav {
     gap: 0.7rem;
   }

@@ -55,7 +55,7 @@ import type { Fx } from "../Fx.js";
  * @param f - The function to call for each emitted value.
  * @returns An `Effect` that completes when the stream ends.
  * @since 1.0.0
- * @category runners
+ * @category Running effects
  */
 export const observe: {
   <A, E2 = never, R2 = never>(
@@ -116,7 +116,7 @@ export const observe: {
  * @param fx - The `Fx` stream to drain.
  * @returns An `Effect` that completes when the stream ends.
  * @since 1.0.0
- * @category runners
+ * @category Running effects
  */
 export const drain = <A, E, R>(fx: Fx<A, E, R>): Effect<void, E, R> => observe(fx, () => void_);
 
@@ -157,7 +157,7 @@ export const drain = <A, E, R>(fx: Fx<A, E, R>): Effect<void, E, R> => observe(f
  * @param fx - The `Fx` stream to run.
  * @returns A `Layer` that manages the background execution of the stream.
  * @since 1.0.0
- * @category runners
+ * @category Running effects
  */
 export const drainLayer = <A, E, R>(fx: Fx<A, E, R>): Layer<never, E, Exclude<R, Scope>> =>
   effectDiscard(forkScoped(drain(fx)));
@@ -200,7 +200,7 @@ export const drainLayer = <A, E, R>(fx: Fx<A, E, R>): Layer<never, E, Exclude<R,
  * @param f - The function to call for each emitted value.
  * @returns A `Layer` that manages the background execution of the stream.
  * @since 1.0.0
- * @category runners
+ * @category Running effects
  */
 export const observeLayer: {
   <A, E2 = never, R2 = never>(

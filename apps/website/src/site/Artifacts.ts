@@ -4,6 +4,8 @@ import { siteHref } from "../SiteHref.js";
 import { resolveMarkdownLinks } from "../docs/MarkdownLinks.js";
 import { canonicalReferencePath } from "../docs/Reference.js";
 import { inventory } from "./Reference.js";
+import { expandCurriculumSources } from "../tutorial/Files.js";
+import { counterLessonPath, isQuickStartSection } from "../tutorial/Routes.js";
 
 export const artifactUrl = (path: string): string =>
   `https://tylors.github.io${siteHref(canonicalReferencePath(path))}`;
@@ -66,16 +68,38 @@ export async function authoredArticles(): Promise<ReadonlyArray<MarkdownArticle>
   const tutorialArticles = tutorial
     .sort((a, b) => a.data.order - b.data.order)
     .map(({ data, body }) =>
-      article(`/explore/tutorial/${data.slug}`, data.title, data.summary, body ?? ""),
+      article(
+        `/explore/tutorial/${data.slug}`,
+        data.title,
+        data.summary,
+        expandCurriculumSources(body ?? ""),
+      ),
+    );
+  const counterArticles = learn
+    .filter(({ data }) => !isQuickStartSection(data.id))
+    .sort((a, b) => a.data.order - b.data.order)
+    .map(({ data, body }) =>
+      article(
+        counterLessonPath(data.id),
+        data.title,
+        data.summary,
+        expandCurriculumSources(body ?? ""),
+      ),
     );
   const quickStart = article(
     "/explore/quick-start",
-    "Build your first Typed application",
-    "Grow a Counter through reactive state, component lifetime, server HTML, and hydration.",
-    learn
-      .sort((a, b) => a.data.order - b.data.order)
-      .map(({ data, body }) => `## ${data.title}\n\n${data.summary}\n\n${body ?? ""}`)
-      .join("\n\n---\n\n"),
+    "Build a counter",
+    "Two files and a few commands. Click the counter, then make it your own.",
+    [
+      learn
+        .filter(({ data }) => isQuickStartSection(data.id))
+        .sort((a, b) => a.data.order - b.data.order)
+        .map(({ data, body }) => `## ${data.title}\n\n${expandCurriculumSources(body ?? "")}`)
+        .join("\n\n---\n\n"),
+      "## Keep going",
+      list(counterArticles),
+      `[Build a Todo app](${artifactUrl("/explore/tutorial.md")}) with forms, lists, and persistence.`,
+    ].join("\n\n"),
   );
   const tutorialIndex = article(
     "/explore/tutorial",
@@ -98,9 +122,10 @@ export async function authoredArticles(): Promise<ReadonlyArray<MarkdownArticle>
       "/explore",
       "Explore Typed",
       "Learn the tools through application problems and complete examples.",
-      list([quickStart, tutorialIndex, ...guideArticles]),
+      list([quickStart, ...counterArticles, tutorialIndex, ...guideArticles]),
     ),
     quickStart,
+    ...counterArticles,
     tutorialIndex,
     ...tutorialArticles,
     ...guideArticles,

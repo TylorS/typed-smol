@@ -32,7 +32,7 @@ import { type Inspectable, NodeInspectSymbol } from "effect/Inspectable";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Template structure
  */
 export class Template implements Inspectable {
   /** AST discriminant used by inspectors and renderer tooling.
@@ -42,7 +42,7 @@ export class Template implements Inspectable {
    * ## Ownership and lifetime
    * Immutable metadata for this parsed template.
    * @since 1.0.0
-   * @category discriminants
+   * @category Template structure
    */
   readonly _tag = "template";
 
@@ -54,7 +54,7 @@ export class Template implements Inspectable {
    * ## Ownership and lifetime
    * The Template retains this parsed array, not live DOM.
    * @since 1.0.0
-   * @category data
+   * @category Template structure
    */
   readonly nodes: ReadonlyArray<Node>;
 
@@ -66,7 +66,7 @@ export class Template implements Inspectable {
    * ## Ownership and lifetime
    * Immutable metadata for the Template lifetime.
    * @since 1.0.0
-   * @category data
+   * @category Template identity
    */
   readonly hash: string;
 
@@ -80,7 +80,7 @@ export class Template implements Inspectable {
    * ## Ownership and lifetime
    * The Template retains parsed paths; render Scopes own live part instances.
    * @since 1.0.0
-   * @category data
+   * @category Dynamic positions
    */
   readonly parts: ReadonlyArray<readonly [part: PartNode | SparsePartNode, path: Array<number>]>;
 
@@ -91,7 +91,7 @@ export class Template implements Inspectable {
    * ## Ownership and lifetime
    * The instance retains the supplied arrays and owns no renderer resource.
    * @since 1.0.0
-   * @category constructors
+   * @category Template structure
    */
   constructor(
     nodes: ReadonlyArray<Node>,
@@ -110,7 +110,7 @@ export class Template implements Inspectable {
    * ## Ownership and lifetime
    * Returns references to immutable parsed data; no DOM is created.
    * @since 1.0.0
-   * @category conversions
+   * @category Template inspection
    */
   toJSON() {
     return {
@@ -128,7 +128,7 @@ export class Template implements Inspectable {
    * ## Ownership and lifetime
    * Delegates to `toJSON` and acquires nothing.
    * @since 1.0.0
-   * @category conversions
+   * @category Template inspection
    */
   [NodeInspectSymbol]() {
     return this.toJSON();
@@ -156,7 +156,7 @@ export class Template implements Inspectable {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Element structure
  */
 export type ParentNode = ElementNode | SelfClosingElementNode | TextOnlyElement;
 
@@ -180,7 +180,7 @@ export type ParentNode = ElementNode | SelfClosingElementNode | TextOnlyElement;
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Template structure
  */
 export type Node =
   | ElementNode
@@ -212,7 +212,7 @@ export type Node =
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Dynamic positions
  */
 export type PartNode =
   | AttrPartNode
@@ -249,7 +249,7 @@ export type PartNode =
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Sparse expressions
  */
 export type SparsePartNode =
   | SparseAttrNode
@@ -278,7 +278,7 @@ export type SparsePartNode =
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Element structure
  */
 export class ElementNode {
   /**
@@ -289,7 +289,7 @@ export class ElementNode {
    * ## Ownership and lifetime
    * Immutable AST metadata.
    * @since 1.0.0
-   * @category discriminants
+   * @category Element structure
    */
   readonly _tag = "element";
   /**
@@ -300,7 +300,7 @@ export class ElementNode {
    * ## Ownership and lifetime
    * Retained string metadata.
    * @since 1.0.0
-   * @category data
+   * @category Element structure
    */
   readonly tagName: string;
   /**
@@ -311,7 +311,7 @@ export class ElementNode {
    * ## Ownership and lifetime
    * Retained AST array; no Attr ownership.
    * @since 1.0.0
-   * @category data
+   * @category Element structure
    */
   readonly attributes: Array<Attribute>;
   /**
@@ -322,7 +322,7 @@ export class ElementNode {
    * ## Ownership and lifetime
    * Retained AST array; no DOM ownership.
    * @since 1.0.0
-   * @category data
+   * @category Element structure
    */
   readonly children: Array<Node>;
   /**
@@ -333,7 +333,7 @@ export class ElementNode {
    * ## Ownership and lifetime
    * Retains supplied data and creates no Element.
    * @since 1.0.0
-   * @category constructors
+   * @category Element structure
    */
   constructor(tagName: string, attributes: Array<Attribute>, children: Array<Node>) {
     this.tagName = tagName;
@@ -363,7 +363,7 @@ export class ElementNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Dynamic child positions
  */
 export class NodePart {
   /**
@@ -374,7 +374,7 @@ export class NodePart {
    * ## Ownership and lifetime
    * Immutable AST metadata.
    * @since 1.0.0
-   * @category discriminants
+   * @category Dynamic child positions
    */
   readonly _tag = "node";
   /**
@@ -385,7 +385,7 @@ export class NodePart {
    * ## Ownership and lifetime
    * Immutable index; the mounted range owns its producer Scope.
    * @since 1.0.0
-   * @category data
+   * @category Dynamic child positions
    */
   readonly index: number;
   /**
@@ -396,7 +396,7 @@ export class NodePart {
    * ## Ownership and lifetime
    * Stores only the index.
    * @since 1.0.0
-   * @category constructors
+   * @category Dynamic child positions
    */
   constructor(index: number) {
     this.index = index;
@@ -423,7 +423,7 @@ export class NodePart {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Element structure
  */
 export class SelfClosingElementNode {
   /**
@@ -434,7 +434,7 @@ export class SelfClosingElementNode {
    * ## Ownership and lifetime
    * Immutable metadata.
    * @since 1.0.0
-   * @category discriminants
+   * @category Element structure
    */
   readonly _tag = "self-closing-element";
   /**
@@ -445,7 +445,7 @@ export class SelfClosingElementNode {
    * ## Ownership and lifetime
    * Retained string metadata.
    * @since 1.0.0
-   * @category data
+   * @category Element structure
    */
   readonly tagName: string;
   /**
@@ -456,7 +456,7 @@ export class SelfClosingElementNode {
    * ## Ownership and lifetime
    * Retained AST array.
    * @since 1.0.0
-   * @category data
+   * @category Element structure
    */
   readonly attributes: Array<Attribute>;
   /**
@@ -467,7 +467,7 @@ export class SelfClosingElementNode {
    * ## Ownership and lifetime
    * Retains parsed data and creates no DOM.
    * @since 1.0.0
-   * @category constructors
+   * @category Element structure
    */
   constructor(tagName: string, attributes: Array<Attribute>) {
     this.tagName = tagName;
@@ -496,7 +496,7 @@ export class SelfClosingElementNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Text contexts
  */
 export class TextOnlyElement {
   /**
@@ -507,7 +507,7 @@ export class TextOnlyElement {
    * ## Ownership and lifetime
    * Immutable metadata.
    * @since 1.0.0
-   * @category discriminants
+   * @category Text contexts
    */
   readonly _tag = "text-only-element";
 
@@ -519,7 +519,7 @@ export class TextOnlyElement {
    * ## Ownership and lifetime
    * Retained string metadata.
    * @since 1.0.0
-   * @category data
+   * @category Text contexts
    */
   readonly tagName: string;
   /**
@@ -530,7 +530,7 @@ export class TextOnlyElement {
    * ## Ownership and lifetime
    * Retained AST array.
    * @since 1.0.0
-   * @category data
+   * @category Text contexts
    */
   readonly attributes: Array<Attribute>;
   /**
@@ -541,7 +541,7 @@ export class TextOnlyElement {
    * ## Ownership and lifetime
    * Retained AST value.
    * @since 1.0.0
-   * @category data
+   * @category Text contexts
    */
   readonly textContent: Text | null;
   /**
@@ -552,7 +552,7 @@ export class TextOnlyElement {
    * ## Ownership and lifetime
    * Retains parsed data and creates no DOM.
    * @since 1.0.0
-   * @category constructors
+   * @category Text contexts
    */
   constructor(tagName: string, attributes: Array<Attribute>, textContent: Text | null) {
     this.tagName = tagName;
@@ -581,7 +581,7 @@ export class TextOnlyElement {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Document structure
  */
 export class DocType {
   /**
@@ -592,7 +592,7 @@ export class DocType {
    * ## Ownership and lifetime
    * Immutable metadata.
    * @since 1.0.0
-   * @category discriminants
+   * @category Document structure
    */
   readonly _tag = "doctype";
   /**
@@ -603,7 +603,7 @@ export class DocType {
    * ## Ownership and lifetime
    * Retained string metadata.
    * @since 1.0.0
-   * @category data
+   * @category Document structure
    */
   readonly name: string;
   /**
@@ -614,7 +614,7 @@ export class DocType {
    * ## Ownership and lifetime
    * Retained string metadata.
    * @since 1.0.0
-   * @category data
+   * @category Document structure
    */
   readonly publicId: string | undefined;
   /**
@@ -625,7 +625,7 @@ export class DocType {
    * ## Ownership and lifetime
    * Retained string metadata.
    * @since 1.0.0
-   * @category data
+   * @category Document structure
    */
   readonly systemId: string | undefined;
   /**
@@ -636,7 +636,7 @@ export class DocType {
    * ## Ownership and lifetime
    * Stores strings only.
    * @since 1.0.0
-   * @category constructors
+   * @category Document structure
    */
   constructor(name: string, publicType?: string, systemId?: string) {
     this.name = name;
@@ -666,7 +666,7 @@ export class DocType {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Attribute syntax
  */
 export type Attribute =
   | AttributeNode
@@ -702,7 +702,7 @@ export type Attribute =
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Attribute syntax
  */
 export class AttributeNode {
   /** Static-attribute discriminant.
@@ -711,7 +711,7 @@ export class AttributeNode {
    * Selects one-time native attribute creation and SSR serialization.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Attribute syntax */
   readonly _tag = "attribute" as const;
   /** Native attribute name.
    * @remarks
@@ -719,7 +719,7 @@ export class AttributeNode {
    * Preserves the authored attribute target.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Attribute syntax */
   readonly name: string;
   /** Authored static value.
    * @remarks
@@ -727,9 +727,9 @@ export class AttributeNode {
    * Compiles without a dynamic producer.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Attribute syntax */
   readonly value: string;
-  /** Creates static attribute syntax. @since 1.0.0 @category constructors */
+  /** Creates static attribute syntax. @since 1.0.0 @category Attribute syntax */
   constructor(name: string, value: string) {
     this.name = name;
     this.value = value;
@@ -756,7 +756,7 @@ export class AttributeNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Attribute bindings
  */
 export class AttrPartNode {
   /** Dynamic-attribute discriminant.
@@ -765,7 +765,7 @@ export class AttrPartNode {
    * Selects direct Attr updates and escaped SSR.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Attribute bindings */
   readonly _tag = "attr" as const;
   /** Native attribute name.
    * @remarks
@@ -773,7 +773,7 @@ export class AttrPartNode {
    * Identifies the target whose sparse segments are joined.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Attribute bindings */
   readonly name: string;
   /** Interpolation index driving this attribute.
    * @remarks
@@ -781,9 +781,9 @@ export class AttrPartNode {
    * Locates the producer for one retained Attr target.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the render Scope owns the producer.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Attribute bindings */
   readonly index: number;
-  /** Creates dynamic attribute syntax. @since 1.0.0 @category constructors */
+  /** Creates dynamic attribute syntax. @since 1.0.0 @category Attribute bindings */
   constructor(name: string, index: number) {
     this.name = name;
     this.index = index;
@@ -810,7 +810,7 @@ export class AttrPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Sparse attributes
  */
 export class SparseAttrNode {
   /** Sparse-attribute discriminant.
@@ -819,7 +819,7 @@ export class SparseAttrNode {
    * Selects ordered segment joining under attribute escaping.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Sparse attributes */
   readonly _tag = "sparse-attr" as const;
   /** Native attribute name.
    * @remarks
@@ -827,7 +827,7 @@ export class SparseAttrNode {
    * Identifies the direct attribute target for one interpolation.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Sparse attributes */
   readonly name: string;
   /** Ordered literal and dynamic segments.
    * @remarks
@@ -835,9 +835,9 @@ export class SparseAttrNode {
    * Reconstructs one attribute value from its authored order.
    * ## Ownership and lifetime
    * Retained AST array; mounted parts own live inputs.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Sparse attributes */
   readonly nodes: Array<AttrPartNode | TextNode>;
-  /** Creates sparse attribute syntax. @since 1.0.0 @category constructors */
+  /** Creates sparse attribute syntax. @since 1.0.0 @category Sparse attributes */
   constructor(name: string, nodes: Array<AttrPartNode | TextNode>) {
     this.name = name;
     this.nodes = nodes;
@@ -864,7 +864,7 @@ export class SparseAttrNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Boolean attributes
  */
 export class BooleanNode {
   /** Static-boolean discriminant.
@@ -873,7 +873,7 @@ export class BooleanNode {
    * Selects presence-only native attribute semantics.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Boolean attributes */
   readonly _tag = "boolean" as const;
   /** Presence-only native attribute name.
    * @remarks
@@ -881,9 +881,9 @@ export class BooleanNode {
    * Identifies the exact boolean attribute to create.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Boolean attributes */
   readonly name: string;
-  /** Creates static boolean-attribute syntax. @since 1.0.0 @category constructors */
+  /** Creates static boolean-attribute syntax. @since 1.0.0 @category Boolean attributes */
   constructor(name: string) {
     this.name = name;
   }
@@ -909,7 +909,7 @@ export class BooleanNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Boolean attributes
  */
 export class BooleanPartNode {
   /** Dynamic-boolean discriminant.
@@ -918,7 +918,7 @@ export class BooleanPartNode {
    * Selects native attribute presence toggling.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Boolean attributes */
   readonly _tag = "boolean-part" as const;
   /** Native boolean attribute name.
    * @remarks
@@ -926,7 +926,7 @@ export class BooleanPartNode {
    * Identifies the exact attribute updated by the part.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Boolean attributes */
   readonly name: string;
   /** Interpolation index controlling presence.
    * @remarks
@@ -934,9 +934,9 @@ export class BooleanPartNode {
    * Locates the boolean producer without tree traversal.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the render Scope owns the producer.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Boolean attributes */
   readonly index: number;
-  /** Creates dynamic boolean-attribute syntax. @since 1.0.0 @category constructors */
+  /** Creates dynamic boolean-attribute syntax. @since 1.0.0 @category Boolean attributes */
   constructor(name: string, index: number) {
     this.name = name;
     this.index = index;
@@ -963,7 +963,7 @@ export class BooleanPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Class contributions
  */
 export class ClassNamePartNode {
   /** Dynamic-class discriminant.
@@ -972,7 +972,7 @@ export class ClassNamePartNode {
    * Selects class normalization without replacing external classes.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Class contributions */
   readonly _tag = "className-part" as const;
   /** Interpolation index producing class values.
    * @remarks
@@ -980,9 +980,9 @@ export class ClassNamePartNode {
    * Locates the producer for one retained class contribution.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the render Scope owns the producer.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Class contributions */
   readonly index: number;
-  /** Creates dynamic class syntax. @since 1.0.0 @category constructors */
+  /** Creates dynamic class syntax. @since 1.0.0 @category Class contributions */
   constructor(index: number) {
     this.index = index;
   }
@@ -1008,7 +1008,7 @@ export class ClassNamePartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Class contributions
  */
 export class SparseClassNameNode {
   /** Sparse-class discriminant.
@@ -1017,7 +1017,7 @@ export class SparseClassNameNode {
    * Selects ordered literal/reactive class joining.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Class contributions */
   readonly _tag = "sparse-class-name" as const;
 
   /** Ordered literal and dynamic class segments.
@@ -1026,9 +1026,9 @@ export class SparseClassNameNode {
    * Defines only this part's class contribution.
    * ## Ownership and lifetime
    * Retained AST array; mounted parts own live inputs.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Class contributions */
   readonly nodes: Array<ClassNamePartNode | TextNode>;
-  /** Creates sparse class syntax. @since 1.0.0 @category constructors */
+  /** Creates sparse class syntax. @since 1.0.0 @category Class contributions */
   constructor(nodes: Array<ClassNamePartNode | TextNode>) {
     this.nodes = nodes;
   }
@@ -1055,7 +1055,7 @@ export class SparseClassNameNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Dataset contributions
  */
 export class DataPartNode {
   /** Data-record discriminant.
@@ -1064,7 +1064,7 @@ export class DataPartNode {
    * Selects native dataset and safe `data-*` serialization.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Dataset contributions */
   readonly _tag = "data" as const;
 
   /** Interpolation index producing the data record.
@@ -1073,9 +1073,9 @@ export class DataPartNode {
    * Locates the record producer for local dataset updates.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the render Scope owns the producer.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Dataset contributions */
   readonly index: number;
-  /** Creates data-record syntax. @since 1.0.0 @category constructors */
+  /** Creates data-record syntax. @since 1.0.0 @category Dataset contributions */
   constructor(index: number) {
     this.index = index;
   }
@@ -1102,7 +1102,7 @@ export class DataPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Native event bindings
  */
 export class EventPartNode {
   /** Native-event discriminant.
@@ -1111,7 +1111,7 @@ export class EventPartNode {
    * Selects real DOM listener setup and omits events from SSR attributes.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Native event bindings */
   readonly _tag = "event" as const;
   /** Native event name.
    * @remarks
@@ -1121,7 +1121,7 @@ export class EventPartNode {
    * event object identity.
    * ## Ownership and lifetime
    * Retained string metadata; the mount Scope owns the listener.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Native event bindings */
   readonly name: string;
   /** Interpolation index producing the Effect handler.
    * @remarks
@@ -1129,9 +1129,9 @@ export class EventPartNode {
    * Locates the handler while preserving its error and service channels.
    * ## Ownership and lifetime
    * Immutable scalar metadata; EventSource owns running fibers through its Scope.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Native event bindings */
   readonly index: number;
-  /** Creates native event-listener syntax. @since 1.0.0 @category constructors */
+  /** Creates native event-listener syntax. @since 1.0.0 @category Native event bindings */
   constructor(name: string, index: number) {
     this.name = name;
     this.index = index;
@@ -1158,7 +1158,7 @@ export class EventPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Property bindings
  */
 export class PropertyPartNode {
   /** Native-property discriminant.
@@ -1167,7 +1167,7 @@ export class PropertyPartNode {
    * Selects property assignment rather than attribute serialization.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Property bindings */
   readonly _tag = "property" as const;
   /** Native property name.
    * @remarks
@@ -1175,7 +1175,7 @@ export class PropertyPartNode {
    * Identifies the exact property target on the native element.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Property bindings */
   readonly name: string;
   /** Interpolation index producing the property value.
    * @remarks
@@ -1183,9 +1183,9 @@ export class PropertyPartNode {
    * Locates the producer for one direct property update.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the render Scope owns the producer.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Property bindings */
   readonly index: number;
-  /** Creates native property syntax. @since 1.0.0 @category constructors */
+  /** Creates native property syntax. @since 1.0.0 @category Property bindings */
   constructor(name: string, index: number) {
     this.name = name;
     this.index = index;
@@ -1214,7 +1214,7 @@ export class PropertyPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Spread bindings
  */
 export class PropertiesPartNode {
   /** Property-spread discriminant.
@@ -1223,7 +1223,7 @@ export class PropertiesPartNode {
    * Selects recursive directive setup and safe SSR filtering.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Spread bindings */
   readonly _tag = "properties" as const;
   /** Interpolation index producing the directive record.
    * @remarks
@@ -1231,9 +1231,9 @@ export class PropertiesPartNode {
    * Locates the record whose keys become local directive instances.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the spread instance owns per-key cleanup.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Spread bindings */
   readonly index: number;
-  /** Creates property-spread syntax. @since 1.0.0 @category constructors */
+  /** Creates property-spread syntax. @since 1.0.0 @category Spread bindings */
   constructor(index: number) {
     this.index = index;
   }
@@ -1260,7 +1260,7 @@ export class PropertiesPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Element references
  */
 export class RefPartNode {
   /** Native-ref discriminant.
@@ -1269,7 +1269,7 @@ export class RefPartNode {
    * Selects exact-node ref setup and hydration metadata.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Element references */
   readonly _tag = "ref" as const;
 
   /** Interpolation index producing the ref handler.
@@ -1278,9 +1278,9 @@ export class RefPartNode {
    * Locates the handler for the exact native node.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the render Scope owns setup and finalization.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Element references */
   readonly index: number;
-  /** Creates native node-ref syntax. @since 1.0.0 @category constructors */
+  /** Creates native node-ref syntax. @since 1.0.0 @category Element references */
   constructor(index: number) {
     this.index = index;
   }
@@ -1307,7 +1307,7 @@ export class RefPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Text content
  */
 export type Text = TextNode | TextPartNode | SparseTextNode;
 
@@ -1331,7 +1331,7 @@ export type Text = TextNode | TextPartNode | SparseTextNode;
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Text content
  */
 export class TextNode {
   /** Static-text discriminant.
@@ -1340,7 +1340,7 @@ export class TextNode {
    * Selects one-time native text creation and escaped SSR output.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Text content */
   readonly _tag = "text" as const;
 
   /** Authored text value.
@@ -1349,9 +1349,9 @@ export class TextNode {
    * Preserves exact literal content for compilation.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Text content */
   readonly value: string;
-  /** Creates static text syntax. @since 1.0.0 @category constructors */
+  /** Creates static text syntax. @since 1.0.0 @category Text content */
   constructor(value: string) {
     this.value = value;
   }
@@ -1378,7 +1378,7 @@ export class TextNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Text bindings
  */
 export class TextPartNode {
   /** Dynamic-text discriminant.
@@ -1387,7 +1387,7 @@ export class TextPartNode {
    * Selects a retained native Text target for O(1) scalar updates.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Text bindings */
   readonly _tag = "text-part" as const;
 
   /** Interpolation index driving the retained text target.
@@ -1396,9 +1396,9 @@ export class TextPartNode {
    * Locates the producer without walking the surrounding tree.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the render Scope owns the producer.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Text bindings */
   readonly index: number;
-  /** Creates dynamic text syntax. @since 1.0.0 @category constructors */
+  /** Creates dynamic text syntax. @since 1.0.0 @category Text bindings */
   constructor(index: number) {
     this.index = index;
   }
@@ -1425,7 +1425,7 @@ export class TextPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Sparse text
  */
 export class SparseTextNode {
   /** Sparse-text discriminant.
@@ -1434,7 +1434,7 @@ export class SparseTextNode {
    * Selects ordered segment joining into one retained text target.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Sparse text */
   readonly _tag = "sparse-text" as const;
   /** Ordered literal and dynamic text segments.
    * @remarks
@@ -1442,9 +1442,9 @@ export class SparseTextNode {
    * Reconstructs one text value in author order.
    * ## Ownership and lifetime
    * Retained AST array; the mounted part owns live inputs.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Sparse text */
   readonly nodes: Array<TextNode | TextPartNode>;
-  /** Creates sparse text syntax. @since 1.0.0 @category constructors */
+  /** Creates sparse text syntax. @since 1.0.0 @category Sparse text */
   constructor(nodes: Array<TextNode | TextPartNode>) {
     this.nodes = nodes;
   }
@@ -1470,7 +1470,7 @@ export class SparseTextNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Comment content
  */
 export type Comment = CommentNode | CommentPartNode | SparseCommentNode;
 
@@ -1494,7 +1494,7 @@ export type Comment = CommentNode | CommentPartNode | SparseCommentNode;
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Comment content
  */
 export class CommentNode {
   /** Static-comment discriminant.
@@ -1503,7 +1503,7 @@ export class CommentNode {
    * Selects one-time native comment creation and SSR serialization.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Comment content */
   readonly _tag = "comment" as const;
 
   /** Authored comment value.
@@ -1512,9 +1512,9 @@ export class CommentNode {
    * Preserves exact literal comment content.
    * ## Ownership and lifetime
    * Retained string metadata.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Comment content */
   readonly value: string;
-  /** Creates static comment syntax. @since 1.0.0 @category constructors */
+  /** Creates static comment syntax. @since 1.0.0 @category Comment content */
   constructor(value: string) {
     this.value = value;
   }
@@ -1541,7 +1541,7 @@ export class CommentNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Comment bindings
  */
 export class CommentPartNode {
   /** Dynamic-comment discriminant.
@@ -1550,7 +1550,7 @@ export class CommentPartNode {
    * Selects a retained native Comment target for direct updates.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Comment bindings */
   readonly _tag = "comment-part" as const;
 
   /** Interpolation index driving the retained comment target.
@@ -1559,9 +1559,9 @@ export class CommentPartNode {
    * Locates the producer without structural reconciliation.
    * ## Ownership and lifetime
    * Immutable scalar metadata; the render Scope owns the producer.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Comment bindings */
   readonly index: number;
-  /** Creates dynamic comment syntax. @since 1.0.0 @category constructors */
+  /** Creates dynamic comment syntax. @since 1.0.0 @category Comment bindings */
   constructor(index: number) {
     this.index = index;
   }
@@ -1587,7 +1587,7 @@ export class CommentPartNode {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Sparse comments
  */
 export class SparseCommentNode {
   /** Sparse-comment discriminant.
@@ -1596,7 +1596,7 @@ export class SparseCommentNode {
    * Selects ordered segment joining into one native Comment.
    * ## Ownership and lifetime
    * Immutable AST metadata.
-   * @since 1.0.0 @category discriminants */
+   * @since 1.0.0 @category Sparse comments */
   readonly _tag = "sparse-comment" as const;
 
   /** Ordered literal and dynamic comment segments.
@@ -1605,9 +1605,9 @@ export class SparseCommentNode {
    * Reconstructs one comment value in author order.
    * ## Ownership and lifetime
    * Retained AST array; the mounted part owns live inputs.
-   * @since 1.0.0 @category data */
+   * @since 1.0.0 @category Sparse comments */
   readonly nodes: Array<TextNode | CommentPartNode>;
-  /** Creates sparse comment syntax. @since 1.0.0 @category constructors */
+  /** Creates sparse comment syntax. @since 1.0.0 @category Sparse comments */
   constructor(nodes: Array<TextNode | CommentPartNode>) {
     this.nodes = nodes;
   }

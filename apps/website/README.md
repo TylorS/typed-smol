@@ -8,13 +8,13 @@ pnpm install --frozen-lockfile
 pnpm --filter typed-website dev
 ```
 
-`dev` builds workspace dependencies and generates documentation before starting Astro.
+`dev` builds workspace dependencies, documentation, and Storybook before starting Astro.
 Open the printed address under `/typed-smol/`. Use `SITE_BASE=/` for a root-hosted local build.
 
 ## Authoring
 
 - `content/guides`: explanations and focused application/library guides.
-- `content/learn`: the Quick Start, including SSR and hydration.
+- `content/learn`: the short Quick Start and its separate counter, SSR, and hydration lessons.
 - `content/tutorial`: cumulative TodoMVC chapters with client-only examples.
 - `content/recipes`: host and framework integrations.
 - `content/glossary`: shared terminology.
@@ -26,10 +26,32 @@ Generated files are build artifacts; edit the source content or package document
 Run `pnpm --filter typed-website format:astro` after editing Astro templates; the workspace's
 Oxfmt command handles the TypeScript, CSS, JSON, and Markdown files.
 
+Keep teaching templates deliberately indented, with complete opening and closing tags.
+The workspace formatter preserves embedded HTML in the runnable examples and code fences
+in authored Markdown, so formatting does not split inline tags or change significant text spacing.
+Source excerpts remove only their shared outer indentation; their internal nesting and the
+complete downloadable files remain tied to the runnable source.
+
+Use short code comments to explain decisions at the point of use: who owns state, why a value
+is derived, what a stable key preserves, or when work is cancelled. Keep surrounding prose for
+the larger idea and avoid comments that merely repeat the next statement.
+
 `src/site` contains layouts, routes, static document/search endpoints, and Typed islands.
 `src/docs` contains extraction and content validation. `src/tutorial` contains shared executable
-examples and the build-time curriculum reader. Tailwind and DaisyUI themes in
-`src/site/styles.css` retain the Matrix Green palette in dark and light modes.
+examples and the build-time curriculum reader. Tailwind and DaisyUI themes in the repository's
+`styles/matrix.css` share the Matrix Green palette between the website and Storybook.
+
+Write client behavior with Typed: keep state in `RefSubject`, compose work with `Fx`, and
+render reactive content with `html` and UI primitives. Browser event sources own their
+listeners through the running Effect scope. Keep native focus, scrolling, measurements,
+and browser observation at explicit boundaries; do not use DOM attributes as application state.
+Keep mounted views and their state for the document lifetime, including cached-page returns.
+Pause playback and suspend browser observation on `pagehide`; reacquire active work on
+`pageshow` without remounting the views. The inline theme script only selects the first paint;
+the Typed theme component owns subsequent changes.
+
+`/explore/storybook/` embeds the maintained UI stories. `build:storybook` writes its standalone
+assets into `public/storybook`; Astro includes them in the static output under the deployment base.
 
 The site emits HTML, direct Markdown, a search index, a documentation manifest, a sitemap,
 `llms.txt`, and `llms-full.txt`. All are static files served by GitHub Pages.
@@ -48,8 +70,10 @@ pnpm --filter @typed/astro test:integration
 
 `test:docs` checks source coverage, authored examples, cumulative tutorial snapshots, Markdown,
 and search behavior. `test:production` regenerates and builds the site, then checks every local
-HTML link and reference route and exercises hydration, search, themes, and mobile layouts in
-Chromium. `test:static` runs those output checks against an existing build.
+HTML link and renders every documentation page in dark desktop and light mobile layouts.
+Focused Chromium checks cover hydration, counter interactions, search, animated marbles,
+Storybook controls and theme synchronization. `test:static` runs those output checks against
+an existing build.
 
 The extractor and Astro checker use TypeScript 6's compiler API. Library builds retain the
 workspace TypeScript version; the website's compiler dependencies are intentionally local.

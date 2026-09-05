@@ -6,16 +6,15 @@ kind: "guide"
 order: 1.7
 ---
 
-An event can mean “later,” “after the burst settles,” “at most once per window,” or “keep trying.”
-Those are different timing rules, so model the rule at the `Fx` boundary instead of adding an
-unmanaged timer around its consumer.
+A document editor needs three different clocks. Search should wait until typing settles. A dragging
+preview should update promptly but at a bounded rate. A connection indicator should become unavailable
+after silence. Putting the same timer around all three would lose the distinctions the user sees.
 
-## Delay one value, wait for quiet, or limit a rate
+After [selection by values](/explore/fx-selection-and-cardinality), this lesson makes time the
+selection boundary. Effect owns the clock and its interruption; the feature still chooses which
+values may be omitted and what silence means.
 
-Use `Fx.at` for one value that should arrive later. Use `Fx.delay` when every source value must
-still arrive, in order, after the same delay. Use `Fx.debounce` when only the latest value after a
-quiet period matters. Use `Fx.throttle` when immediate feedback is useful but a source must not
-deliver more often than a window allows.
+## Separate postponed delivery from omitted input
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -32,13 +31,24 @@ const previews = edits.pipe(
 const settledValues = Fx.collectAll(settledEdits);
 ```
 
+`at(value, delay)` produces one value after a wait. [`delay`](/reference/symbols/QHR5cGVkL2Z4L0Z4I2RlbGF5)
+sleeps before forwarding each delivery. With sequential `fromIterable`, those sleeps pace the example's
+outputs at roughly 100, 200, and 300 milliseconds. Concurrent producers can overlap sleeps instead;
+`delay` inherits producer concurrency through `mapEffect` rather than adding a queue.
+
 ```fx-marble
-title: delay shifts every value by 100ms (two 50ms slots)
+title: delay sleeps 100ms for each independently timed delivery (50ms slots)
 covers: delay
-input: a . b . c |
+input: a . b . c . . |
 operator: delay(100ms)
 output: . . a . b . c |
 ```
+
+This diagram assumes independently timed source deliveries. Each is shifted by two slots, and the
+source run itself waits for pending deliveries before completing. A sequential producer would also
+shift later input work while waiting for each earlier sink delivery.
+
+For search, every intermediate string is not equally useful:
 
 ```fx-marble
 title: debounce emits 250ms after the final value (50ms slots)
@@ -48,6 +58,13 @@ operator: debounce(250ms)
 output: . . . . . . . . . typed |
 ```
 
+Each newer query cancels the previous quiet-period timer. `t` and `ty` never emit; only `typed`
+survives five quiet 50-millisecond slots. Debounce is selection, not merely postponement. Normalize
+and remove adjacent repeated queries before debounce when a whitespace-only edit should not restart
+that timer.
+
+For a preview, waiting for silence would withhold feedback throughout a continuous gesture:
+
 ```fx-marble
 title: throttle keeps leading and trailing values in a 100ms window (50ms slots)
 covers: throttle
@@ -56,24 +73,40 @@ operator: throttle({ duration: 100ms, leading: true, trailing: true })
 output: t . ty . next . . |
 ```
 
-Debounce replaces an in-flight quiet-period timer whenever a newer value arrives. Throttle opens a
-fixed window: the duration-only form is leading-edge; `{ leading: true, trailing: true }` also
-keeps the latest value seen during that window. Both add `Scope` to the resulting `Fx`, because a
-subscription owns the timer and any pending value.
+Throttle opens a fixed window. The duration-only form emits the leading value. With both options
+enabled, `t` appears immediately and the latest busy value `ty` appears at the trailing boundary.
+A leading-only policy can omit the final position of a burst. Both debounce and throttle require
+Scope to own pending timers and retained values.
 
-## Make a clock, or subscribe again after completion
+## Test the search rule using the clock it actually runs on
 
-`Fx.periodic` emits `void` after each full period; the first tick is not immediate. For a custom or
-finite clock, use `Fx.fromSchedule`. `Fx.repeat` is different: it starts a fresh, sequential
-subscription only after the previous source completes successfully. It does not repeat each value
-and never overlaps attempts.
+```ts
+import { Effect, Fiber } from "effect";
+import * as TestClock from "effect/testing/TestClock";
+import { expect, it } from "@effect/vitest";
+import { Fx } from "@typed/fx";
+
+it.effect("keeps the final search query after quiet time", Effect.fn(function* () {
+  const queries = Fx.fromIterable(["t", "ty", "typed"]).pipe(Fx.debounce("250 millis"));
+  const result = yield* Effect.forkScoped(Fx.collectAll(queries));
+  yield* TestClock.adjust("250 millis");
+  expect(yield* Fiber.join(result)).toEqual(["typed"]);
+}));
+```
+
+The finite input produces its burst immediately. The test forks collection so its pending timer can
+remain asleep while the test advances Effect's clock, then asserts the final query. It does not wait
+250 milliseconds of wall time. Also test interruption while a value is pending: closing the editor
+must prevent a stale search from firing afterward.
+
+## Poll by completion or tick on a schedule
 
 ```ts
 import { Effect, Schedule } from "effect";
 import { Fx } from "@typed/fx";
 
 const threeHeartbeats = Fx.collectAll(Fx.periodic("1 minute").pipe(Fx.take(3)));
-const threeScheduledTicks = Fx.collectAll(Fx.fromSchedule(Schedule.recurs(2)));
+const twoScheduledTicks = Fx.collectAll(Fx.fromSchedule(Schedule.recurs(2)));
 
 const pollAttempt = Fx.succeed("updated");
 const threePolls = Fx.collectAll(pollAttempt.pipe(Fx.repeat(Schedule.recurs(2))));
@@ -81,9 +114,9 @@ const threePolls = Fx.collectAll(pollAttempt.pipe(Fx.repeat(Schedule.recurs(2)))
 const program: Effect.Effect<ReadonlyArray<string>> = threePolls;
 ```
 
-A schedule supplies the timing and stopping policy for `fromSchedule`, `repeat`, and `Fx.retry`.
-Its failure and service requirements join the source's `E` and `R`, so a schedule that needs a
-service or can fail remains visible to the caller rather than escaping through a callback.
+`periodic` first emits after a full period; it has no immediate initial tick. `fromSchedule` emits
+according to the recurrence, and `Schedule.recurs(2)` produces two ticks. `repeat` is different:
+it runs a source once, then permits two additional subscriptions for a total of three scans.
 
 ```fx-marble
 title: repeat starts a fresh run only after the previous run completes
@@ -95,11 +128,12 @@ inner repeat-2: . . . . ^ poll |
 output: . poll . poll . poll |
 ```
 
-## Decide what silence means
+Each repeated `^` follows normal completion of the previous run. There is no overlapping poll.
+A failed source stops repeat; [retry](/explore/fx-errors-and-recovery) handles a failed subscription
+instead. Schedules can contribute their own errors and service requirements, which remain visible
+rather than escaping into a detached timer callback.
 
-`Fx.timeout` treats an idle interval as normal completion. `Fx.timeoutTo` instead interrupts the
-quiet source and transfers output to a fallback `Fx`. Both reset their clock after every emitted
-value, so they detect the gap before the first value as well as gaps between later values.
+## Decide whether silence ends the feed or selects a fallback
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -111,6 +145,9 @@ const availability = heartbeat.pipe(Fx.timeoutTo("2 seconds", Fx.succeed("offlin
 const availabilityValues = Fx.collectAll(availability);
 ```
 
+The heartbeat fixture emits every second, so its two-second idle timeout never fires. To test the
+fallback, use a source that intentionally goes silent as shown below:
+
 ```fx-marble
 title: timeout completes normally after two seconds of silence (1s slots)
 covers: timeout
@@ -119,6 +156,9 @@ input timeout: ^ . . . |
 operator: timeout(2 seconds)
 output: . beat beat . |
 ```
+
+`timeout` resets after every emitted value. Two seconds without an initial or later event complete
+the output normally and interrupt the source. This is not an expected timeout error.
 
 ```fx-marble
 title: timeoutTo cancels the source and hands off to its fallback
@@ -130,14 +170,16 @@ operator: timeoutTo(2 seconds, fallback)
 output: . beat beat . . offline |
 ```
 
-`timeout` preserves the source's value, failure, and service types. `timeoutTo` combines those
-channels with the fallback's, because either producer may become the active one.
+`timeoutTo` instead selects its fallback after interrupting the quiet source. `offline` appears from
+that new inner lane. Its values, failures, and requirements join those of the original source.
+Neither operation asserts that a server is physically disconnected; it models the product's chosen
+idle threshold.
 
-## Model a drag from pointerdown to pointerup
+## Give each drag its own movement window
 
-A drag is a window opened by one producer and closed by another. `pointerdown` selects the pointer,
-matching `pointermove` events produce positions, and either `pointerup` or `pointercancel` closes the
-window. The next `pointerdown` starts a new drag.
+The drag interaction needs an event boundary and may then apply a rate policy to its positions.
+`pointerdown` captures the initial coordinates, matching moves produce deltas, and a matching
+`pointerup` or `pointercancel` closes that drag:
 
 ```ts
 import { Effect } from "effect";
@@ -210,20 +252,22 @@ export const dragEvents = (handle: HTMLElement) => {
 };
 ```
 
-`Fx.callback` is the native DOM boundary here: registration is lazy, and its cleanup Effect removes
-the real event listener when observation ends. `emit.succeed` starts sink delivery immediately and
-returns its Fiber; the DOM callback does not wait for that Fiber. `until(stop)` interrupts the
-matching move source as soon as the terminating event arrives. `switchMap` makes a newer
-`pointerdown` replace an unfinished gesture instead of leaving two drags active.
+The callback adapter installs each listener only during observation and returns its matching removal.
+The browser does not await the delivery Fiber returned by `emit.succeed`. `until(stop)` interrupts
+the move subscription at the matching stop event; `switchMap` replaces an unfinished drag when a
+new start arrives.
 
-For a single bounded window, `Fx.during(events, starts)` accepts a start Fx whose first value is the
-stop Fx. It discards event values before that start and after the stop. The explicit `switchMap` and
-`until` form above is more useful for drag-and-drop because it retains the starting coordinates and
-can open another window for every gesture.
+`Start` is a normal prefixed event and `End` a normal appended event. If the whole inner is interrupted
+by a replacement start, its append need not run. Release resources in finalizers rather than relying
+on a final displayed event. This example models drag events; a complete drag interface separately
+chooses capture, bounds, accessibility, and how positions affect layout.
 
-## Let the subscription own the timer
+For one bounded window, `during(events, starts)` uses the first start value as the stop Fx. The
+explicit switching form here preserves coordinates and can open another window on every start.
+Apply trailing throttle to derived preview positions when frequency should be bounded; do not throttle
+away control events required to close the gesture.
 
-Constructing an `Fx` starts no clock. Running a consumer starts the subscription; completion,
-failure, and interruption cancel pending sleeps and close its `Scope`. A finite runner can own that
-Scope until its result completes. A live clock belongs to a longer-lived application, request, or
-feature Scope. In tests, advance Effect's `TestClock` instead of waiting on wall time.
+The same ownership rule now covers all three clocks: observation starts the wait, its owner stays
+open while the feature needs it, and interruption cancels pending work. Continue with
+[services and lifetime](/explore/fx-services-and-lifetime) to attach that owner to a feature, or
+[higher-order policies](/explore/fx-higher-order-and-concurrency) when a timed event starts new work.

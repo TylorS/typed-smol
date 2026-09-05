@@ -1,129 +1,122 @@
 ---
 title: "Spread props and data records"
 summary: "Combine native attributes, DOM properties, dataset values, and event handlers without losing their individual semantics."
-section: "Templates"
+section: "Template bindings"
 kind: "guide"
-order: 3.25
+order: 2
 ---
 
-Template syntax is explicit about which browser surface you are writing to. A plain attribute is
-serialized markup; a leading `.` writes a property; `?` controls boolean presence; `.data` writes
-`data-*` attributes; and `...` expands a record into those same native operations.
+A reusable search field sometimes receives a capability record: a help title, an analytics ID,
+a disabled state, and an event handler. The record may change when a feature is enabled or removed.
+A spread lets those fields travel together while preserving each field's native meaning and lifetime.
 
-## Start with the surface you mean
+Read [Attributes, properties, and boolean state](/explore/template-element-bindings) first. A spread
+is a grouping mechanism for those operations, not an alternative object model for DOM elements.
 
-```ts
-import { Fx } from "@typed/fx";
-import { html } from "@typed/template";
+## Keep known fields explicit; group fields that belong together
 
-const query = Fx.succeed("typed");
-const disabled = Fx.succeed(false);
-
-const search = html`<input
-  aria-label="Search"
-  value="initial"
-  .value=${query}
-  ?disabled=${disabled}
-/>`;
-```
-
-`value=${...}` targets the `value` attribute. `.value=${...}` targets the live DOM property, so it
-is the form a user is currently editing. `?disabled=${false}` removes the attribute; it does not
-write the string `"false"` (which would still disable an HTML control). A dynamic attribute accepts
-ordinary values, `Effect`, `Stream`, or `Fx` values and updates only its captured attribute node.
-
-Use `class=${...}` for class tokens. Typed keeps a token ledger per class part: a later update
-removes tokens that part contributed while preserving classes added by another owner. A spread
-`class` or `className` entry uses the same ledger.
-
-## `.data` owns a dataset slice
-
-`.data` turns an object into `data-*` attributes. Each value may itself be a renderable, so one
-record can mix constants and producers.
+If a component always owns `.value`, write that part directly. Use a spread when a caller genuinely
+supplies a group of fields or when the set of contributed capabilities changes:
 
 ```ts
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import { html } from "@typed/template";
 
-const card = html`<article .data=${{
-  kind: "result",
-  loading: Effect.succeed("false"),
-  rank: Fx.succeed(3),
-}}></article>`;
-```
-
-The record above contributes `data-kind`, `data-loading`, and `data-rank`; the browser exposes
-them through `element.dataset.kind`, `element.dataset.loading`, and `element.dataset.rank`. When a
-later record omits a key, Typed removes only that key's attribute. Existing `data-*` attributes
-with different names remain untouched. Values use the same scalar-to-string conversion as ordinary
-dynamic attributes; the HTML renderer additionally escapes them when it serializes markup.
-
-`null`, `undefined`, or a non-object record contributes no keys and therefore clears the keys that
-this `.data` part previously emitted. Invalid names and prototype-sensitive keys such as
-`__proto__`, `prototype`, and `constructor` are ignored.
-
-## Spread a record when the shape is dynamic
-
-Use `...${record}` when a caller supplies a group of props. The record is reconciled by key: an
-unchanged value keeps its existing part, a changed value updates that part, and a removed key is
-cleaned up.
-
-```ts
-import { Effect } from "effect";
-import { Fx } from "@typed/fx";
-import { html } from "@typed/template";
-
-const saveProps = {
-  "aria-label": "Save draft",
+const saveCapabilities = {
+  title: "Save the current search",
+  "aria-label": "Save search",
   "?disabled": Fx.succeed(false),
-  ".value": "Save",
-  ".data": { action: "save" },
-  onclick: Effect.log("Saved draft"),
+  ".data": { action: "save-search" },
+  onclick: Effect.log("Save search requested"),
 } as const;
 
-const SaveButton = html`<button ...${saveProps}>Save</button>`;
+export const save = html`<button type="button" ...${saveCapabilities}>Save</button>`;
 ```
 
-These keys retain their meaning inside a spread:
+Each accepted key installs the same kind of part as explicitly authored syntax. The event is a
+registration; `?disabled` controls presence; the dataset contains serialized metadata. They do not
+all become string attributes merely because they were supplied in a record.
 
-| Record key | Native operation |
+This example logs a command rather than claiming to persist anything. In an application, replace
+the Effect with the actual command operation and retain its error/service requirements.
+
+## Understand the accepted surface before designing a public prop bag
+
+| Record key | Meaning |
 | --- | --- |
-| `aria-label`, `title`, `id` | set or remove an attribute |
-| `?disabled` | toggle boolean attribute presence |
-| `.value`, `.checked`, `.indeterminate`, `.selected`, `.selectedIndex` | assign a safe DOM property |
-| `class` or `className` | reconcile this part's class tokens |
-| `.data` | reconcile nested `data-*` keys |
-| `@click` or `onclick` | install a real DOM event handler |
-| `ref` | run the ref against the exact element |
-| `.props` or `.properties` | recursively spread another record |
+| `title`, `id`, `aria-label` | ordinary attribute set/removal |
+| `?disabled` | boolean attribute presence |
+| `.value`, `.checked`, `.indeterminate`, `.selected`, `.selectedIndex` | allowed live property assignments |
+| `class` or `className` | contributed class tokens |
+| `.data` | contributed `data-*` keys |
+| `onclick` or `@click` | native event handler |
+| `ref` | setup on the exact element |
+| `.props` or `.properties` | nested capability record |
 
-Spread property writes are deliberately restricted to the form-control properties above. Use a
-direct `.someProperty=${value}` part when you need an arbitrary property and can name it in the
-template. A spread cannot replace `constructor`, `prototype`, or `__proto__`, and `on*` keys are
-not treated as attributes. Cyclic nested records are ignored at the cycle boundary.
+Arbitrary property assignment is deliberately not a spread feature. Name a property directly in
+the template when an integration needs it. Invalid attribute names and prototype-sensitive keys
+(`constructor`, `prototype`, `__proto__`) are ignored. Event-shaped `on*` keys are not emitted as
+HTML attributes. Cyclic nested records stop at the cycle boundary.
 
-## Ownership is local, including removal
+This allowlist is renderer behavior, not a reason to accept arbitrary untrusted records in a library.
+Expose a narrow typed contract for the capabilities a component actually supports.
 
-Each spread key gets a local instance in the render Scope. Removing `title` removes that attribute;
-removing `.value` restores the value that was present before the spread; removing a handler
-unregisters only that handler; and removing `ref` closes the ref's setup. Nested `.data`, `class`,
-and `.properties` parts clean up their own keys recursively.
+## Use `.data` for a slice of metadata
 
-The same ownership rule lets spreads coexist with hand-authored DOM and other renderers when they
-own different fields. A spread does not clear all classes, replace the whole dataset, or remove
-nodes it did not create. Two writers should not share the same attribute or property target: when
-the spread removes that key, it cannot distinguish a later write by another owner.
+Dataset keys are contributed independently from the rest of the element:
 
-## Server rendering has a smaller surface
+```ts
+import { Effect } from "effect";
+import { Fx } from "@typed/fx";
+import { html } from "@typed/template";
 
-The HTML renderer serializes safe attributes, booleans, classes, `.data`, and nested spreads. It
-escapes dynamic strings and omits events, ordinary callback refs, DOM properties, unsafe names, and invalid attribute
-names because those have no HTML-attribute equivalent. `Effect`, `Stream`, and `Fx` values are
-sampled for the finite server render; the browser renderer is the one that keeps them live.
-Hydration refs have an explicit serialization protocol; see
-[Reference the native element](/explore/template-references-and-element-access) for that exception.
+export const article = html`<article .data=${{
+  id: "scope",
+  kind: Effect.succeed("saved-article"),
+  rank: Fx.succeed(3),
+}}>Understanding resource scopes</article>`;
+```
 
-Read [DOM scalar parts and attributes](/explore/dom-parts-and-attributes) for the single-part cost
-model, [class names without className replacement](/explore/dom-class-names) for token ownership,
-and [rendering HTML on the server](/explore/rendering-html-on-the-server) for the SSR boundary.
+This contributes `data-id`, `data-kind`, and `data-rank`. A later record omitting `rank` removes
+only `data-rank`; unrelated keys contributed by another system remain. Values may themselves be
+producers and are serialized as data. Use explicit hyphenated keys when that is the attribute name
+you intend; `.data` builds `data-${key}` rather than implementing arbitrary property-name magic.
+
+A nullish or non-object record contributes no keys, clearing this part's previous contributions.
+That differs from a nullish value inside a record, which follows value serialization for that key.
+Do not confuse clearing the record with removing all `data-*` attributes on the element.
+
+## Follow a capability through replacement and removal
+
+Suppose the outer record initially contains `title`, `onclick`, and `ref`, then becomes an empty
+record. Typed removes the contributed title, unregisters that handler, and closes the resource scope
+owned by that ref. The host element and independently installed capabilities remain.
+
+Removing a spread property restores the property's value from before that part was installed.
+Removing class/data/nested spread entries clears their local contributions. This makes removal
+meaningful: a capability has both a value and an end to its lifetime.
+
+A retained record containing a reactive `.value` does not need to be re-enumerated for every emission
+from that entry. The retained entry updates its captured target. Replacing the *outer record* does
+require comparing its keys and replacing, retaining, or disposing entries. Measure those separately
+when a large capability record is involved.
+
+Two independent writers should not claim the same field. A spread cannot distinguish another
+owner's later write to its `title` from its own contribution when it removes that key. Give helpers
+separate attributes and class tokens, and decide explicitly which component owns the edit property.
+
+## Verify both lifetime and serialization
+
+A useful browser test replaces a capability record while retaining the same element. Assert the
+removed handler no longer runs, its ref finalizer ran, and an unrelated class/data key survives.
+Checking only final HTML would miss a leaked event registration.
+
+On the HTML target, attributes, booleans, classes, dataset keys, and nested spreads serialize.
+DOM properties, event handlers, and ordinary refs do not. Hydration refs are an explicit exception
+that carry state metadata. Compare server attributes with the browser property behavior rather than
+expecting all spread fields to appear in a response.
+
+Continue with [Class contributions](/explore/dom-class-names) for token conflicts and
+[Reference the native element](/explore/template-references-and-element-access) for the ref resources
+a removable capability may acquire.

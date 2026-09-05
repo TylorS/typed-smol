@@ -26,7 +26,7 @@ import type { Fx } from "../Fx.js";
  * @param f - A function that transforms values of type `A` to `B`.
  * @returns An `Fx` that emits values of type `B`.
  * @since 1.0.0
- * @category combinators
+ * @category Transforming values
  */
 export const map: {
   <A, B>(f: (a: A) => B): <E, R>(self: Fx<A, E, R>) => Fx<B, E, R>;
@@ -58,7 +58,7 @@ export const map: {
  * @param b - The value to emit instead.
  * @returns An Fx that emits `b` for every element.
  * @since 1.0.0
- * @category combinators
+ * @category Transforming values
  */
 export const as: {
   <B>(b: B): <A, E, R>(self: Fx<A, E, R>) => Fx<B, E, R>;

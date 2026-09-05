@@ -22,7 +22,7 @@ import * as NativePopover from "./NativePopover.js";
  * ## Ownership and lifetime
  * Plain state retains no resources; RefSubject observation is Scope-owned.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface State {
   /** Stable id used by `aria-describedby` and tooltip content.
@@ -32,7 +32,7 @@ export interface State {
    * ## Ownership and lifetime
    * Plain data acquires no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly id: string;
   /** Whether tooltip content is open.
@@ -42,7 +42,7 @@ export interface State {
    * ## Ownership and lifetime
    * Plain data acquires no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open: boolean;
 }
@@ -54,7 +54,7 @@ export interface State {
  * ## Ownership and lifetime
  * Configuration is inert.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface InitialState {
   /** Stable tooltip id.
@@ -64,7 +64,7 @@ export interface InitialState {
    * ## Ownership and lifetime
    * Plain data retains no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly id: string;
   /** Initial visibility, defaulting to false.
@@ -74,7 +74,7 @@ export interface InitialState {
    * ## Ownership and lifetime
    * Plain data retains no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open?: boolean;
 }
@@ -86,7 +86,7 @@ export interface InitialState {
  * ## Ownership and lifetime
  * The immutable schema acquires no resources.
  * @since 1.0.0
- * @category schemas
+ * @category Open state
  */
 export const StateSchema = Schema.Struct({ id: Schema.String, open: Schema.Boolean });
 
@@ -106,7 +106,7 @@ export const StateSchema = Schema.Struct({ id: Schema.String, open: Schema.Boole
  * })
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Open state
  */
 export function makeState(initial: InitialState) {
   return RefSubject.hydrate(StateSchema, { id: initial.id, open: initial.open ?? false });
@@ -129,7 +129,7 @@ export function makeState(initial: InitialState) {
  * })
  * ```
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export function setOpen<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -160,7 +160,7 @@ const scheduleOpen = Effect.fn(function* <E, R>(
  * ## Ownership and lifetime
  * Options are inert; rendering owns listeners/timers by Scope.
  * @since 1.0.0
- * @category models
+ * @category Pointer and focus anchors
  */
 export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
   /** Hydrated state shared with tooltip content.
@@ -170,7 +170,7 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
    * ## Ownership and lifetime
    * The anchor borrows state; its original Scope owns it.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /** Anchor content.
@@ -181,7 +181,7 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the anchor Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /** Delay in milliseconds before opening.
@@ -192,7 +192,7 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
    * Delayed Effects run inside the component interaction lifetime; newer
    * schedules invalidate older versions.
    * @since 1.0.0
-   * @category timing
+   * @category Interaction delays
    */
   readonly showDelay?: number;
   /** Delay in milliseconds before closing.
@@ -202,7 +202,7 @@ export interface AnchorOptions extends Dom.HostOptions<HTMLSpanElement> {
    * ## Ownership and lifetime
    * Newer schedules invalidate older delayed updates.
    * @since 1.0.0
-   * @category timing
+   * @category Interaction delays
    */
   readonly hideDelay?: number;
 }
@@ -255,7 +255,7 @@ type AnchorInternalProps<Options extends AnchorOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Pointer and focus anchors
  */
 export function Anchor<const Options extends AnchorOptions, const Host extends HostResult = never>(
   options: Options,
@@ -291,7 +291,7 @@ export function Anchor<const Options extends AnchorOptions, const Host extends H
  * ## Ownership and lifetime
  * Options are inert; rendering owns listeners/ref observation by Scope.
  * @since 1.0.0
- * @category models
+ * @category Native content host
  */
 export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
   /** Hydrated state supplying content id and visibility.
@@ -301,7 +301,7 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * Content borrows state; its original Scope owns it.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /** Non-interactive explanatory tooltip content.
@@ -311,7 +311,7 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the content Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -371,7 +371,7 @@ type ContentInternalProps<Options extends ContentOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Native content host
  */
 export function Content<
   const Options extends ContentOptions,
@@ -406,6 +406,6 @@ export function Content<
  * ## Ownership and lifetime
  * It has exactly the same Scope and popover ownership as `Content`.
  * @since 1.0.0
- * @category aliases
+ * @category Native content host
  */
 export const Tooltip = Content;

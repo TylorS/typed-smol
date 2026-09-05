@@ -39,7 +39,7 @@ import { getGuard } from "./getGuard.js";
  * const string: Guard<unknown, string> = (input) => Effect.succeed(typeof input === "string" ? Option.some(input) : Option.none())
  * ```
  *
- * @category Models
+ * @category Guard contracts
  * @since 1.0.0
  */
 export type Guard<in I, out O, out E = never, out R = never> = (
@@ -62,7 +62,7 @@ export namespace Guard {
    * import type { Guard } from "@typed/guard"
    * type Input = Guard.Input<Guard<string, number>>
    * ```
-   * @category Type helpers
+   * @category Type utilities
    * @since 1.0.0
    */
   export type Input<T> = [T] extends [Guard<infer I, infer _R, infer _E, infer _O>]
@@ -83,7 +83,7 @@ export namespace Guard {
    * import type { Guard } from "@typed/guard"
    * type Services = Guard.Services<Guard<string, number, never, { readonly Db: unique symbol }>>
    * ```
-   * @category Type helpers
+   * @category Type utilities
    * @since 1.0.0
    */
   export type Services<T> = [T] extends [Guard<infer _I, infer _O, infer _E, infer R>]
@@ -104,7 +104,7 @@ export namespace Guard {
    * import type { Guard } from "@typed/guard"
    * type Error = Guard.Error<Guard<string, number, "Invalid">>
    * ```
-   * @category Type helpers
+   * @category Type utilities
    * @since 1.0.0
    */
   export type Error<T> = [T] extends [Guard<infer _I, infer _O, infer E, infer _R>]
@@ -125,7 +125,7 @@ export namespace Guard {
    * import type { Guard } from "@typed/guard"
    * type Output = Guard.Output<Guard<string, number>>
    * ```
-   * @category Type helpers
+   * @category Type utilities
    * @since 1.0.0
    */
   export type Output<T> = [T] extends [Guard<infer _I, infer O, infer _E, infer _R>]
@@ -153,7 +153,7 @@ export namespace Guard {
  * const adapter: AsGuard<string, string> = { asGuard: () => ((input) => Effect.succeedSome(input)) as Guard<string, string> }
  * ```
  *
- * @category Models
+ * @category Guard contracts
  * @since 1.0.0
  */
 export interface AsGuard<in I, out O, out E = never, out R = never> {
@@ -164,7 +164,7 @@ export interface AsGuard<in I, out O, out E = never, out R = never> {
    * Requiring an own callable property avoids ambiguous prototype behavior when adapters cross object boundaries.
    * ## Ownership and lifetime
    * Calling this property acquires no resources; the returned Guard follows its own Effect lifetime.
-   * @category Models
+   * @category Guard contracts
    * @since 1.0.0
    */
   readonly asGuard: () => Guard<I, O, E, R>;
@@ -187,7 +187,7 @@ export interface AsGuard<in I, out O, out E = never, out R = never> {
  * const input: GuardInput<unknown, string> = liftPredicate((value: unknown): value is string => typeof value === "string")
  * ```
  *
- * @category Models
+ * @category Guard contracts
  * @since 1.0.0
  */
 export type GuardInput<I, O, E = never, R = never> = Guard<I, O, E, R> | AsGuard<I, O, E, R>;
@@ -269,7 +269,7 @@ const mergeEnumerableRecords = (
  * const nonEmpty = pipe(liftPredicate((u: unknown): u is string => typeof u === "string"), liftPredicate((s) => s.length > 0))
  * ```
  *
- * @category Composition
+ * @category Sequential composition
  * @since 1.0.0
  */
 export const pipe: {
@@ -314,7 +314,7 @@ export const pipe: {
  * import { Effect } from "effect"
  * const length = mapEffect(liftPredicate((u: unknown): u is string => typeof u === "string"), (s) => Effect.succeed(s.length))
  * ```
- * @category Composition
+ * @category Value transformations
  * @since 1.0.0
  */
 export const mapEffect: {
@@ -354,7 +354,7 @@ export const mapEffect: {
  * import { liftPredicate, map } from "@typed/guard"
  * const length = map(liftPredicate((u: unknown): u is string => typeof u === "string"), (s) => s.length)
  * ```
- * @category Composition
+ * @category Value transformations
  * @since 1.0.0
  */
 export const map: {
@@ -382,7 +382,7 @@ export const map: {
  * import { liftPredicate, tap } from "@typed/guard"
  * const observed = tap(liftPredicate((u: unknown): u is string => typeof u === "string"), console.log)
  * ```
- * @category Composition
+ * @category Effectful observation
  * @since 1.0.0
  */
 export const tap: {
@@ -429,7 +429,7 @@ export const tap: {
  * import { Option } from "effect"
  * const parsed = filterMap(liftPredicate((u: unknown): u is string => typeof u === "string"), (s) => s ? Option.some(Number(s)) : Option.none())
  * ```
- * @category Composition
+ * @category Input selection
  * @since 1.0.0
  */
 export const filterMap: {
@@ -460,7 +460,7 @@ export const filterMap: {
  * import { filter, liftPredicate } from "@typed/guard"
  * const positive = filter(liftPredicate((u: unknown): u is number => typeof u === "number"), (n) => n > 0)
  * ```
- * @category Composition
+ * @category Input selection
  * @since 1.0.0
  */
 export const filter: {
@@ -508,7 +508,7 @@ export const filter: {
  * const classify = any({ text: liftPredicate((u: unknown): u is string => typeof u === "string") })
  * ```
  *
- * @category Dispatch
+ * @category Alternative selection
  * @since 1.0.0
  */
 export function any<const GS extends Readonly<Record<string, GuardInput<any, any, any, any>>>>(
@@ -541,7 +541,7 @@ export function any<const GS extends Readonly<Record<string, GuardInput<any, any
  * import type { AnyInput, Guard } from "@typed/guard"
  * type Input = AnyInput<{ text: Guard<unknown, string>; count: Guard<unknown, number> }>
  * ```
- * @category Type helpers
+ * @category Type utilities
  * @since 1.0.0
  */
 export type AnyInput<GS extends Readonly<Record<string, GuardInput<any, any, any, any>>>> =
@@ -563,7 +563,7 @@ type UnionToIntersection<T> = (T extends any ? (x: T) => any : never) extends (x
  * import type { AnyOutput, Guard } from "@typed/guard"
  * type Output = AnyOutput<{ text: Guard<unknown, string>; count: Guard<unknown, number> }>
  * ```
- * @category Type helpers
+ * @category Type utilities
  * @since 1.0.0
  */
 export type AnyOutput<GS extends Readonly<Record<string, GuardInput<any, any, any, any>>>> = [
@@ -592,7 +592,7 @@ export type AnyOutput<GS extends Readonly<Record<string, GuardInput<any, any, an
  * const string = liftPredicate((value: unknown): value is string => typeof value === "string")
  * ```
  *
- * @category Constructors
+ * @category Input selection
  * @since 1.0.0
  */
 export function liftPredicate<A, B extends A>(predicate: Predicate.Refinement<A, B>): Guard<A, B>;
@@ -918,7 +918,7 @@ const parseOptions: ParseOptions = { errors: "all", onExcessProperty: "ignore" }
  * const number = fromSchemaDecode(Schema.NumberFromString)
  * ```
  * See [Effect Schema transformations](https://effect.website/docs/schema/transformations/).
- * @category Schema
+ * @category Schema decoding and encoding
  * @since 1.0.0
  */
 export function fromSchemaDecode<S extends Schema.Top>(
@@ -941,7 +941,7 @@ export function fromSchemaDecode<S extends Schema.Top>(
  * import { Schema } from "effect"
  * const encoded = fromSchemaEncode(Schema.NumberFromString)
  * ```
- * @category Schema
+ * @category Schema decoding and encoding
  * @since 1.0.0
  */
 export function fromSchemaEncode<S extends Schema.Top>(
@@ -964,7 +964,7 @@ export function fromSchemaEncode<S extends Schema.Top>(
  * import { Schema } from "effect"
  * const number = decode(liftPredicate((u: unknown): u is string => typeof u === "string"), Schema.NumberFromString)
  * ```
- * @category Schema
+ * @category Schema decoding and encoding
  * @since 1.0.0
  */
 export const decode: {
@@ -1005,7 +1005,7 @@ export const decode: {
  * import { Schema } from "effect"
  * const text = encode(liftPredicate((u: unknown): u is number => typeof u === "number"), Schema.NumberFromString)
  * ```
- * @category Schema
+ * @category Schema decoding and encoding
  * @since 1.0.0
  */
 export const encode: {

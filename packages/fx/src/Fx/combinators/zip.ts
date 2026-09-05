@@ -39,7 +39,7 @@ import { tuple } from "./tuple.js";
  * @param that - The second Fx stream.
  * @returns An Fx that emits pairs `[A, B]`.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const zip: {
   <A2, E2, R2>(
@@ -120,7 +120,7 @@ export const zip: {
  * @param f - Function to combine the pair `(a, b)` into a single value.
  * @returns An Fx that emits combined values.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const zipWith: {
   <A, A2, E2, R2, B>(
@@ -168,7 +168,7 @@ export const zipWith: {
  * @param that - The second Fx stream.
  * @returns An Fx that emits `[AL, AR]` on every update from either stream.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const zipLatest: {
   <AR, ER, RR>(
@@ -213,7 +213,7 @@ export const zipLatest: {
  * @param f - Function to combine the latest `(left, right)` into a single value.
  * @returns An Fx that emits combined values.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const zipLatestWith: {
   <AL, AR, ER, RR, B>(

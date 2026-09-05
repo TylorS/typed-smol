@@ -29,7 +29,7 @@ import { dual } from "effect/Function";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export const debounce: {
   (duration: Duration.Input): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;

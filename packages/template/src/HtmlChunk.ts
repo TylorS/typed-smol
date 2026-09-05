@@ -40,7 +40,7 @@ import { TEMPLATE_END_COMMENT, TEMPLATE_START_COMMENT } from "./internal/meta.js
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category HTML chunk protocol
  */
 export type HtmlChunk = HtmlTextChunk | HtmlPartChunk | HtmlSparsePartChunk;
 
@@ -64,7 +64,7 @@ export type HtmlChunk = HtmlTextChunk | HtmlPartChunk | HtmlSparsePartChunk;
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Static HTML chunks
  */
 export interface HtmlTextChunk {
   /**
@@ -80,7 +80,7 @@ export interface HtmlTextChunk {
    * The literal is immutable metadata.
    *
    * @since 1.0.0
-   * @category discriminants
+   * @category Static HTML chunks
    */
   readonly _tag: "text";
   /**
@@ -96,7 +96,7 @@ export interface HtmlTextChunk {
    * The chunk owns the string; the response sink owns emitted bytes.
    *
    * @since 1.0.0
-   * @category data
+   * @category Static HTML chunks
    */
   readonly text: string;
 }
@@ -124,7 +124,7 @@ export interface HtmlTextChunk {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Dynamic HTML chunks
  */
 export interface HtmlPartChunk {
   /** Identifies a single dynamic part chunk.
@@ -137,7 +137,7 @@ export interface HtmlPartChunk {
    * Immutable metadata owned by the chunk.
    *
    * @since 1.0.0
-   * @category discriminants
+   * @category Dynamic HTML chunks
    */
   readonly _tag: "part";
   /** The parsed dynamic part whose index selects the input value.
@@ -150,7 +150,7 @@ export interface HtmlPartChunk {
    * The chunk borrows the immutable AST node.
    *
    * @since 1.0.0
-   * @category data
+   * @category Dynamic HTML chunks
    */
   readonly node: Template.PartNode;
   /**
@@ -166,7 +166,7 @@ export interface HtmlPartChunk {
    * The pure function retains no application value between calls.
    *
    * @since 1.0.0
-   * @category rendering
+   * @category Dynamic HTML chunks
    */
   readonly render: (value: unknown) => string;
 }
@@ -193,7 +193,7 @@ export interface HtmlPartChunk {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Sparse HTML chunks
  */
 export interface HtmlSparsePartChunk {
   /** Identifies a sparse dynamic chunk.
@@ -206,7 +206,7 @@ export interface HtmlSparsePartChunk {
    * Immutable metadata owned by the chunk.
    *
    * @since 1.0.0
-   * @category discriminants
+   * @category Sparse HTML chunks
    */
   readonly _tag: "sparse-part";
   /** The parsed sparse part retaining literal/dynamic ordering.
@@ -219,7 +219,7 @@ export interface HtmlSparsePartChunk {
    * The chunk borrows the immutable AST node.
    *
    * @since 1.0.0
-   * @category data
+   * @category Sparse HTML chunks
    */
   readonly node: Template.SparsePartNode;
   /**
@@ -235,7 +235,7 @@ export interface HtmlSparsePartChunk {
    * The pure function retains no application value between calls.
    *
    * @since 1.0.0
-   * @category rendering
+   * @category Sparse HTML chunks
    */
   readonly render: (value: unknown) => string;
 }
@@ -263,7 +263,7 @@ export interface HtmlSparsePartChunk {
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category HTML chunk assembly
  * @stability internal-but-published
  */
 export class HtmlChunksBuilder {
@@ -279,7 +279,7 @@ export class HtmlChunksBuilder {
    * Mutates only this builder's private buffer.
    *
    * @since 1.0.0
-   * @category methods
+   * @category HTML chunk assembly
    */
   text(text: string): HtmlChunksBuilder {
     const lastIndex = this.chunks.length - 1;
@@ -302,7 +302,7 @@ export class HtmlChunksBuilder {
    * Retains the node and pure function until `build` transfers the buffer.
    *
    * @since 1.0.0
-   * @category methods
+   * @category HTML chunk assembly
    */
   part(node: Template.PartNode, render: (value: unknown) => string): HtmlChunksBuilder {
     this.chunks.push({ _tag: "part", node, render });
@@ -319,7 +319,7 @@ export class HtmlChunksBuilder {
    * Retains the node and function until `build` transfers the buffer.
    *
    * @since 1.0.0
-   * @category methods
+   * @category HTML chunk assembly
    */
   sparsePart(node: Template.SparsePartNode, render: (value: unknown) => string): HtmlChunksBuilder {
     this.chunks.push({ _tag: "sparse-part", node, render });
@@ -336,7 +336,7 @@ export class HtmlChunksBuilder {
    * The caller receives the prior array; the builder starts a new empty buffer.
    *
    * @since 1.0.0
-   * @category methods
+   * @category HTML chunk assembly
    */
   build(): ReadonlyArray<HtmlChunk> {
     const chunks = this.chunks;
@@ -381,7 +381,7 @@ export class HtmlChunksBuilder {
  * ```
  *
  * @since 1.0.0
- * @category utilities
+ * @category HTML compilation
  */
 export function templateToHtmlChunks({ nodes }: Template.Template) {
   const builder = new HtmlChunksBuilder();
@@ -418,7 +418,7 @@ export function templateToHtmlChunks({ nodes }: Template.Template) {
  * ```
  *
  * @since 1.0.0
- * @category utilities
+ * @category Hydration markers
  */
 export function addTemplateHash(
   chunks: ReadonlyArray<HtmlChunk>,
@@ -740,7 +740,7 @@ function renderSpreadAttributes(value: unknown, ancestors = new Set<object>()): 
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Spread serialization
  */
 export function isSerializableSpreadKey(key: string): boolean {
   if (!isSafeDynamicKey(key) || /^on/i.test(key)) return false;

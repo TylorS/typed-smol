@@ -24,7 +24,7 @@ const INITIAL_COUNT_MAX = 476782367;
  * const id = Cuid.make("a00000000000000000000000")
  * ```
  * See [Effect Schema](https://effect.website/docs/schema/introduction/).
- * @category Schemas
+ * @category ID schemas
  * @since 1.0.0
  */
 export const Cuid = Schema.String.pipe(
@@ -45,7 +45,7 @@ export type Cuid = Schema.Schema.Type<typeof Cuid>;
  * import { isCuid } from "@typed/id/Cuid"
  * isCuid("a00000000000000000000000")
  * ```
- * @category Refinements
+ * @category ID validation
  * @since 1.0.0
  */
 export const isCuid: (value: string) => value is Cuid = Schema.is(Cuid);
@@ -63,7 +63,7 @@ export const isCuid: (value: string) => value is Cuid = Schema.is(Cuid);
  * import type { CuidSeed } from "@typed/id/Cuid"
  * const seed: CuidSeed = { timestamp: 0, counter: 0, random: new Uint8Array(32) as CuidSeed["random"], fingerprint: "test" }
  * ```
- * @category Models
+ * @category ID types
  * @since 1.0.0
  */
 export type CuidSeed = {
@@ -91,7 +91,7 @@ export type CuidSeed = {
  * const program = Effect.provide(cuid, CuidState.Default)
  * ```
  * See [Effect services](https://effect.website/docs/requirements-management/services/) and [Layers](https://effect.website/docs/requirements-management/layers/).
- * @category Services
+ * @category Sequence state
  * @since 1.0.0
  */
 export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState", {
@@ -149,7 +149,7 @@ export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState
    * The explicit Layer gives production code a standard service while keeping test and environment-specific alternatives replaceable.
    * ## Ownership and lifetime
    * Layer acquisition creates one counter state; the surrounding Layer Scope owns it. Web Crypto must be available in the runtime.
-   * @category Layers
+   * @category Production layers
    * @since 1.0.0
    */
   static readonly Default = Layer.effect(CuidState, CuidState.make("node")).pipe(
@@ -170,7 +170,7 @@ export class CuidState extends Context.Service<CuidState>()("@typed/id/CuidState
  * import { Effect } from "effect"
  * const id = Effect.provide(cuid, CuidState.Default)
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const cuid: Effect.Effect<Cuid, never, CuidState> = Effect.flatMap(

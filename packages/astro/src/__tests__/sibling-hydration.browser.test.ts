@@ -4,27 +4,23 @@ import * as Button from "@typed/ui/Button";
 import * as Checkbox from "@typed/ui/Checkbox";
 import * as RefSubject from "@typed/fx/RefSubject";
 import { html } from "@typed/template";
-import * as Component from "../Component.js";
+import { component } from "../Component.js";
 import client from "../client.js";
 import server from "../server.js";
 
-const Checklist = Component.make(() =>
-  Effect.gen(function* () {
-    const states = yield* Effect.all(
-      [true, false, false].map((checked) => Checkbox.makeState({ checked })),
-    );
-    const completed = RefSubject.map(
-      RefSubject.tuple(states),
-      (items) => items.filter((item) => item.checked).length,
-    );
-    const reset = Effect.forEach(states, (state, index) => Checkbox.setChecked(state, index === 0));
-    return html`<section>
-      ${states.map((state) => html`<label>${Checkbox.Input({ state })}</label>`)}<output
-        >${completed}</output
-      >${Button.Button({ content: "Reset", onclick: reset })}
-    </section>`;
-  }),
-);
+const Checklist = component(function* () {
+  const states = yield* Effect.all(
+    [true, false, false].map((checked) => Checkbox.makeState({ checked })),
+  );
+  const completed = RefSubject.map(
+    RefSubject.tuple(states),
+    (items) => items.filter((item) => item.checked).length,
+  );
+  const reset = Effect.forEach(states, (state, index) => Checkbox.setChecked(state, index === 0));
+  return html`<section>
+    ${states.map((state) => html`<label>${Checkbox.Input({ state })}</label>`)}<output>${completed}</output>${Button.Button({ content: "Reset", onclick: reset })}
+  </section>`;
+});
 
 describe("repeated sibling template hydration", () => {
   it("adopts separate sibling nodes and preserves independent hydrated states", async () => {

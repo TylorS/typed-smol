@@ -23,7 +23,7 @@ import type { Unify } from "effect/Unify";
  * const progress: Progress = { loaded: 4, total: 10 }
  * ```
  *
- * @category Models
+ * @category State models
  * @since 1.0.0
  */
 export interface Progress {
@@ -34,7 +34,7 @@ export interface Progress {
    * A required counter lets consumers render useful progress even when the total is unknown.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing `Progress` value.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly loaded: number;
@@ -45,7 +45,7 @@ export interface Progress {
    * Optionality distinguishes indeterminate work from a known total without inventing a sentinel value.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing `Progress` value.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly total?: number | undefined;
@@ -63,7 +63,7 @@ export interface Progress {
  * import { NoData } from "@typed/async-data"
  * const initial = NoData
  * ```
- * @category Models
+ * @category State models
  * @since 1.0.0
  */
 export interface NoData {
@@ -74,7 +74,7 @@ export interface NoData {
    * A literal tag enables exhaustive matching without runtime class identity.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing state.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly _tag: "NoData";
@@ -92,7 +92,7 @@ export interface NoData {
  * import { loading } from "@typed/async-data"
  * const state = loading({ loaded: 0 })
  * ```
- * @category Models
+ * @category State models
  * @since 1.0.0
  */
 export interface Loading {
@@ -103,7 +103,7 @@ export interface Loading {
    * The literal tag makes loading branches explicit and exhaustively checkable.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing state.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly _tag: "Loading";
@@ -114,7 +114,7 @@ export interface Loading {
    * Keeping progress optional supports both determinate and uninstrumented operations.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing state.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly progress?: Progress | undefined;
@@ -132,7 +132,7 @@ export interface Loading {
  * import { success } from "@typed/async-data"
  * const state = success({ id: 1 })
  * ```
- * @category Models
+ * @category State models
  * @since 1.0.0
  */
 export interface Success<A> {
@@ -143,7 +143,7 @@ export interface Success<A> {
    * The literal tag enables exhaustive success handling without inspecting the payload.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing state.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly _tag: "Success";
@@ -154,7 +154,7 @@ export interface Success<A> {
    * The payload remains directly accessible even when `progress` marks a refresh.
    * ## Ownership and lifetime
    * Inherits the enclosing state's lifetime; the caller retains ownership of the referenced value.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly value: A;
@@ -165,7 +165,7 @@ export interface Success<A> {
    * Its presence distinguishes refreshing success from a settled success.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing state.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly progress?: Progress | undefined;
@@ -185,7 +185,7 @@ export interface Success<A> {
  * const state = failure(Cause.fail("offline"))
  * ```
  * See [Effect Cause](https://effect.website/docs/error-management/cause/).
- * @category Models
+ * @category State models
  * @since 1.0.0
  */
 export interface Failure<E> {
@@ -196,7 +196,7 @@ export interface Failure<E> {
    * The literal tag separates failure from absence and loading.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing state.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly _tag: "Failure";
@@ -207,7 +207,7 @@ export interface Failure<E> {
    * Cause preservation keeps defects and interruption observable alongside typed failures.
    * ## Ownership and lifetime
    * Inherits the enclosing state's lifetime; Effect Cause is persistent.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly cause: Cause.Cause<E>;
@@ -218,7 +218,7 @@ export interface Failure<E> {
    * Its presence distinguishes a refreshing failure from a settled failure.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing state.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly progress?: Progress | undefined;
@@ -236,7 +236,7 @@ export interface Failure<E> {
  * import { optimistic, success } from "@typed/async-data"
  * const state = optimistic(success(1), 2)
  * ```
- * @category Models
+ * @category State models
  * @since 1.0.0
  */
 export interface Optimistic<A, E> {
@@ -247,7 +247,7 @@ export interface Optimistic<A, E> {
    * The literal tag enables explicit optimistic handling and cycle-safe traversal.
    * ## Ownership and lifetime
    * Inherits the resource-free lifetime of its enclosing state.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly _tag: "Optimistic";
@@ -258,7 +258,7 @@ export interface Optimistic<A, E> {
    * Separating the provisional value from history makes pending intent directly observable.
    * ## Ownership and lifetime
    * Inherits the enclosing state's lifetime; the caller retains ownership of the referenced value.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly value: A;
@@ -269,7 +269,7 @@ export interface Optimistic<A, E> {
    * Explicit history supports deterministic rollback and transformation of nested optimistic states.
    * ## Ownership and lifetime
    * Inherits the enclosing optimistic wrapper's resource-free lifetime.
-   * @category Models
+   * @category State models
    * @since 1.0.0
    */
   readonly previous: AsyncData<A, E>;
@@ -288,7 +288,7 @@ export interface Optimistic<A, E> {
  * import { success } from "@typed/async-data"
  * const state: AsyncData<number, string> = success(1)
  * ```
- * @category Models
+ * @category State models
  * @since 1.0.0
  */
 export type AsyncData<A, E> = NoData | Loading | Success<A> | Failure<E> | Optimistic<A, E>;
@@ -305,7 +305,7 @@ export type AsyncData<A, E> = NoData | Loading | Success<A> | Failure<E> | Optim
  * import type { Refreshing } from "@typed/async-data"
  * const state: Refreshing<number, never> = { _tag: "Success", value: 1, progress: { loaded: 0 } }
  * ```
- * @category Models
+ * @category State models
  * @since 1.0.0
  */
 export type Refreshing<A, E> = (Success<A> | Failure<E>) & {
@@ -346,7 +346,7 @@ type EncodedAsyncData<A, E> =
  * const codec = AsyncData(Schema.String, Schema.String)
  * ```
  * See [Effect Schema](https://effect.website/docs/schema/introduction/).
- * @category Schemas
+ * @category Serialization
  * @since 1.0.0
  */
 export const AsyncData = <const A extends Schema.Top, E extends Schema.Top>(
@@ -407,7 +407,7 @@ export const AsyncData = <const A extends Schema.Top, E extends Schema.Top>(
  * import { isNoData, NoData } from "@typed/async-data"
  * isNoData(NoData)
  * ```
- * @category Refinements
+ * @category State inspection
  * @since 1.0.0
  */
 export const isNoData = <A, E>(asyncData: AsyncData<A, E>): asyncData is NoData =>
@@ -424,7 +424,7 @@ export const isNoData = <A, E>(asyncData: AsyncData<A, E>): asyncData is NoData 
  * import { isLoading, loading } from "@typed/async-data"
  * isLoading(loading())
  * ```
- * @category Refinements
+ * @category State inspection
  * @since 1.0.0
  */
 export const isLoading = <A, E>(asyncData: AsyncData<A, E>): asyncData is Loading =>
@@ -441,7 +441,7 @@ export const isLoading = <A, E>(asyncData: AsyncData<A, E>): asyncData is Loadin
  * import { isSuccess, success } from "@typed/async-data"
  * isSuccess(success(1))
  * ```
- * @category Refinements
+ * @category State inspection
  * @since 1.0.0
  */
 export const isSuccess = <A, E>(asyncData: AsyncData<A, E>): asyncData is Success<A> =>
@@ -459,7 +459,7 @@ export const isSuccess = <A, E>(asyncData: AsyncData<A, E>): asyncData is Succes
  * import { Cause } from "effect"
  * isFailure(failure(Cause.fail("offline")))
  * ```
- * @category Refinements
+ * @category State inspection
  * @since 1.0.0
  */
 export const isFailure = <A, E>(asyncData: AsyncData<A, E>): asyncData is Failure<E> =>
@@ -476,7 +476,7 @@ export const isFailure = <A, E>(asyncData: AsyncData<A, E>): asyncData is Failur
  * import { isOptimistic, optimistic, success } from "@typed/async-data"
  * isOptimistic(optimistic(success(1), 2))
  * ```
- * @category Refinements
+ * @category State inspection
  * @since 1.0.0
  */
 export const isOptimistic = <A, E>(asyncData: AsyncData<A, E>): asyncData is Optimistic<A, E> =>
@@ -510,7 +510,7 @@ const hasValidProgress = (u: object): boolean => {
  * import { isAsyncData } from "@typed/async-data"
  * isAsyncData({ _tag: "Loading", progress: { loaded: 1 } })
  * ```
- * @category Refinements
+ * @category Runtime validation
  * @since 1.0.0
  */
 export const isAsyncData = <A, E>(u: unknown): u is AsyncData<A, E> => {
@@ -558,7 +558,7 @@ export const isAsyncData = <A, E>(u: unknown): u is AsyncData<A, E> => {
  * import { isRefreshing, success } from "@typed/async-data"
  * isRefreshing(success("cached", { loaded: 0 }))
  * ```
- * @category Refinements
+ * @category State inspection
  * @since 1.0.0
  */
 export const isRefreshing = <A, E>(asyncData: AsyncData<A, E>): asyncData is Refreshing<A, E> =>
@@ -579,7 +579,7 @@ export const isRefreshing = <A, E>(asyncData: AsyncData<A, E>): asyncData is Ref
  * import { isPending, loading, optimistic } from "@typed/async-data"
  * isPending(optimistic(loading(), "draft"))
  * ```
- * @category Refinements
+ * @category State inspection
  * @since 1.0.0
  */
 export const isPending = <A, E>(
@@ -609,7 +609,7 @@ export const isPending = <A, E>(
  * import { NoData } from "@typed/async-data"
  * const initial = NoData
  * ```
- * @category Constructors
+ * @category State construction
  * @since 1.0.0
  */
 export const NoData: NoData = { _tag: "NoData" };
@@ -626,7 +626,7 @@ export const NoData: NoData = { _tag: "NoData" };
  * import { loading } from "@typed/async-data"
  * const state = loading({ loaded: 2, total: 5 })
  * ```
- * @category Constructors
+ * @category State construction
  * @since 1.0.0
  */
 export const loading = (progress?: Progress): Loading => ({ _tag: "Loading", progress });
@@ -643,7 +643,7 @@ export const loading = (progress?: Progress): Loading => ({ _tag: "Loading", pro
  * import { success } from "@typed/async-data"
  * const state = success("ready")
  * ```
- * @category Constructors
+ * @category State construction
  * @since 1.0.0
  */
 export const success = <A>(value: A, progress?: Progress): Success<A> => ({
@@ -665,7 +665,7 @@ export const success = <A>(value: A, progress?: Progress): Success<A> => ({
  * import { Cause } from "effect"
  * const state = failure(Cause.fail("offline"))
  * ```
- * @category Constructors
+ * @category State construction
  * @since 1.0.0
  */
 export const failure = <E>(cause: Cause.Cause<E>, progress?: Progress): Failure<E> => ({
@@ -686,7 +686,7 @@ export const failure = <E>(cause: Cause.Cause<E>, progress?: Progress): Failure<
  * import { optimistic, success } from "@typed/async-data"
  * const state = optimistic(success("saved"), "saving")
  * ```
- * @category Constructors
+ * @category Optimistic transitions
  * @since 1.0.0
  */
 export const optimistic = <A, E>(previous: AsyncData<A, E>, value: A): Optimistic<A, E> => ({
@@ -733,7 +733,7 @@ const refreshingProgress = (progress?: Progress, existing?: Progress): Progress 
  * import { startLoading, success } from "@typed/async-data"
  * const refreshing = startLoading(success("cached"))
  * ```
- * @category Transformations
+ * @category Refresh transitions
  * @since 1.0.0
  */
 export const startLoading = <A, E>(data: AsyncData<A, E>, progress?: Progress): AsyncData<A, E> => {
@@ -763,7 +763,7 @@ export const startLoading = <A, E>(data: AsyncData<A, E>, progress?: Progress): 
  * import { startLoading, stopLoading, success } from "@typed/async-data"
  * const settled = stopLoading(startLoading(success("cached")))
  * ```
- * @category Transformations
+ * @category Refresh transitions
  * @since 1.0.0
  */
 export const stopLoading = <A, E>(data: AsyncData<A, E>): AsyncData<A, E> => {
@@ -791,7 +791,7 @@ export const stopLoading = <A, E>(data: AsyncData<A, E>): AsyncData<A, E> => {
  * import { match } from "@typed/async-data"
  * const label = match({ NoData: () => "empty", Loading: () => "loading", Failure: () => "failed", Success: String, Optimistic: String })
  * ```
- * @category Folding
+ * @category Pattern matching
  * @since 1.0.0
  */
 export const match: {
@@ -852,7 +852,7 @@ export const match: {
  * const value = getSuccess(success(1))
  * ```
  * See [Effect Option](https://effect.website/docs/data-types/option/).
- * @category Accessors
+ * @category State extraction
  * @since 1.0.0
  */
 export function getSuccess<A, E>(data: AsyncData<A, E>): Option.Option<A> {
@@ -878,7 +878,7 @@ export function getSuccess<A, E>(data: AsyncData<A, E>): Option.Option<A> {
  * import { Cause } from "effect"
  * const cause = getCause(failure(Cause.fail("offline")))
  * ```
- * @category Accessors
+ * @category State extraction
  * @since 1.0.0
  */
 export function getCause<A, E>(data: AsyncData<A, E>): Option.Option<Cause.Cause<E>> {
@@ -904,7 +904,7 @@ export function getCause<A, E>(data: AsyncData<A, E>): Option.Option<Cause.Cause
  * import { Cause } from "effect"
  * const error = getError(failure(Cause.fail("offline")))
  * ```
- * @category Accessors
+ * @category State extraction
  * @since 1.0.0
  */
 export function getError<A, E>(data: AsyncData<A, E>): Option.Option<E> {
@@ -929,7 +929,7 @@ export function getError<A, E>(data: AsyncData<A, E>): Option.Option<E> {
  * import { map, success } from "@typed/async-data"
  * const state = map(success(2), (n) => n * 2)
  * ```
- * @category Transformations
+ * @category Value transformations
  * @since 1.0.0
  */
 export const map: {
@@ -961,7 +961,7 @@ export const map: {
  * import { flatMap, success } from "@typed/async-data"
  * const parsed = flatMap(success("2"), (text) => success(Number(text)))
  * ```
- * @category Transformations
+ * @category Value transformations
  * @since 1.0.0
  */
 export const flatMap: {
@@ -1001,7 +1001,7 @@ export const flatMap: {
  * import { Cause } from "effect"
  * const state = mapError(failure(Cause.fail(404)), String)
  * ```
- * @category Transformations
+ * @category Failure transformations
  * @since 1.0.0
  */
 export const mapError: {
@@ -1031,7 +1031,7 @@ export const mapError: {
  * import { Exit } from "effect"
  * const state = fromExit(Exit.succeed(1))
  * ```
- * @category Conversions
+ * @category Effect outcome conversion
  * @since 1.0.0
  */
 export const fromExit = <A, E>(exit: Exit.Exit<A, E>): AsyncData<A, E> =>
@@ -1050,7 +1050,7 @@ export const fromExit = <A, E>(exit: Exit.Exit<A, E>): AsyncData<A, E> =>
  * import { Result } from "effect"
  * const state = fromResult(Result.succeed(1))
  * ```
- * @category Conversions
+ * @category Effect outcome conversion
  * @since 1.0.0
  */
 export const fromResult = <A, E>(result: Result.Result<A, E>): AsyncData<A, E> =>

@@ -1,15 +1,13 @@
 /**
- * Select keeps popover visibility, active option, and selected value separate. A native button
- * targets manual-popover listbox content; keyboard movement and typeahead update active state
- * before selection closes the popover.
+ * A native popover-backed listbox with separate selection, focus, and visibility.
+ * Unlike Form.Select, these options are divs rather than native select options.
+ * Pass one collection to Content and its Options for registered keyboard navigation.
  *
- * @remarks
- * The module keeps policy, state transitions, and DOM rendering separable so applications can use
- * the state and pure operations without mounting UI, or supply custom hosts without replacing native
- * events and browser-owned focus.
+ * Read the [Select guide](/explore/ui-select) for a complete example.
  *
+ * [APG interaction reference](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/).
  * @since 1.0.0
- * @category modules
+ * @category Overview
  * @packageDocumentation
  */
 import * as Effect from "effect/Effect";
@@ -31,50 +29,37 @@ import type { HostResult } from "./Dom/Types.js";
 import * as NativePopover from "./NativePopover.js";
 
 /**
- * Complete renderer-independent state for Select.
+ * Popup identity, committed value, visibility, and active option.
  *
  * @remarks
- * ## Why
- *
- * Applications can inspect, update, and test Select behavior without mounting or coupling the
- * state to a renderer.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { State } from "@typed/ui/Select";` Extend the [Select.makeState
- * runnable setup](/reference/%40typed%2Fui%2FSelect%23makeState). Inside the linked program,
- * `const snapshot: State = yield* state` exposes popup identity, selected value, open state, and
- * active option.
+ * value and activeId are independent: keyboard movement can change activeId before selection
+ * commits a value. Vertical real-focus navigation is fixed by makeState.
  * @since 1.0.0
- * @category models
+ * @category State models
  */
 export interface State extends Omit<Composite.State, "orientation"> {
   /**
    * Axis used to interpret Arrow-key movement.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly orientation: "vertical";
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Current semantic value selected or edited by the widget.
    * @since 1.0.0
-   * @category models
+   * @category Value state
    */
   readonly value: string | null;
   /**
    * Whether the associated native popover is open.
    * @since 1.0.0
-   * @category models
+   * @category Visibility
    */
   readonly open: boolean;
 }
@@ -85,56 +70,43 @@ const invokers = new WeakMap<
 >();
 
 /**
- * Initial Select values. The caller supplies id; value and activeId default null, open false, and
- * loop true.
+ * Required popup ID with optional initial selection, visibility, focus, and wrap policy.
  *
  * @remarks
- * ## Why
- *
- * Making initialization explicit documents hydration-sensitive defaults and lets servers and
- * clients construct matching state.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InitialState } from "@typed/ui/Select";` Extend the [Select.makeState
- * runnable setup](/reference/%40typed%2Fui%2FSelect%23makeState). Construct state with
- * `const initial: InitialState = { id: "timezone", value: null, open: false }; const state = yield* Select.makeState(initial)`.
+ * value and activeId default to null, open to false, and loop to true. Use a stable
+ * document-unique ID so the native invoker relationship survives hydration.
  * @since 1.0.0
- * @category models
+ * @category State models
  */
 export interface InitialState {
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Current semantic value selected or edited by the widget.
    * @since 1.0.0
-   * @category models
+   * @category Value state
    */
   readonly value?: string | null;
   /**
    * Whether the associated native popover is open.
    * @since 1.0.0
-   * @category models
+   * @category Visibility
    */
   readonly open?: boolean;
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly activeId?: string | null;
   /**
    * Whether movement wraps between the first and last enabled items.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly loop?: boolean;
 }
@@ -143,14 +115,8 @@ export interface InitialState {
  * Effect Schema used by makeState to encode, decode, and hydrate Select state.
  *
  * @remarks
- * ## Why
- *
  * A public schema makes hydration and serialized state use the same runtime validation as direct
  * construction.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
  *
  * @example
  * ```ts
@@ -160,7 +126,7 @@ export interface InitialState {
  * const decodeState = Schema.decodeUnknownEffect(Select.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Hydration schemas
  */
 export const StateSchema = Schema.Struct({
   id: Schema.String,
@@ -178,11 +144,7 @@ export const StateSchema = Schema.Struct({
  * false, and loop true.
  *
  * @remarks
- * ## Why
- *
  * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
  *
  * The returned Effect creates the RefSubject when run. That state is renderer-independent;
  * collection registrations belong to the separate Scope that runs register or ref, not to state
@@ -202,7 +164,7 @@ export const StateSchema = Schema.Struct({
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category State construction
  */
 export function makeState(initial: InitialState) {
   return RefSubject.hydrate(StateSchema, {
@@ -221,11 +183,7 @@ export function makeState(initial: InitialState) {
  * Creates a scoped Collection for Select items.
  *
  * @remarks
- * ## Why
- *
  * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
  *
  * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
  * owned by the Scope that runs register, independently of this construction Effect.
@@ -243,32 +201,19 @@ export function makeState(initial: InitialState) {
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category State construction
  */
 export const makeCollection = Collection.makeState<string>;
 
 /**
- * Sets selected value and active id, then closes the popover.
+ * Commits an option ID and value, then marks the popup closed.
  *
  * @remarks
- * ## Why
- *
- * The operation exposes Select's transition directly so callers can compose it in Effect programs
- * and native event handlers.
- *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { select } from "@typed/ui/Select";` Extend the [Select.makeState runnable
- * setup](/reference/%40typed%2Fui%2FSelect%23makeState). Inside the linked Effect program invoke
- * `yield* select(state, "utc", "UTC")`, then read state to observe selection and active focus
- * update together while the popup closes.
+ * This Effect changes state only. It does not check collection membership or move focus itself;
+ * the mounted popover observes the visibility change. Keep id and value consistent with the
+ * option being selected.
  * @since 1.0.0
- * @category combinators
+ * @category State transitions
  */
 export function select<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -299,37 +244,25 @@ function selectActive(
 }
 
 /**
- * Inputs accepted by Select.Trigger in addition to the shared DOM host options.
+ * Shared select state and the button content that names the current choice.
  *
  * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { TriggerOptions } from "@typed/ui/Select";` Extend the
- * [Select.makeState runnable setup](/reference/%40typed%2Fui%2FSelect%23makeState). A native
- * popover trigger accepts `const options: TriggerOptions = { state, content: "Choose timezone" }`.
+ * The trigger derives its IDs and popover target from state.id. Content may be reactive; selecting
+ * a value does not automatically replace the label.
  * @since 1.0.0
- * @category models
+ * @category Component options
  */
 export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -374,28 +307,47 @@ type TriggerProps<Options extends TriggerOptions> = ReturnType<
 >;
 
 /**
- * Renders the native button that targets listbox popover content and opens it on ArrowDown.
+ * Renders the native button that toggles the select listbox popover.
  *
  * @remarks
- * ## Why
+ * The generated button ID labels Content; popovertarget points to state.id. ArrowDown invokes
+ * the native button click. Content synchronizes native toggle events with open state. Render a
+ * useful name containing the current choice; the trigger does not format selected values for
+ * you.
  *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
+ * @example
+ * ```ts
+ * import { RefSubject } from "@typed/fx";
+ * import { html } from "@typed/template";
+ * import { component } from "@typed/ui/Component";
+ * import * as Select from "@typed/ui/Select";
  *
- * ## Ownership and lifetime
- *
- * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
- * collection registrations only when rendered. The rendering Scope removes those resources;
- * unrelated nodes and attributes remain caller-owned.
- *
- * ## Example
- *
- * Import with `import { Trigger } from "@typed/ui/Select";` Extend the [Select.makeState runnable
- * setup](/reference/%40typed%2Fui%2FSelect%23makeState). Replace the linked program's final
- * snapshot read with `Trigger({ state, content: "Choose timezone" })`; render that Fx before the
- * same Scope closes.
+ * export const DensityPicker = component(function* () {
+ *   const state = yield* Select.makeState({ id: "density-options", value: "comfortable" });
+ *   const collection = yield* Select.makeCollection();
+ *   const label = RefSubject.map(state, ({ value }) =>
+ *     value === "compact" ? "Density: compact" : "Density: comfortable",
+ *   );
+ *   return html`<div class="density-picker">
+ *     ${Select.Trigger({ state, content: label })}
+ *     ${Select.Content({
+ *       state, collection,
+ *       content: [
+ *         Select.Option({
+ *           state, collection, id: "density-comfortable", value: "comfortable",
+ *           textValue: "Comfortable", content: "Comfortable",
+ *         }),
+ *         Select.Option({
+ *           state, collection, id: "density-compact", value: "compact",
+ *           textValue: "Compact", content: "Compact",
+ *         }),
+ *       ],
+ *     })}
+ *   </div>`;
+ * });
+ * ```
  * @since 1.0.0
- * @category components
+ * @category Controls
  */
 export function Trigger<
   const Options extends TriggerOptions,
@@ -428,68 +380,43 @@ export function Trigger<
 }
 
 /**
- * Consumer-facing alias of the canonical Select component with identical behavior and lifetime.
+ * Alias of Trigger.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
- * The alias acquires nothing. Rendering it has exactly the canonical component's Scope and DOM
- * ownership contract.
- *
- * ## Example
- *
- * Import with `import { Select } from "@typed/ui/Select";` Extend the [Select.makeState runnable
- * setup](/reference/%40typed%2Fui%2FSelect%23makeState). Replace the linked program's final
- * snapshot read with `Select({ state, content: "Choose timezone" })`; render that Fx before the
- * same Scope closes.
+ * Calling Select alone creates only the invoker button. Compose Content and Option for the popup
+ * choice surface; use Form.Select for a native select element.
  * @since 1.0.0
- * @category components
+ * @category Controls
  */
 export const Select = Trigger;
 
 /**
- * Inputs accepted by Select.Content in addition to the shared DOM host options.
+ * Shared state, registered option collection, and listbox content.
  *
  * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { ContentOptions } from "@typed/ui/Select";` Extend the
- * [Select.makeState runnable setup](/reference/%40typed%2Fui%2FSelect%23makeState). Enable listbox
- * movement with `const options: ContentOptions = { state, collection, content: "Timezones" }`.
+ * The collection is optional in the type but required for this host’s keyboard navigation and
+ * selected-item focus on opening. Render the same registered options represented by that
+ * collection.
  * @since 1.0.0
- * @category models
+ * @category Component options
  */
 export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -581,28 +508,16 @@ type ContentProps<Options extends ContentOptions> = ReturnType<
 >;
 
 /**
- * Renders manual-popover listbox content and handles Arrow keys, Enter, Escape, and typeahead.
+ * Renders the manual-popover listbox and coordinates registered keyboard movement.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
- * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
- * collection registrations only when rendered. The rendering Scope removes those resources;
- * unrelated nodes and attributes remain caller-owned.
- *
- * ## Example
- *
- * Import with `import { Content } from "@typed/ui/Select";` Extend the [Select.makeState runnable
- * setup](/reference/%40typed%2Fui%2FSelect%23makeState). Replace the linked program's final
- * snapshot read with `Content({ state, content: "Timezones" })`; render that Fx before the same
- * Scope closes.
+ * With a collection, arrows and Home/End move focus, buffered typeahead locates options,
+ * Enter/Space commits the active choice, and Escape closes with invoker focus restoration.
+ * Opening focuses a registered option matching the selected value; an unmatched or null value
+ * does not choose the first option. Manual popover mode does not imply auto-mode outside-click
+ * dismissal.
  * @since 1.0.0
- * @category components
+ * @category Controls
  */
 export function Content<
   const Options extends ContentOptions,
@@ -631,67 +546,55 @@ export function Content<
 }
 
 /**
- * Inputs accepted by Select.Option in addition to the shared DOM host options.
+ * Stable option identity, selection value, rendered content, and optional typeahead text.
  *
  * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { OptionOptions } from "@typed/ui/Select";` Extend the [Select.makeState
- * runnable setup](/reference/%40typed%2Fui%2FSelect%23makeState). A selectable option is
- * `const options: OptionOptions = { state, collection, id: "utc", value: "UTC", content: "UTC" }`.
+ * Share state and collection with Content. textValue should be the human-readable label when value
+ * is an internal code; disabled suppresses activation and participates in navigation.
  * @since 1.0.0
- * @category models
+ * @category Component options
  */
 export interface OptionOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Current semantic value selected or edited by the widget.
    * @since 1.0.0
-   * @category models
+   * @category Value state
    */
   readonly value: string;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Search text used by typeahead independently of rendered markup.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly textValue?: string;
   /**
    * Flag used by collection movement and widget handlers to skip activation by default.
    * @since 1.0.0
-   * @category models
+   * @category Availability
    */
   readonly disabled?: boolean;
 }
@@ -728,29 +631,15 @@ type OptionProps<Options extends OptionOptions> = ReturnType<
 >;
 
 /**
- * Renders and optionally registers a selectable option; focus updates activeId and click selects
- * unless disabled.
+ * Renders a selectable listbox option with distinct active and selected state.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
- * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
- * collection registrations only when rendered. The rendering Scope removes those resources;
- * unrelated nodes and attributes remain caller-owned.
- *
- * ## Example
- *
- * Import with `import { Option } from "@typed/ui/Select";` Extend the [Select.makeState runnable
- * setup](/reference/%40typed%2Fui%2FSelect%23makeState). Replace the linked program's final
- * snapshot read with `Option({ state, id: "utc", value: "UTC", content: "UTC" })`; render that Fx
- * before the same Scope closes.
+ * Click commits value and closes the popup; focus updates activeId without committing a new
+ * value. Register every option with the same collection used by Content for keyboard navigation.
+ * Supply textValue for readable typeahead when value is an internal code. This div is not a
+ * native form field.
  * @since 1.0.0
- * @category components
+ * @category Controls
  */
 export function Option<const Options extends OptionOptions, const Host extends HostResult = never>(
   options: Options,

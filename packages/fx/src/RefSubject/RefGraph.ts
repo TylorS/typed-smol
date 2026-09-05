@@ -25,7 +25,7 @@ import * as RefSubject from "./RefSubject.js";
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefGraph<
   in out N,
@@ -49,7 +49,7 @@ export interface RefGraph<
  * and cleanup; source failures and services stay on reads and pushes.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<N, E, T extends Graph.Kind, Err = never, R = never>(
   initial:
@@ -74,7 +74,7 @@ export function make<N, E, T extends Graph.Kind, Err = never, R = never>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function directed<N, E, Err = never, R = never>(): Effect.Effect<
   RefGraph<N, E, "directed", Err>,
@@ -98,7 +98,7 @@ export function directed<N, E, Err = never, R = never>(): Effect.Effect<
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function undirected<N, E, Err = never, R = never>(): Effect.Effect<
   RefGraph<N, E, "undirected", Err>,
@@ -126,7 +126,7 @@ export function undirected<N, E, Err = never, R = never>(): Effect.Effect<
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const addNode: {
   <N>(
@@ -166,7 +166,7 @@ export const addNode: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const removeNode: {
   (
@@ -206,7 +206,7 @@ export const removeNode: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const updateNode: {
   <N>(
@@ -248,7 +248,7 @@ export const updateNode: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const addEdge: {
   <E>(
@@ -292,7 +292,7 @@ export const addEdge: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const removeEdge: {
   (
@@ -332,7 +332,7 @@ export const removeEdge: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const updateEdge: {
   <E>(
@@ -373,7 +373,7 @@ export const updateEdge: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed graph and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const mapNodes: {
   <N>(
@@ -412,7 +412,7 @@ export const mapNodes: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed graph and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const mapEdges: {
   <E>(
@@ -451,7 +451,7 @@ export const mapEdges: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed graph and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filterNodes: {
   <N>(
@@ -490,7 +490,7 @@ export const filterNodes: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed graph and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filterEdges: {
   <E>(
@@ -530,7 +530,7 @@ export const filterEdges: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const reverse = <N, E, T extends Graph.Kind, Err, R>(
   ref: RefGraph<N, E, T, Err, R>,
@@ -558,7 +558,7 @@ export const reverse = <N, E, T extends Graph.Kind, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const nodeCount = <N, E, T extends Graph.Kind, Err, R>(
   ref: RefGraph<N, E, T, Err, R>,
@@ -577,7 +577,7 @@ export const nodeCount = <N, E, T extends Graph.Kind, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const edgeCount = <N, E, T extends Graph.Kind, Err, R>(
   ref: RefGraph<N, E, T, Err, R>,
@@ -597,7 +597,7 @@ export const edgeCount = <N, E, T extends Graph.Kind, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const hasNode: {
   (
@@ -633,7 +633,7 @@ export const hasNode: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const hasEdge: {
   (
@@ -671,7 +671,7 @@ export const hasEdge: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const neighbors: {
   (
@@ -707,7 +707,7 @@ export const neighbors: {
  * once; Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const neighborsDirected: {
   (
@@ -744,7 +744,7 @@ export const neighborsDirected: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isAcyclic = <N, E, T extends Graph.Kind, Err, R>(
   ref: RefGraph<N, E, T, Err, R>,
@@ -764,7 +764,7 @@ export const isAcyclic = <N, E, T extends Graph.Kind, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isBipartite = <N, E, Err, R>(
   ref: RefGraph<N, E, "undirected", Err, R>,
@@ -784,7 +784,7 @@ export const isBipartite = <N, E, Err, R>(
  * once; Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const connectedComponents = <N, E, Err, R>(
   ref: RefGraph<N, E, "undirected", Err, R>,
@@ -806,7 +806,7 @@ export const connectedComponents = <N, E, Err, R>(
  * cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const stronglyConnectedComponents = <N, E, Err, R>(
   ref: RefGraph<N, E, "directed", Err, R>,
@@ -831,7 +831,7 @@ export const stronglyConnectedComponents = <N, E, Err, R>(
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const getNode: {
   (
@@ -867,7 +867,7 @@ export const getNode: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const getEdge: {
   (
@@ -903,7 +903,7 @@ export const getEdge: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const findNode: {
   <N>(
@@ -939,7 +939,7 @@ export const findNode: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const findEdge: {
   <E>(

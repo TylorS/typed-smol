@@ -1,3 +1,14 @@
+/**
+ * Native number entry publishing valueAsNumber at the change boundary.
+ * This thin primitive does not maintain draft strings or filter invalid numeric writes.
+ *
+ * Read the [SpinButton guide](/explore/ui-spin-button) for a complete example.
+ *
+ * [APG interaction reference](https://www.w3.org/WAI/ARIA/apg/patterns/spinbutton/).
+ * @since 1.0.0
+ * @category Overview
+ * @packageDocumentation
+ */
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
@@ -5,66 +16,30 @@ import { EventHandler, html, type Renderable } from "@typed/template";
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
-/** Current renderer-independent spin-button value.
- * @remarks
- * ## Why
- * Numeric state can be transformed and tested without an input element.
- * ## Ownership and lifetime
- * Plain state is resource-free; RefSubject ownership is Scope-based.
- * @since 1.0.0
- * @category state
+/**
  */
 export interface State {
-  /** Finite value reflected by the native number input.
-   * @remarks
-   * ## Why
-   * One source keeps form control and application state aligned.
-   * ## Ownership and lifetime
-   * Plain data acquires no resources.
-   * @since 1.0.0
-   * @category state
+  /**
    */
   readonly value: number;
 }
 
-/** Initial spin-button value.
- * @remarks
- * ## Why
- * Explicit state gives SSR and hydration the same numeric snapshot.
- * ## Ownership and lifetime
- * Configuration is inert.
- * @since 1.0.0
- * @category state
+/**
  */
 export interface InitialState {
-  /** Finite initial value.
-   * @remarks
-   * ## Why
-   * It seeds synchronized state before the element mounts.
-   * ## Ownership and lifetime
-   * Plain data retains no resources.
-   * @since 1.0.0
-   * @category state
+  /**
    */
   readonly value: number;
 }
 
-/** Schema for spin-button hydration state.
- * @remarks
- * ## Why
- * Finite validation prevents invalid serialized number values.
- * ## Ownership and lifetime
- * The immutable schema acquires no resources.
- * @since 1.0.0
- * @category schemas
+/**
  */
 export const StateSchema = Schema.Struct({ value: Schema.Finite });
 
-/** Creates hydrated spin-button state.
+/**
+ * Creates hydrated spin-button state.
  * @remarks
- * ## Why
  * State remains renderer-independent and directly testable.
- * ## Ownership and lifetime
  * The calling Effect Scope owns the returned RefSubject.
  * @example
  * ```ts
@@ -76,30 +51,21 @@ export const StateSchema = Schema.Struct({ value: Schema.Finite });
  * })
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category State construction
  */
 export function makeState(initial: InitialState) {
   return RefSubject.hydrate(StateSchema, initial);
 }
 
-/** Updates the synchronized numeric value.
- * @remarks
- * ## Why
- * An explicit Effect transition preserves RefSubject errors and services.
- * ## Ownership and lifetime
- * It uses the existing state lifetime and acquires no resource.
- * @example
- * ```ts
- * import { Effect } from "effect"
- * import * as SpinButton from "@typed/ui/SpinButton"
+/**
+ * Assigns a numeric value without bounds checks or draft filtering.
  *
- * const program = Effect.gen(function* () {
- *   const state = yield* SpinButton.makeState({ value: 1 })
- *   yield* SpinButton.setValue(state, 2)
- * })
- * ```
+ * @remarks
+ * The helper does not consult min/max/step or reject NaN. The hydration schema describes finite
+ * snapshots, but this update is not a decoder. Choose Form.NumberInput or an explicit draft
+ * model when invalid text needs structured feedback.
  * @since 1.0.0
- * @category state
+ * @category State transitions
  */
 export function setValue<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -108,55 +74,31 @@ export function setValue<E, R>(
   return RefSubject.update(state, (current) => ({ ...current, value }));
 }
 
-/** Options for a native number input.
- * @remarks
- * ## Why
- * Native spin-button behavior supplies editing, stepping, forms, and
- * accessibility while Typed synchronizes state.
- * ## Ownership and lifetime
- * Options are inert; the mounted component owns subscriptions by Scope.
- * @since 1.0.0
- * @category models
+/**
  */
 export interface SpinButtonOptions extends Dom.HostOptions<HTMLInputElement> {
-  /** Hydrated value state.
-   * @remarks
-   * ## Why
-   * One source serves SSR, UI, and renderer-free state logic.
-   * ## Ownership and lifetime
-   * The component borrows state and subscribes only while mounted.
+  /**
+   * Hydrated value state.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
-  /** Native minimum value.
-   * @remarks
-   * ## Why
-   * The platform applies this bound to stepping and validation.
-   * ## Ownership and lifetime
-   * Dynamic attributes follow the component Scope.
+  /**
+   * Native minimum value.
    * @since 1.0.0
-   * @category attributes
+   * @category Numeric bounds
    */
   readonly min?: Renderable.Any<number | null | undefined>;
-  /** Native maximum value.
-   * @remarks
-   * ## Why
-   * The platform applies this bound to stepping and validation.
-   * ## Ownership and lifetime
-   * Dynamic attributes follow the component Scope.
+  /**
+   * Native maximum value.
    * @since 1.0.0
-   * @category attributes
+   * @category Numeric bounds
    */
   readonly max?: Renderable.Any<number | null | undefined>;
-  /** Native step value or `"any"`.
-   * @remarks
-   * ## Why
-   * Increment semantics remain delegated to the number input.
-   * ## Ownership and lifetime
-   * Dynamic attributes follow the component Scope.
+  /**
+   * Native step value or `"any"`.
    * @since 1.0.0
-   * @category attributes
+   * @category Numeric bounds
    */
   readonly step?: Renderable.Any<number | "any" | null | undefined>;
 }
@@ -182,26 +124,37 @@ type SpinButtonInternalProps<Options extends SpinButtonOptions> = ReturnType<
   ReturnType<typeof internalProps<Options>>
 >;
 
-/** Renders a native number input synchronized with hydrated state.
+/**
+ * Renders a native number input that writes valueAsNumber on change.
+ *
  * @remarks
- * ## Why
- * Browser editing, stepping, validation, and form behavior remain intact while
- * change events update renderer-independent state.
- * ## Ownership and lifetime
- * Running the Fx owns listener/state subscriptions in its Scope. A custom host
- * must preserve type, value, constraints, and the single hydration ref owner.
+ * State updates occur at the change boundary rather than every input event. Empty or invalid
+ * native text can yield NaN; the handler does not filter it before assignment. This thin
+ * primitive does not preserve a separate draft string, create field errors, or clamp
+ * programmatic writes.
+ *
  * @example
  * ```ts
- * import { Effect } from "effect"
- * import * as SpinButton from "@typed/ui/SpinButton"
+ * import { RefSubject } from "@typed/fx";
+ * import { html } from "@typed/template";
+ * import { component } from "@typed/ui/Component";
+ * import * as SpinButton from "@typed/ui/SpinButton";
  *
- * const program = Effect.gen(function* () {
- *   const state = yield* SpinButton.makeState({ value: 1 })
- *   return SpinButton.SpinButton({ state, min: 0 })
- * })
+ * export const CopyCount = component(function* () {
+ *   const state = yield* SpinButton.makeState({ value: 1 });
+ *   const summary = RefSubject.map(state, ({ value }) => `Copies requested: ${value}`);
+ *   return html`<div class="copy-count">
+ *     <label for="print-copies">Number of copies</label>
+ *     ${SpinButton.SpinButton({
+ *       state, min: 1, max: 100, step: 1,
+ *       props: { id: "print-copies", name: "copies", required: true },
+ *     })}
+ *     <p>${summary}</p>
+ *   </div>`;
+ * });
  * ```
  * @since 1.0.0
- * @category components
+ * @category Native controls
  */
 export function SpinButton<
   const Options extends SpinButtonOptions,

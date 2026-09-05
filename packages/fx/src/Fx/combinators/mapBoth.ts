@@ -30,7 +30,7 @@ import type { Fx } from "../Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const mapBoth: {
   <E, E2, A, A2>(options: {

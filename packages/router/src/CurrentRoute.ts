@@ -25,7 +25,7 @@ const normalizeBasePath = (base: string): string => {
  * through `CurrentRoute`; nested layout and route layers may extend it.
  *
  * @since 1.0.0
- * @category navigation
+ * @category Structural mounts
  */
 export interface CurrentRouteTree {
   /**
@@ -39,7 +39,7 @@ export interface CurrentRouteTree {
    * The value is immutable and lives with the containing mount tree.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Structural mounts
    */
   readonly route: Route<string, any>;
   /**
@@ -53,7 +53,7 @@ export interface CurrentRouteTree {
    * The reference is immutable and does not extend the parent's owning Scope.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Structural mounts
    */
   readonly parent?: CurrentRouteTree | undefined;
 }
@@ -79,7 +79,7 @@ export interface CurrentRouteTree {
  * ```
  *
  * @since 1.0.0
- * @category navigation
+ * @category Structural mounts
  */
 export class CurrentRoute extends Context.Service<CurrentRoute, CurrentRouteTree>()(
   "@typed/router/CurrentRoute",
@@ -98,7 +98,7 @@ export class CurrentRoute extends Context.Service<CurrentRoute, CurrentRouteTree
    * The Layer borrows Navigation and provides CurrentRoute for its surrounding Layer Scope.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Structural mounts
    */
   static readonly Default = Layer.effect(CurrentRoute, CurrentRoute.make);
 
@@ -107,13 +107,15 @@ export class CurrentRoute extends Context.Service<CurrentRoute, CurrentRouteTree
    *
    * @remarks
    * ## Why
-   * Layouts and nested matchers can establish ownership boundaries while preserving ancestry.
+   * An independently owned child Matcher declares paths relative to this mount. The supplied
+   * Route is the exact child mount, not an automatically joined relative segment; compose deeper
+   * prefixes with `Route.Join` before extending. Navigation remains shared with the surrounding app.
    *
    * ## Ownership and lifetime
    * Layer acquisition reads the ambient context once. The returned child tree lives until that Layer Scope closes.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Structural mounts
    */
   static readonly extend = (route: Route.Any) =>
     Layer.unwrap(

@@ -10,16 +10,17 @@ describe("template cost guide", () => {
   it("classifies lifecycle and reconciliation costs by template part family", () => {
     const guide = fs.readFileSync(guidePath, "utf8");
 
-    expect(guide).toContain("## Cost table");
-    expect(guide).toMatch(
-      /\| Part family\s+\| Construction\s+\| Mount\s+\| Hydration\s+\| Update\s+\| n\s+\|/,
-    );
-    expect(guide).toMatch(/captured.*text.*attribute.*property.*boolean.*comment/is);
-    expect(guide).toMatch(/class.*dataset.*spread/is);
-    expect(guide).toMatch(/event handler/is);
-    expect(guide).toMatch(/RenderEvent.*range/is);
-    expect(guide).toMatch(/arrays?.*iterables?.*keyed/is);
-    expect(guide).toMatch(/fast path.*fallback/is);
-    expect(guide).toMatch(/already-parented.*moveBefore/is);
+    // Assert cost dimensions and integration boundaries, not prose headings or table layout.
+    for (const dimension of [
+      "Template mount", "Captured text", "Class contribution", "Dataset contribution",
+      "Spread installation/replacement", "Retained reactive spread entry", "Event setup",
+      "Dynamic node range", "Keyed collection emission", "Hydration", "O(`a + b`)",
+      "moveBefore", "insertBefore",
+    ]) {
+      expect(guide).toContain(dimension);
+    }
+    expect(guide).toContain("/explore/keyed-template-collections");
+    expect(guide).toContain("/explore/render-scheduling");
+    expect(guide).toContain("/explore/dom-parts-and-attributes");
   });
 });

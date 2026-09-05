@@ -37,7 +37,7 @@ import type { Fx } from "../Fx.js";
  * @param f - Effectful function: `(prev, next) => Effect<boolean>`. Return `true` to skip (treat as duplicate), `false` to emit.
  * @returns An `Fx` with consecutive "equal" elements removed.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const changesWithEffect: {
   <A, E2, R2>(

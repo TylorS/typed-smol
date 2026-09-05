@@ -4,6 +4,7 @@ import { renderFxMarble } from "../docs/FxMarble.js";
 import { canonicalReferencePath, referencePath } from "../docs/Reference.js";
 import { referenceInventory } from "../generated/reference.js";
 import { siteHref } from "../SiteHref.js";
+import { remarkCurriculumSources } from "../tutorial/Files.js";
 
 interface Node {
   type: string;
@@ -72,7 +73,7 @@ function typedMarkdown() {
 
 export const markdown = {
   shikiConfig: { themes: { light: "github-light", dark: "github-dark" }, wrap: false },
-  processor: unified({ remarkPlugins: [typedMarkdown] }),
+  processor: unified({ remarkPlugins: [remarkCurriculumSources, typedMarkdown] }),
 } satisfies NonNullable<AstroUserConfig["markdown"]>;
 
 let processor: ReturnType<typeof markdown.processor.createRenderer> | undefined;

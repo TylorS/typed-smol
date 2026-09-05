@@ -53,7 +53,7 @@ import type { Fx } from "../Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const retry: {
   <E, X, E2, R2>(

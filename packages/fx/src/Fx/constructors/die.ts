@@ -30,7 +30,7 @@ import { failCause } from "./failCause.js";
  * @param defect - The defect value.
  * @returns An `Fx` that dies immediately.
  * @since 1.0.0
- * @category constructors
+ * @category Failure sources
  */
 export const die: (defect: unknown) => Fx<never, never, never> = /*#__PURE__*/ flow(
   Cause.die,

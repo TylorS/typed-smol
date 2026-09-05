@@ -12,6 +12,9 @@ try {
   const staticContext = await browser.newContext({ javaScriptEnabled: false });
   const staticPage = await staticContext.newPage();
   await staticPage.goto(url);
+  assert.equal(await staticPage.locator("#summary .summary-count").textContent(), "0");
+  assert.equal((await staticPage.locator("#summary .summary-button").textContent()).trim(), "Add");
+  assert.match(await staticPage.locator("#summary").innerText(), /Total:\s*0/);
   assert.equal(await staticPage.locator("#load button").textContent(), "1");
   assert.equal(await staticPage.locator("#load strong").textContent(), "Default slot");
   assert.equal(await staticPage.locator("#load h2").textContent(), "Named slot");
@@ -63,6 +66,27 @@ try {
     "Named slot",
   );
 
+  const summary = page.locator("#summary .summary-button");
+  await page.waitForFunction(
+    () => !document.querySelector("#summary astro-island")?.hasAttribute("ssr"),
+  );
+  await summary.click();
+  await page.waitForFunction(
+    () => document.querySelector("#summary .summary-count")?.textContent === "1",
+  );
+  assert.equal(await page.locator("#summary-static .summary-count").textContent(), "0");
+  await page.goto(new URL("component-contract/", url).href);
+  assert.equal(await page.locator("#zero").textContent(), "Zero");
+  assert.equal(await page.locator("#with-props").textContent(), "Props");
+  await page.waitForFunction(() => {
+    const island = document.querySelector("#piped-zero astro-island");
+    return island !== null && !island.hasAttribute("ssr");
+  });
+  assert.equal(await page.locator("#piped-zero button").textContent(), "Piped 0");
+  await page.locator("#piped-zero button").click();
+  await page.waitForFunction(
+    () => document.querySelector("#piped-zero button")?.textContent === "Piped 1",
+  );
   assert.deepEqual(errors, []);
   console.log(
     "Astro production fixture: SSR, slots, load/idle/visible/media/only hydration passed.",

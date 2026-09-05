@@ -41,7 +41,7 @@ import type { Fx } from "../Fx.js";
  * @param fx - The `Fx` stream.
  * @returns An `Fx` emitting `Result<A, Cause<E>>`.
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const result = <A, E, R>(fx: Fx<A, E, R>): Fx<Result.Result<A, Cause.Cause<E>>, never, R> =>
   make<Result.Result<A, Cause.Cause<E>>, never, R>((sink) =>

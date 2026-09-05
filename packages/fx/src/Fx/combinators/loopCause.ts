@@ -28,7 +28,7 @@ import type { Fx } from "../Fx.js";
  * @param f - The loop function for causes.
  * @returns An `Fx` with transformed errors.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const loopCause: {
   <B, A, C>(

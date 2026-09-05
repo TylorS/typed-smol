@@ -31,7 +31,7 @@ import { make } from "./make.js";
  * @param delay - The duration to wait before emitting.
  * @returns An `Fx` that emits the value after the delay.
  * @since 1.0.0
- * @category constructors
+ * @category Time and rate
  */
 export const at: {
   (delay: Duration.Input): <A>(value: A) => Fx<A>;

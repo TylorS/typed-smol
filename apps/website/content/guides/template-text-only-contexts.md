@@ -1,156 +1,126 @@
 ---
 title: "Interpolate into text-only elements"
 summary: "Keep textarea, title, script, and style content in the context the browser gives it, with explicit limits around escaping, closing tags, and trust."
-section: "Templates"
+section: "Template bindings"
 kind: "deep-dive"
-order: 3.28
+order: 7
 ---
 
-Some HTML elements do not contain ordinary child markup. The browser treats their contents as one
-text context: `textarea`, `title`, `script`, `style`, and the legacy `xmp` element. Typed preserves
-that distinction instead of trying to parse a dynamic value as a new child tree. A value interpolated
-there is text for that element; it does not create a nested button, listener, or template range.
+An article editor may need a textarea for notes, a document title, and a JSON data script in its
+server response. Each contains text, but they do not use one interchangeable HTML escaping rule.
+The surrounding element determines how the browser parses its contents and what can accidentally
+end that context.
 
-`plaintext` is recognized while parsing, but it cannot be closed reliably in HTML and cannot carry
-Typed's hydration boundary. Rendering a `plaintext` template throws. Do not use it in a document.
+Read [scalar bindings](/explore/template-element-bindings) first. This page separates the initial
+text context from live properties and explains the serialization boundary a server renderer must
+preserve.
 
-## Text-only means text, not child markup
-
-The same `html` tag can describe a text area, document title, structured-data script, or stylesheet.
-The dynamic value remains data until the renderer writes it into that element. In the DOM renderer,
-that means text content. In the HTML renderer, it means a context-aware serialized chunk.
+## Start with text that must remain text
 
 ```ts
 import { html } from "@typed/template";
 
-const notes = "<em>not markup</em>";
-
+const notes = "Remember the <scope> example & its cleanup rule.";
 export const editor = html`<label>
-  Notes
+  Article notes
   <textarea name="notes">${notes}</textarea>
 </label>`;
-
-export const documentTitle = html`<title>${"Typed documentation"}</title>`;
+export const title = html`<title>${"Saved articles & notes"}</title>`;
 ```
 
-The `<em>` in `notes` is displayed as text inside the `textarea`; it is not parsed into an element.
-This is different from a node position such as `${html`<em>...</em>`}`, where a nested template is
-renderer-owned output. The same interpolation can be an `Effect`, `Stream`, or `Fx`; the renderer
-keeps its normal producer lifetime while applying this element's text rules.
+The `<scope>` text in the textarea does not create an element. Typed recognizes these positions as
+text-only content, not a child range in which nested markup can install another component. The HTML
+renderer escapes ordinary textarea/title text; the DOM renderer writes the corresponding text
+content.
 
-## Choose the context deliberately
+For editing, the textarea body supplies initial content. Its current edit buffer is the live
+`.value` property, just as with an input. If application state should control later edits, bind that
+property and capture events. Updating initial markup and controlling current editing are separate
+decisions.
 
-Text-only contexts are useful when the browser already provides the format you need. They are not
-interchangeable:
+An Effect, Fx, or Stream can supply these text values. Their ordinary producer lifetime remains;
+choosing a text-only position changes the interpretation of each value, not who owns its subscription.
 
-| Element | Good use | Ordinary interpolated value |
-| --- | --- | --- |
-| `textarea` | editable text with an initial value | HTML-escaped text |
-| `title` | the document title | HTML-escaped text |
-| `script` | JSON data or authored JavaScript | text with the matching `</script>` opener neutralized |
-| `style` | authored CSS or serialized CSS data | text with the matching `</style>` opener neutralized |
-| `xmp` | legacy text display only | text with the matching `</xmp>` opener neutralized |
+## Serialize the inner format before protecting the outer HTML
 
-For `textarea` and `title`, ordinary values use the normal HTML text escaping rules. For `script`,
-`style`, and `xmp`, Typed keeps the content text-oriented and neutralizes a dynamic matching closing
-tag so the value cannot end its surrounding element in the serialized response. That boundary rule
-does not make the value valid JavaScript or CSS, and it does not choose a safe URL, policy, or
-serialization format for you.
-
-```ts
-import { Fx } from "@typed/fx";
-import { html } from "@typed/template";
-
-const structuredData = Fx.succeed(
-  JSON.stringify({
-    "@context": "https://schema.org",
-    name: "Typed",
-  }),
-);
-
-const css = Fx.succeed(".notice { color: teal; }");
-
-export const head = html`<head>
-  <script type="application/ld+json">${structuredData}</script>
-  <style>${css}</style>
-</head>`;
-```
-
-Serialize structured data before interpolation. If the value is JavaScript source, generate it with
-the rules of the JavaScript format you are producing; Typed does not quote a string into a valid
-JavaScript literal for you. The browser's text-only context is a boundary, not a code generator.
-
-## Closing tags need neutralization
-
-An ordinary dynamic value in a normal text or attribute position is HTML-escaped. A script or style
-element cannot use that exact strategy: entity text is not a dependable way to protect the HTML
-parser's raw-text end tag. Typed instead replaces the `<` that begins a dynamic matching closing tag:
-`script` uses a JavaScript-safe `\\u003c`, `style` uses the CSS escape `\\3C `, and `xmp` uses `&lt;`.
-
-The replacement is deliberately narrow. It protects the surrounding raw-text element from a
-dynamic `</script>`, `</style>`, or `</xmp>` sequence; it does not sanitize the rest of the value.
-Authored literal content remains authored code or CSS and is not inspected for safety.
+A JSON data script has two contracts: valid JSON inside and an intact HTML script element around it.
+Serialize the JSON first:
 
 ```ts
 import { html } from "@typed/template";
 
-const untrusted = "</script><script>stealSomething()</script>";
-
-export const dataScript = html`<script type="application/json">
-  ${JSON.stringify({ untrusted })}
+const article = {
+  id: "scope",
+  note: "A literal </script> can occur in saved text.",
+};
+export const initialData = html`<script type="application/json">
+  ${JSON.stringify(article)}
 </script>`;
 ```
 
-Use ordinary interpolation for application data. Never concatenate user input into a literal
-`<script>`, `<style>`, or `xmp` body and assume the template tag has sanitized it. For a server
-response, [rendering HTML on the server](/explore/rendering-html-on-the-server) applies the same
-context rules while preserving ordered output.
+A generic HTML entity escape is not a substitute for raw-text closing-tag handling. The HTML parser
+can recognize a dynamic `</script>` as the end of the element even though it occurred inside the
+format you meant to embed. Typed neutralizes the matching closing tag's opening `<` in dynamic
+script text with `\\u003c`.
 
-## Trusted HTML is a separate boundary
+That protection does not validate the JSON schema, quote arbitrary JavaScript into a valid literal,
+or make authored executable code safe. The application still owns the chosen inner format.
 
-`HtmlRenderEvent` is for a renderer that already owns serialization. It is not a more powerful form
-of string interpolation and it is not an application sanitizer. In `textarea` and `title`, its
-content still goes through text escaping. In `script`, `style`, and `xmp`, the text-only serializer
-uses its renderer-owned string and applies only the matching closing-tag neutralization described
-above.
+## Choose the escaping rule by element
+
+| Context | Serialized dynamic content | Remaining responsibility |
+| --- | --- | --- |
+| `textarea`, `title` | HTML text escaping | choose initial text versus live properties |
+| `script` | neutralize matching closing tags with `\\u003c` | valid JSON or intentionally authored JavaScript |
+| `style` | neutralize matching closing tags with `\\3C ` | valid, appropriate CSS |
+| legacy `xmp` | neutralize matching closing tags with `&lt;` | avoid using legacy markup for new UI |
+
+Authored literal script/style content remains authored code. Typed does not sanitize JavaScript,
+CSS, URLs, or arbitrary literal markup. It protects the relevant dynamic context boundary.
+`plaintext` is recognized by parsing but cannot carry a reliable closing/hydration boundary;
+rendering it throws. It is not an alternative escaping strategy.
+
+For CSS, keep the same division of responsibilities:
+
+```ts
+import { html } from "@typed/template";
+
+const authoredCss = ".article-note { white-space: pre-wrap; }";
+export const stylesheet = html`<style>${authoredCss}</style>`;
+```
+
+Do not interpolate unvalidated CSS merely because the closing tag is neutralized. For ordinary
+component appearance, a stylesheet and class contributions are usually a clearer boundary than
+constructing dynamic stylesheet text.
+
+## Keep renderer-owned HTML distinct from application data
+
+`HtmlRenderEvent` is a serializer's explicit output type. It does not sanitize its input string.
+Even branded output follows text escaping in `textarea` and `title`; raw-text contexts use its
+renderer-owned string with matching closing-tag neutralization.
 
 ```ts
 import { html, HtmlRenderEvent } from "@typed/template";
 
-// This value came from a serializer that owns the JSON format and its trust policy.
-const rendererOwnedJson = HtmlRenderEvent(
-  '{"@context":"https://schema.org","name":"Typed"}',
-  true,
-);
-
-export const structuredData = html`<script type="application/ld+json">
-  ${rendererOwnedJson}
-</script>`;
+// The producing serializer owns the format and trust policy for this constant.
+const serialized = HtmlRenderEvent('{"id":"scope","kind":"article"}', true);
+export const data = html`<script type="application/json">${serialized}</script>`;
 ```
 
-Do not wrap user input, an arbitrary API response, or a hand-built string in `HtmlRenderEvent` to
-make it “safe.” Typed does not sanitize JavaScript, CSS, URLs, JSON semantics, or authored literal
-markup. The brand records an existing renderer's responsibility; it does not transfer that
-responsibility to Typed. See [Using HtmlRenderEvent](/explore/html-render-event) for chunk order and
-the [RenderEvent substrate](/explore/render-event-substrate) for the DOM/HTML output boundary.
+Application data should use ordinary interpolation, as in `initialData`. Wrapping user input in
+`HtmlRenderEvent` would assert a serialization responsibility that has not actually been fulfilled.
+The [HTML output contract](/explore/html-render-event) explains when a library legitimately owns it.
 
-## Hydration does not make authored code safe
+## Test what the browser parsed
 
-Interactive server rendering adds the template identity needed for the browser renderer to adopt
-the matching output. Hydration can preserve the exact text-only element and reconnect its dynamic
-part, but it does not re-sanitize the server's literal script, style, title, textarea, or xmp
-content. A matching template hash proves identity, not safety.
+A substring assertion on the response is insufficient. Parse the serialized response, count the
+resulting elements, and inspect their text. For the JSON example, parse the data script's text as
+JSON and compare the recovered note. This checks both the outer boundary and inner format.
 
-The security boundary is therefore the same on both sides of the handoff:
+For a textarea, test initial content separately from a later `.value` update and a user's edit.
+For hydratable output, retain the server element and assert adoption identity as well as text.
+Matching markers prove compatible template structure, not a trust policy or valid application data.
 
-- Keep application data in ordinary interpolations so Typed can apply the context's escaping rule.
-- Treat literal `script` and `style` bodies as code owned by the author.
-- Use `HtmlRenderEvent` only when another renderer owns the complete serialization and trust policy.
-- Add application policy for URLs, CSS, JavaScript, and any format-specific validation Typed does not
-  provide.
-
-The DOM renderer's text-only behavior is part of the same template contract as SSR; it does not
-turn `html` into an HTML sanitizer. Continue with [Hydrating Typed HTML](/explore/hydrating-typed-html)
-for the server/client handoff, [What a template can render](/explore/renderable-normalization) for
-producer normalization, and [Template references](/explore/template-references-and-element-access)
-when a native element needs an explicit browser integration.
+The [HtmlChunk reference](/reference/modules/%40typed%2Ftemplate%2FHtmlChunk) exposes context-aware
+serialization for renderer authors. [Hydrating Typed HTML](/explore/hydrating-typed-html) explains the
+separate browser adoption contract.

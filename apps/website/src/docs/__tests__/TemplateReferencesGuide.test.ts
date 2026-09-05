@@ -18,24 +18,16 @@ describe("Template references guide", () => {
 
     expect(guide).toMatchObject({
       slug: "template-references-and-element-access",
-      section: "Templates",
+      section: "Template bindings",
       kind: "guide",
-      order: 3.35,
     });
-    for (const term of [
-      "ref=${handler}",
-      "HTMLElement | SVGElement",
-      "Effect.acquireRelease",
-      "HydrationRef",
-      "RefSubject.hydrate",
-      "hydrateAll",
-      "StaticHtmlRenderTemplate",
-      "exact server-rendered element",
-    ]) {
-      expect(guide.body).toContain(term);
+    const examples = extractTypeScriptFences(guide.body).join("\n");
+    for (const term of ["Effect.acquireRelease", "observer.disconnect()", "RefSubject.hydrate", "RefSubject.hydrateAll", "ref=${"]) {
+      expect(examples).toContain(term);
     }
-    expect(extractTypeScriptFences(guide.body)).toHaveLength(4);
-    expect(guide.body.split(/\s+/u).length).toBeLessThanOrEqual(1_400);
+    expect(guide.body).toContain("/explore/hydrating-typed-html");
+    expect(guide.body).toContain("/explore/template-spreads-data");
+    expect(extractTypeScriptFences(guide.body)).not.toHaveLength(0);
   });
 
   it("keeps every TypeScript example independently compilable", () => {

@@ -36,7 +36,7 @@ interface State {
  * ```
  *
  * @since 1.0.0
- * @category refs
+ * @category Native synchronization
  */
 export function ref<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,

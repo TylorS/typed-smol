@@ -30,7 +30,7 @@ import type { Fx } from "../Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export const sample: {
   <S, E2, R2>(sampler: Fx<S, E2, R2>): <A, E, R>(self: Fx<A, E, R>) => Fx<A, E | E2, R | R2>;

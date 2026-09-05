@@ -7,6 +7,10 @@ related: [template, render-event, fx]
 links: []
 ---
 
-Renderable input includes ordinary values, Effect work, Fx output, nested Templates, and existing
-render events. Template normalization determines how that value becomes output; it does not erase
-the value's failures, services, or ownership boundary.
+Renderable describes inputs that template normalization can interpret, including ordinary values,
+arrays, Effects, Fx or Stream output, and render events. A string label, an Effect that loads a label,
+and a RefSubject that changes its label reach the same interpolation boundary with different behavior.
+
+Asynchronous values retain their failures and requirements. Parsed Template metadata is a separate
+renderer-author representation, not the value returned by `html`. See
+[rendering values](/explore/render-your-first-template).

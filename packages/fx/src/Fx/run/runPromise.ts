@@ -33,7 +33,7 @@ import { drain } from "./observe.js";
  * @param options - `RunOptions` for execution.
  * @returns A Promise resolving to the `Exit` of the execution.
  * @since 1.0.0
- * @category runners
+ * @category Running effects
  */
 export const runPromiseExit = <A, E>(
   fx: Fx<A, E>,
@@ -69,7 +69,7 @@ export const runPromiseExit = <A, E>(
  * @param options - `RunOptions` for execution.
  * @returns A Promise that resolves when the stream completes.
  * @since 1.0.0
- * @category runners
+ * @category Running effects
  */
 export const runPromise = <A, E>(fx: Fx<A, E>, options?: RunOptions): Promise<unknown> =>
   Effect.runPromise(drain(fx), options);

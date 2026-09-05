@@ -1,6 +1,8 @@
 ---
 import type { ReferenceModule } from "../../../docs/Model.js";
 import Markdown from "../../components/Markdown.astro";
+import { uiGuidePath } from "../../Guides.js";
+import { siteHref } from "../../../SiteHref.js";
 import {
   packages,
   moduleHref,
@@ -15,6 +17,7 @@ interface Props {
 }
 const { mod } = Astro.props;
 const pkg = packages.get(mod.packageName)!;
+const uiGuide = uiGuidePath(mod.consumerSpecifier);
 ---
 
 <header class="page-intro">
@@ -28,6 +31,22 @@ const pkg = packages.get(mod.packageName)!;
     {mod.uniqueExportCount} unique exports available through this public import path,
     including their members and aliases.
   </p>
+  {
+    uiGuide && (
+      <p>
+        <a href={siteHref(uiGuide)}>Learn this UI primitive →</a>
+      </p>
+    )
+  }
+  {
+    mod.consumerSpecifier === "@typed/fx/Fx" && (
+      <p>
+        <a href={siteHref("/explore/fx-operator-atlas")}>
+          Explore every operation with marble diagrams →
+        </a>
+      </p>
+    )
+  }
   <div class="prose">
     <Markdown
       source={codeBlock(
@@ -57,7 +76,7 @@ const pkg = packages.get(mod.packageName)!;
         ))
       }
     </div>
-    <details class="sidebar-group" open={pkg.moduleSpecifiers.length < 16}>
+    <details class="sidebar-group" open>
       <summary>Modules in {mod.packageName}</summary>
       {
         pkg.moduleSpecifiers.map((specifier) => (

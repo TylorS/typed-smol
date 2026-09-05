@@ -4,13 +4,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
-import { extractTypeScriptFences } from "../Recipes.js";
+import { extractTypeScriptFenceDocuments } from "../RecipeValidation.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guideFile = "versioned-state.md";
 
 describe("Versioned guide", () => {
-  it("documents the public Versioned contract with independently compilable examples", () => {
+  it("documents the public Versioned contract with compilable companion modules", () => {
     const guide = parseGuideDocumentation(
       guideFile,
       fs.readFileSync(path.join(websiteRoot, "content/guides", guideFile), "utf8"),
@@ -29,15 +29,18 @@ describe("Versioned guide", () => {
       "Versioned.hold",
       "Fx.collectAll",
       "version",
-      "does not define a write operation",
+      "Versioned.tuple",
+      "onFx",
+      "onEffect",
     ]) {
       expect(guide.body).toContain(term);
     }
 
     const staging = fs.mkdtempSync(path.join(websiteRoot, ".versioned-guide-check-"));
     try {
-      const examples = extractTypeScriptFences(guide.body).map((code, index) => {
-        const file = path.join(staging, `example-${index}.ts`);
+      const examples = extractTypeScriptFenceDocuments(guide.body).map(({ code, fileName, extension }, index) => {
+        const file = path.join(staging, guide.slug, fileName ?? `example-${index}.${extension}`);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.writeFileSync(file, code);
         return file;
       });

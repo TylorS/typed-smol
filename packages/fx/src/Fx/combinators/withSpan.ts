@@ -35,7 +35,7 @@ import { isFx } from "../TypeId.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Observing failures
  */
 export const withSpan: {
   (name: string, options?: SpanOptionsNoTrace): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;

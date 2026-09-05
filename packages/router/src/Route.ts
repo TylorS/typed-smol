@@ -20,7 +20,7 @@ import * as Path from "./Path.js";
  * A Route value retains its AST and memoized derived values until that Route becomes unreachable; it owns no Scope.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route contracts
  */
 export interface Route<
   P extends string,
@@ -37,7 +37,7 @@ export interface Route<
    * The Route retains its `ast` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route inspection
    */
   readonly ast: AST.RouteAst;
   /**
@@ -51,7 +51,7 @@ export interface Route<
    * The Route retains its `path` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route inspection
    */
   readonly path: P;
 
@@ -66,7 +66,7 @@ export interface Route<
    * The Route retains its `paramsSchema` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Parameter codecs
    */
   readonly paramsSchema: S;
   /**
@@ -80,7 +80,7 @@ export interface Route<
    * The Route retains its `pathSchema` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Parameter codecs
    */
   readonly pathSchema: Schema.Codec<Path.PathParams<P>>;
   /**
@@ -94,7 +94,7 @@ export interface Route<
    * The Route retains its `querySchema` value for the Route's lifetime. Reading it performs no acquisition; Codec services are required only when a schema is executed.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Parameter codecs
    */
   readonly querySchema: Schema.Codec<Path.QueryParams<P>>;
 }
@@ -111,7 +111,7 @@ export declare namespace Route {
    * TypeScript computes `Any` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type Any = Route<any, any>;
 
@@ -126,7 +126,7 @@ export declare namespace Route {
    * TypeScript computes `Path` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type Path<T> = T extends Route<infer P, any> ? P : never;
   /**
@@ -140,7 +140,7 @@ export declare namespace Route {
    * TypeScript computes `Schema` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type Schema<T> = T extends Route<any, infer S> ? S : never;
   /**
@@ -154,7 +154,7 @@ export declare namespace Route {
    * TypeScript computes `Type` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type Type<T> = T extends Route<any, infer S> ? S["Type"] : never;
   /**
@@ -168,7 +168,7 @@ export declare namespace Route {
    * TypeScript computes `Params` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type Params<T> = T extends Route<infer P, infer _S> ? Path.Params<P> : never;
   /**
@@ -182,7 +182,7 @@ export declare namespace Route {
    * TypeScript computes `DecodingServices` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type DecodingServices<T> = T extends Route<any, infer S> ? S["DecodingServices"] : never;
   /**
@@ -196,7 +196,7 @@ export declare namespace Route {
    * TypeScript computes `EncodingServices` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type EncodingServices<T> = T extends Route<any, infer S> ? S["EncodingServices"] : never;
 
@@ -211,7 +211,7 @@ export declare namespace Route {
    * TypeScript computes `PathType` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type PathType<T extends Any> = T["pathSchema"]["Type"];
   /**
@@ -225,7 +225,7 @@ export declare namespace Route {
    * TypeScript computes `QueryType` from its Route input; the alias is erased and owns no runtime value.
    *
    * @since 1.0.0
-   * @category routes
+   * @category Route type inference
    */
   export type QueryType<T extends Any> = T["querySchema"]["Type"];
 }
@@ -241,7 +241,7 @@ export declare namespace Route {
  * TypeScript computes `Any` from its Route input; the alias is erased and owns no runtime value.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route type inference
  */
 export type Any = Route.Any;
 /**
@@ -255,7 +255,7 @@ export type Any = Route.Any;
  * TypeScript computes `Params` from its Route input; the alias is erased and owns no runtime value.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route type inference
  */
 export type Params<T> = Route.Params<T>;
 /**
@@ -269,7 +269,7 @@ export type Params<T> = Route.Params<T>;
  * TypeScript computes `Type` from its Route input; the alias is erased and owns no runtime value.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route type inference
  */
 export type Type<T> = Route.Type<T>;
 /**
@@ -283,7 +283,7 @@ export type Type<T> = Route.Type<T>;
  * TypeScript computes `PathType` from its Route input; the alias is erased and owns no runtime value.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route type inference
  */
 export type PathType<T extends Any> = Route.PathType<T>;
 /**
@@ -297,7 +297,7 @@ export type PathType<T extends Any> = Route.PathType<T>;
  * TypeScript computes `QueryType` from its Route input; the alias is erased and owns no runtime value.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route type inference
  */
 export type QueryType<T extends Any> = Route.QueryType<T>;
 
@@ -320,7 +320,7 @@ export type QueryType<T extends Any> = Route.QueryType<T>;
  * ```
  *
  * @since 1.0.0
- * @category routes
+ * @category Route construction
  */
 export function make<
   const P extends string,
@@ -492,7 +492,7 @@ function projectRecord(input: unknown, names: ReadonlySet<string>): Record<Prope
  * ```
  *
  * @since 1.0.0
- * @category routes
+ * @category Route construction
  */
 export const Parse = <const P extends string>(path: P): Route<Path.Join<Path.ParseAsts<P>>> => {
   const asts = Path.parse(path) as ReadonlyArray<AST.PathAst>;
@@ -514,7 +514,7 @@ export const Parse = <const P extends string>(path: P): Route<Path.Join<Path.Par
  * `Slash` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route construction
  */
 export const Slash = make<"/">(AST.path(AST.literal("")));
 
@@ -529,7 +529,7 @@ export const Slash = make<"/">(AST.path(AST.literal("")));
  * `Wildcard` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route construction
  */
 export const Wildcard = make<"*">(AST.path(AST.wildcard()));
 
@@ -544,7 +544,7 @@ export const Wildcard = make<"*">(AST.path(AST.wildcard()));
  * `Param` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route construction
  */
 export const Param = <const P extends string>(paramName: P): Route<`/:${P}`> =>
   make<`/:${P}`>(AST.path(AST.parameter(paramName)));
@@ -560,7 +560,7 @@ export const Param = <const P extends string>(paramName: P): Route<`/:${P}`> =>
  * `ParamWithSchema` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
  *
  * @since 1.0.0
- * @category routes
+ * @category Parameter codecs
  */
 export const ParamWithSchema = <
   const P extends string,
@@ -594,7 +594,7 @@ export const ParamWithSchema = <
  * `Number` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
  *
  * @since 1.0.0
- * @category routes
+ * @category Parameter codecs
  */
 export const Number = <const P extends string>(
   paramName: P,
@@ -612,7 +612,7 @@ export const Number = <const P extends string>(
  * `Int` constructs its Route immediately. The Route retains the supplied AST or route values and lazily memoizes derived paths and Codecs; Codec services are required only when decoding or encoding runs.
  *
  * @since 1.0.0
- * @category routes
+ * @category Parameter codecs
  */
 export const Int = <const P extends string>(
   paramName: P,
@@ -620,17 +620,18 @@ export const Int = <const P extends string>(
   ParamWithSchema(paramName, Schema.FiniteFromString.pipe(Schema.check(Schema.isInt())));
 
 /**
- * A Route AST node containing ordered child routes.
+ * Infers the normalized path, intersected decoded parameters, and codec services of joined Routes.
  *
  * @remarks
- * ## Why
- * Composition retains child schema boundaries and parameter ownership.
+ * The combined decoded record includes every child parameter. Decoding and encoding requirements
+ * are unions of the child codec requirements, so composing a service-backed parameter does not
+ * make its dependency disappear. This type accompanies the value-level `Join` constructor.
  *
  * ## Ownership and lifetime
  * TypeScript computes `Join` from its Route input; the alias is erased and owns no runtime value.
  *
  * @since 1.0.0
- * @category routes
+ * @category Route composition
  */
 export type Join<Routes extends ReadonlyArray<Route<any, any>>> = [
   Route<
@@ -662,6 +663,29 @@ const removeSlash = (ast: AST.RouteAst): ReadonlyArray<AST.RouteAst> => {
   return [ast];
 };
 
+/**
+ * Composes ordered Route fragments into one typed path and combined parameter codec.
+ *
+ * Reuse a workspace prefix in queue, issue, and settings routes without repeating its parameter
+ * schema. Nested arrays of fragments are flattened. Duplicate decoded parameter names are rejected
+ * during construction rather than allowing one fragment to overwrite another's value.
+ *
+ * The returned Route is a resource-free description. Its codecs preserve the union of decoding
+ * and encoding services; no service lookup or navigation occurs while joining fragments.
+ *
+ * @example
+ * ```ts
+ * import * as Route from "@typed/router/Route"
+ *
+ * const Workspace = Route.Join(Route.Parse("/workspaces"), Route.Param("workspaceId"))
+ * const Issue = Route.Join(Workspace, Route.Parse("/issues"), Route.Int("issueId"))
+ * type IssueInput = Route.Type<typeof Issue>
+ * // { readonly workspaceId: string; readonly issueId: number }
+ * ```
+ *
+ * @since 1.0.0
+ * @category Route composition
+ */
 export const Join = <const Routes extends AnyRoutes>(
   ...routes: Routes
 ): Join<FlattenRoutes<Routes>> => {

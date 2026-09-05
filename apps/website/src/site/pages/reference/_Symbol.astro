@@ -5,6 +5,11 @@ import type {
 } from "../../../docs/Model.js";
 import Markdown from "../../components/Markdown.astro";
 import {
+  findFxOperatorDiagram,
+  renderFxOperatorDiagramMarkdown,
+} from "../../../docs/FxOperatorAtlas.js";
+import { uiGuidePath } from "../../Guides.js";
+import {
   aliases,
   children,
   declarations,
@@ -23,6 +28,17 @@ interface Props {
   symbol: SymbolDocumentation;
 }
 const { exposure, symbol } = Astro.props;
+const fxName =
+  exposure.recordKind === "declaration"
+    ? exposure.consumerSpecifier === "@typed/fx/Fx"
+      ? exposure.qualifiedName
+      : exposure.consumerSpecifier === "@typed/fx" &&
+          exposure.qualifiedName.startsWith("Fx.")
+        ? exposure.qualifiedName.slice(3)
+        : undefined
+    : undefined;
+const diagram = fxName ? findFxOperatorDiagram(fxName) : undefined;
+const uiGuide = uiGuidePath(exposure.consumerSpecifier);
 const declaration =
   exposure.recordKind === "declaration"
     ? declarations.get(exposure.declarationKey)
@@ -68,6 +84,13 @@ const relationHref = (kind: string, target: string) =>
   <div class="reference-summary prose">
     <Markdown source={symbol.summary} />
   </div>
+  {
+    uiGuide && (
+      <p>
+        <a href={siteHref(uiGuide)}>Learn this UI primitive →</a>
+      </p>
+    )
+  }
   <dl class="reference-facts">
     <div><dt>Package version</dt><dd>{exposure.packageVersion}</dd></div>
     {
@@ -140,6 +163,7 @@ const relationHref = (kind: string, target: string) =>
           exposure.recordKind === "resource" ? "Configuration" : "Signatures"
         }</a
       >
+      {diagram && <a href="#timeline">Execution timeline</a>}
       {
         sections.map((section) => (
           <a href={`#${section.id}`}>{section.title}</a>
@@ -159,6 +183,19 @@ const relationHref = (kind: string, target: string) =>
     </div>
   </nav>
   <article class="reference-article prose">
+    {
+      diagram && (
+        <section id="timeline">
+          <h2>Follow one execution</h2>
+          <Markdown source={renderFxOperatorDiagramMarkdown(diagram)} />
+          <p>
+            <a href={siteHref("/explore/fx-operator-atlas")}>
+              Compare all Fx timelines →
+            </a>
+          </p>
+        </section>
+      )
+    }
     <section id="import">
       <h2>
         {

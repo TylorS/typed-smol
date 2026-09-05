@@ -7,8 +7,10 @@ related: [dynamic-range, scope, wire]
 links: []
 ---
 
-Typed treats ownership as a boundary that can be shared. A template owns the dynamic range it
-created and the subscriptions that drive it; it does not claim external classes, sibling nodes,
-native event behavior, or a foreign renderer's resources. See the [dynamic range](#dynamic-range)
-and [Scope](#scope) entries for the two halves of that contract.
+Participants can share a document while writing different fields and ranges. Typed might own a
+caption and place a chart host, while the chart owns that host’s descendants. Both independently
+writing the chart’s children would break the agreement.
 
+Root `render(view, host)` uses the host as a mount slot, so give it a dedicated element. Cleanup also
+needs an owner: placement alone does not release a foreign renderer’s resources. See
+[cooperative boundaries](/explore/cooperative-by-design).

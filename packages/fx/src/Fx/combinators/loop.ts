@@ -27,7 +27,7 @@ import type { Fx } from "../Fx.js";
  * @param f - A function that takes the accumulator and an element, returning a tuple of the emitted value and the new accumulator.
  * @returns An `Fx` that emits the transformed values.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const loop: {
   <B, A, C>(

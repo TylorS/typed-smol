@@ -1,15 +1,12 @@
 /**
- * Group supplies a neutral ARIA group host and an optional label host. Callers retain the normal
- * Dom host-override contract and must provide either an accessible label or a labelled-by
- * relationship where the surrounding widget requires one.
+ * Explicitly named collections of related content.
+ * Group.Label is a span; connect its ID through labelledBy rather than assuming implicit wiring.
  *
- * @remarks
- * The module keeps policy, state transitions, and DOM rendering separable so applications can use
- * the state and pure operations without mounting UI, or supply custom hosts without replacing native
- * events and browser-owned focus.
+ * Read the [Group guide](/explore/ui-group) for a complete example.
  *
+ * [Platform reference](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/group_role).
  * @since 1.0.0
- * @category modules
+ * @category Overview
  * @packageDocumentation
  */
 import type * as Scope from "effect/Scope";
@@ -19,43 +16,31 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /**
- * Inputs accepted by Group.Group in addition to the shared DOM host options.
+ * Related content with either a direct accessible label or an external label ID.
  *
  * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { GroupOptions } from "@typed/ui/Group";` Extend the [Group.Group
- * runnable setup](/reference/%40typed%2Fui%2FGroup%23Group). A labeled group host accepts
- * `const options: GroupOptions = { label: "Formatting", content: "Controls" }`.
+ * Use labelledBy when visible text already names the group; use label when that text is absent.
+ * Native fieldset/legend and composite keyboard behavior are not created by these options.
  * @since 1.0.0
- * @category models
+ * @category Component options
  */
 export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Accessible label rendered through aria-label.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly label?: Renderable.Any<string | null | undefined>;
   /**
    * Id of the external element used through aria-labelledby.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly labelledBy?: Renderable.Any<string | null | undefined>;
 }
@@ -71,28 +56,43 @@ function internalProps<const Options extends GroupOptions>({ property }: Dom.Int
 type GroupInternalProps<Options extends GroupOptions> = ReturnType<typeof internalProps<Options>>;
 
 /**
- * Renders a div host with role=group and caller-controlled aria-label or aria-labelledby.
+ * Renders a semantic group with an explicit accessible name.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
- * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
- * collection registrations only when rendered. The rendering Scope removes those resources;
- * unrelated nodes and attributes remain caller-owned.
+ * label becomes aria-label; labelledBy references existing visible text through aria-labelledby.
+ * The div does not implement fieldset disabling, toolbar navigation, or child selection. Name
+ * each interactive child independently.
  *
  * @example
  * ```ts
+ * import { RefSubject } from "@typed/fx";
+ * import { html } from "@typed/template";
+ * import { Button } from "@typed/ui/Button";
+ * import { component } from "@typed/ui/Component";
  * import * as Group from "@typed/ui/Group";
  *
- * const view = Group.Group({ label: "Formatting", content: "Controls" });
+ * export const PreviewActions = component(function* () {
+ *   const rotation = yield* RefSubject.make(45);
+ *   const scale = yield* RefSubject.make(150);
+ *   return html`<section>
+ *     <p>Rotation: ${rotation} degrees. Scale: ${scale}%.</p>
+ *     ${Group.Label({
+ *       content: "Preview controls",
+ *       props: { id: "preview-control-label", class: "control-group-label" },
+ *     })}
+ *     ${Group.Group({
+ *       labelledBy: "preview-control-label",
+ *       props: { class: "preview-actions" },
+ *       content: [
+ *         Button({ content: "Reset rotation", onclick: RefSubject.set(rotation, 0) }),
+ *         Button({ content: "Reset scale", onclick: RefSubject.set(scale, 100) }),
+ *       ],
+ *     })}
+ *   </section>`;
+ * });
  * ```
  * @since 1.0.0
- * @category components
+ * @category Structure and naming
  */
 export function Group<const Options extends GroupOptions, const Host extends HostResult = never>(
   options: Options,
@@ -112,49 +112,30 @@ export function Group<const Options extends GroupOptions, const Host extends Hos
 }
 
 /**
- * Inputs accepted by Group.Label in addition to the shared DOM host options.
+ * Visible span content and host props for an explicitly linked group label.
  *
  * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { LabelOptions } from "@typed/ui/Group";` Extend the [Group.Group
- * runnable setup](/reference/%40typed%2Fui%2FGroup%23Group). A visible group label accepts
- * `const options: LabelOptions = { content: "Formatting" }`.
+ * Set props.id and reference it through Group.labelledBy. There is no generated ID or implicit
+ * relationship.
  * @since 1.0.0
- * @category models
+ * @category Component options
  */
 export interface LabelOptions extends Dom.HostOptions<HTMLSpanElement> {
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
 
 /**
- * Renders the group's visible label content without inventing an implicit id relationship.
+ * Renders visible group-label text in a span.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
- * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
- * collection registrations only when rendered. The rendering Scope removes those resources;
- * unrelated nodes and attributes remain caller-owned.
+ * Pass an ID through props and reference it from Group.labelledBy to create a relationship.
+ * Rendering this span beside a group does not connect them automatically, and it does not create
+ * heading semantics.
  *
  * @example
  * ```ts
@@ -163,7 +144,7 @@ export interface LabelOptions extends Dom.HostOptions<HTMLSpanElement> {
  * const view = Group.Label({ content: "Formatting" });
  * ```
  * @since 1.0.0
- * @category components
+ * @category Controls
  */
 export function Label<const Options extends LabelOptions, const Host extends HostResult = never>(
   options: Options,

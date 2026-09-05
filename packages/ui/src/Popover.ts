@@ -21,7 +21,7 @@ import * as NativePopover from "./NativePopover.js";
  * ## Ownership and lifetime
  * Plain data retains no resources; RefSubject lifetime is Scope-owned.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface State {
   /** Whether native popover content should be open.
@@ -31,7 +31,7 @@ export interface State {
    * ## Ownership and lifetime
    * Plain state acquires no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open: boolean;
 }
@@ -43,7 +43,7 @@ export interface State {
  * ## Ownership and lifetime
  * Configuration is inert.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface InitialState {
   /** Initial open state, defaulting to false.
@@ -53,7 +53,7 @@ export interface InitialState {
    * ## Ownership and lifetime
    * Plain data retains no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open?: boolean;
 }
@@ -65,7 +65,7 @@ export interface InitialState {
  * ## Ownership and lifetime
  * The immutable schema acquires no resources.
  * @since 1.0.0
- * @category schemas
+ * @category Open state
  */
 export const StateSchema = Schema.Struct({ open: Schema.Boolean });
 
@@ -85,7 +85,7 @@ export const StateSchema = Schema.Struct({ open: Schema.Boolean });
  * })
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Open state
  */
 export function makeState(initial: InitialState = {}) {
   return RefSubject.hydrate(StateSchema, { open: initial.open ?? false });
@@ -109,7 +109,7 @@ export function makeState(initial: InitialState = {}) {
  * })
  * ```
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export function setOpen<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -126,7 +126,7 @@ export function setOpen<E, R>(
  * ## Ownership and lifetime
  * Options are inert; rendering owns listeners/subscriptions by Scope.
  * @since 1.0.0
- * @category models
+ * @category Opening controls
  */
 export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
   /** Hydrated state shared with popover content.
@@ -136,7 +136,7 @@ export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * The trigger borrows state; its original Scope owns it.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /** Id of content targeted through native `popovertarget`.
@@ -146,7 +146,7 @@ export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * The string is reflected and retains no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly controls?: string;
   /** Visible trigger content and accessible name.
@@ -156,7 +156,7 @@ export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the trigger Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -203,7 +203,7 @@ type TriggerInternalProps<Options extends TriggerOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Opening controls
  */
 export function Trigger<
   const Options extends TriggerOptions,
@@ -242,7 +242,7 @@ export function Trigger<
  * ## Ownership and lifetime
  * Options are inert; rendering owns the native ref and subscriptions by Scope.
  * @since 1.0.0
- * @category models
+ * @category Native content host
  */
 export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
   /** Hydrated state synchronized with native popover visibility.
@@ -252,7 +252,7 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * The content borrows the state; its original Scope owns it.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /** Content rendered in the top layer.
@@ -262,7 +262,7 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the content Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -312,7 +312,7 @@ type ContentInternalProps<Options extends ContentOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Native content host
  */
 export function Content<
   const Options extends ContentOptions,

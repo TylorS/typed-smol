@@ -51,7 +51,7 @@ import { flatMapConcurrently } from "./flatMapConcurrently.js";
  * @param concurrency - A positive safe-integer limit for concurrent effects. Invalid limits fail with `Cause.IllegalArgumentError`.
  * @returns An `Fx` that emits the results of the effects.
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const flatMapConcurrentlyEffect: {
   <A, B, E2, R2>(

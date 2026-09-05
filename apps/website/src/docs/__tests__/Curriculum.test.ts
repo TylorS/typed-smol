@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { quickStartSections, tutorialSteps } from "../../tutorial/Content.js";
+import {
+  curriculumSearchEntries,
+  quickStartSections,
+  tutorialSteps,
+} from "../../tutorial/Content.js";
+import { counterLessonPath, isQuickStartSection } from "../../tutorial/Routes.js";
 
 const fileAt = (slug: string, name: string): string => {
   const source = tutorialSteps
@@ -10,6 +15,27 @@ const fileAt = (slug: string, name: string): string => {
 };
 
 describe("Quick Start and TodoMVC curriculum", () => {
+  it("keeps Quick Start to setup and the counter, with searchable follow-up lessons", () => {
+    expect(
+      quickStartSections.filter(({ id }) => isQuickStartSection(id)).map(({ id }) => id),
+    ).toEqual(["install", "reactive-state"]);
+    const followups = quickStartSections.filter(({ id }) => !isQuickStartSection(id));
+    expect(followups.map(({ id }) => id)).toEqual([
+      "client-only",
+      "component-lifetime",
+      "server-html",
+      "hydrate-state",
+    ]);
+    for (const { id, title } of followups) {
+      expect(
+        curriculumSearchEntries.find((entry) => entry.href === counterLessonPath(id))?.title,
+      ).toBe(title);
+    }
+    expect(
+      curriculumSearchEntries.find(({ id }) => id === "curriculum:quick-start")?.text,
+    ).not.toMatch(/hydrat|server|lifetime/iu);
+  });
+
   it("keeps every authored step addressable and ordered", () => {
     expect(quickStartSections.map(({ id }) => id)).toEqual([
       "install",

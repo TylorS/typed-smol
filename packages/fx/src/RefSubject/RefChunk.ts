@@ -29,7 +29,7 @@ import { Result } from "effect";
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefChunk<in out A, in out E = never, out R = never> extends RefSubject.RefSubject<
   Chunk.Chunk<A>,
@@ -51,7 +51,7 @@ export interface RefChunk<in out A, in out E = never, out R = never> extends Ref
  * and cleanup; source failures and services stay on reads and pushes.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<A, E = never, R = never>(
   initial: Chunk.Chunk<A> | Effect.Effect<Chunk.Chunk<A>, E, R> | Fx.Fx<Chunk.Chunk<A>, E, R>,
@@ -74,7 +74,7 @@ export function make<A, E = never, R = never>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const prepend: {
   <A>(value: A): <E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -97,7 +97,7 @@ export const prepend: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const prependAll: {
   <A>(value: Iterable<A>): <E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -120,7 +120,7 @@ export const prependAll: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const append: {
   <A>(value: A): <E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -143,7 +143,7 @@ export const append: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const appendAll: {
   <A>(value: Iterable<A>): <E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -166,7 +166,7 @@ export const appendAll: {
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const drop: {
   (n: number): <A, E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -189,7 +189,7 @@ export const drop: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const dropRight: {
   (n: number): <A, E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -212,7 +212,7 @@ export const dropRight: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const dropWhile: {
   <A>(
@@ -240,7 +240,7 @@ export const dropWhile: {
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const take: {
   (n: number): <A, E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -263,7 +263,7 @@ export const take: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const takeRight: {
   (n: number): <A, E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -286,7 +286,7 @@ export const takeRight: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const takeWhile: {
   <A>(
@@ -314,7 +314,7 @@ export const takeWhile: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const modifyAt: {
   <A>(
@@ -346,7 +346,7 @@ export const modifyAt: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const replaceAt: {
   <A>(index: number, a: A): <E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -371,7 +371,7 @@ export const replaceAt: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const remove: {
   (index: number): <A, E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -393,7 +393,7 @@ export const remove: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed chunk and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filter: {
   <A>(
@@ -420,7 +420,7 @@ export const filter: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed chunk and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const map: {
   <A>(
@@ -448,7 +448,7 @@ export const map: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const dedupe = <A, E, R>(ref: RefChunk<A, E, R>): Effect.Effect<Chunk.Chunk<A>, E, R> =>
   RefSubject.update(ref, Chunk.dedupe);
@@ -467,7 +467,7 @@ export const dedupe = <A, E, R>(ref: RefChunk<A, E, R>): Effect.Effect<Chunk.Chu
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const dedupeAdjacent = <A, E, R>(
   ref: RefChunk<A, E, R>,
@@ -487,7 +487,7 @@ export const dedupeAdjacent = <A, E, R>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const reverse = <A, E, R>(ref: RefChunk<A, E, R>): Effect.Effect<Chunk.Chunk<A>, E, R> =>
   RefSubject.update(ref, Chunk.reverse);
@@ -506,7 +506,7 @@ export const reverse = <A, E, R>(ref: RefChunk<A, E, R>): Effect.Effect<Chunk.Ch
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const sort: {
   <A>(order: Order.Order<A>): <E, R>(ref: RefChunk<A, E, R>) => Effect.Effect<Chunk.Chunk<A>, E, R>;
@@ -533,7 +533,7 @@ export const sort: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, Chunk.isEmpty);
@@ -552,7 +552,7 @@ export const isEmpty = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed<bo
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNonEmpty = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, Chunk.isNonEmpty);
@@ -571,7 +571,7 @@ export const isNonEmpty = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, Chunk.size);
@@ -590,7 +590,7 @@ export const size = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Computed<numbe
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapValues: {
   <A, B>(
@@ -618,7 +618,7 @@ export const mapValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filterValues: {
   <A>(
@@ -646,7 +646,7 @@ export const filterValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const partition: {
   <A>(
@@ -674,7 +674,7 @@ export const partition: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduce: {
   <A, B>(
@@ -709,7 +709,7 @@ export const reduce: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduceRight: {
   <A, B>(
@@ -744,7 +744,7 @@ export const reduceRight: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const some: {
   <A>(
@@ -772,7 +772,7 @@ export const some: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const every: {
   <A>(
@@ -800,7 +800,7 @@ export const every: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const contains: {
   <A>(value: A): <E, R>(ref: RefChunk<A, E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -827,7 +827,7 @@ export const contains: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const getIndex: {
   (index: number): <A, E, R>(ref: RefChunk<A, E, R>) => RefSubject.Filtered<A, E, R>;
@@ -850,7 +850,7 @@ export const getIndex: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const head = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Filtered<A, E, R> =>
   RefSubject.filterMap(ref, Chunk.head);
@@ -869,7 +869,7 @@ export const head = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Filtered<A, E,
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const last = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Filtered<A, E, R> =>
   RefSubject.filterMap(ref, Chunk.last);
@@ -888,7 +888,7 @@ export const last = <A, E, R>(ref: RefChunk<A, E, R>): RefSubject.Filtered<A, E,
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const findFirst: {
   <A>(predicate: (a: A) => boolean): <E, R>(ref: RefChunk<A, E, R>) => RefSubject.Filtered<A, E, R>;
@@ -911,7 +911,7 @@ export const findFirst: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const findLast: {
   <A>(predicate: (a: A) => boolean): <E, R>(ref: RefChunk<A, E, R>) => RefSubject.Filtered<A, E, R>;

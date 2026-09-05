@@ -30,7 +30,7 @@ import type { Fx } from "../Fx.js";
  * @param fx - The `Fx` stream.
  * @returns An `Fx` emitting `Exit<A, E>`.
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const exit = <A, E, R>(fx: Fx<A, E, R>): Fx<Exit.Exit<A, E>, never, R> =>
   make<Exit.Exit<A, E>, never, R>((sink) => fx.run(sinkCore.exit(sink)));

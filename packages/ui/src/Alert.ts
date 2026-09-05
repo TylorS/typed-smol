@@ -1,3 +1,14 @@
+/**
+ * Assertive live-region content without focus movement or an announcement queue.
+ * Use urgent text updates deliberately; routine feedback usually belongs in a status region.
+ *
+ * Read the [Alert guide](/explore/ui-alert) for a complete example.
+ *
+ * [APG interaction reference](https://www.w3.org/WAI/ARIA/apg/patterns/alert/).
+ * @since 1.0.0
+ * @category Overview
+ * @packageDocumentation
+ */
 import type * as Scope from "effect/Scope";
 import type { Fx } from "@typed/fx/Fx";
 import { html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
@@ -8,36 +19,16 @@ import type { HostResult } from "./Dom/Types.js";
  * Options for the assertive alert live region.
  *
  * @remarks
- * ## Why
- *
  * Alerts announce important, time-sensitive output without moving focus or
  * requiring a modal interaction.
- *
- * ## Ownership and lifetime
- *
- * The options are inert. Rendering owns only the alert host and subscriptions
- * for renderable option values; the running Effect Scope removes them.
- *
  * @since 1.0.0
- * @category models
+ * @category Component options
  */
 export interface AlertOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Content announced by the `role="alert"` live region.
-   *
-   * @remarks
-   * ## Why
-   *
-   * Keeping the announcement renderable lets applications publish Effect- or
-   * Fx-backed status while retaining the platform accessibility tree.
-   *
-   * ## Ownership and lifetime
-   *
-   * The value acquires no resources itself. Rendering subscribes to dynamic
-   * content for the lifetime of the alert's Scope.
-   *
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -48,33 +39,36 @@ function internalProps() {
 type AlertInternalProps = ReturnType<typeof internalProps>;
 
 /**
- * Renders a non-modal, assertive live region.
- *
- * For an interrupting confirmation, use `Dialog.Content` with
- * `role="alertdialog"`; an alert must not take focus or require dismissal.
+ * Renders an assertive alert region without moving focus.
  *
  * @remarks
- * ## Why
- *
- * `Alert` supplies the native ARIA live-region contract while leaving content,
- * host choice, and Effect requirements composable. It does not synthesize an
- * event or introduce an application-owned announcement queue.
- *
- * ## Ownership and lifetime
- *
- * Calling `Alert` starts no work. Running the returned Fx owns the rendered
- * host, dynamic values, and listeners in its Effect Scope; finalization removes
- * only those resources. A custom host must preserve the supplied `role`.
+ * Keep the region mounted and change its text when an urgent event occurs. Initial page content
+ * or repeated identical messages may not announce as expected. This primitive does not queue
+ * announcements, schedule dismissal, or provide an acknowledgement dialog. Prefer a status
+ * region for routine updates.
  *
  * @example
  * ```ts
- * import { Alert } from "@typed/ui/Alert"
+ * import { RefSubject } from "@typed/fx";
+ * import { html } from "@typed/template";
+ * import { Alert } from "@typed/ui/Alert";
+ * import { Button } from "@typed/ui/Button";
+ * import { component } from "@typed/ui/Component";
  *
- * const saved = Alert({ content: "Changes saved" })
+ * export const AlertPreview = component(function* () {
+ *   const message = yield* RefSubject.make("");
+ *   return html`<section>
+ *     <p>Preview the message shown when an upload fails.</p>
+ *     ${Button({
+ *       content: "Preview upload failure",
+ *       onclick: RefSubject.set(message, "Upload failed. Your file is still available; try again."),
+ *     })}
+ *     ${Alert({ content: message, props: { class: "upload-alert" } })}
+ *   </section>`;
+ * });
  * ```
- *
  * @since 1.0.0
- * @category components
+ * @category Controls
  */
 export function Alert<const Options extends AlertOptions, const Host extends HostResult = never>(
   options: Options,

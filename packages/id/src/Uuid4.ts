@@ -15,7 +15,7 @@ import { RandomValues } from "./RandomValues.js";
  * import { Uuid4 } from "@typed/id/Uuid4"
  * const id = Uuid4.make("550e8400-e29b-41d4-a716-446655440000")
  * ```
- * @category Schemas
+ * @category ID schemas
  * @since 1.0.0
  */
 export const Uuid4 = Schema.String.pipe(
@@ -36,7 +36,7 @@ export type Uuid4 = typeof Uuid4.Type;
  * import { isUuid4 } from "@typed/id/Uuid4"
  * isUuid4("550e8400-e29b-41d4-a716-446655440000")
  * ```
- * @category Refinements
+ * @category ID validation
  * @since 1.0.0
  */
 export const isUuid4: (value: string) => value is Uuid4 = Schema.is(Uuid4);
@@ -57,7 +57,7 @@ type Uuid4Seed = Uint8Array & { length: 16 };
  * import { Effect } from "effect"
  * const id = Effect.provide(uuid4, RandomValues.Default)
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const uuid4: Effect.Effect<Uuid4, never, RandomValues> = Effect.map(

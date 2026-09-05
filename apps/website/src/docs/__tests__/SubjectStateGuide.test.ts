@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
+import { expectExampleCalls, runGuideExample } from "./FxGuideTestSupport.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guidePath = path.join(websiteRoot, "content/guides/subject-event-publications.md");
@@ -39,8 +40,20 @@ describe("Subject Fx guide", () => {
     ]) {
       expect(guide.body).toContain(term);
     }
-    expect(extractTypeScriptFences(guide.body)).toHaveLength(6);
-    expect(guide.body.split(/\s+/u).length).toBeLessThanOrEqual(1_500);
+    expectExampleCalls(guide.body, [
+      "Subject.make",
+      "Fx.collectAllFork",
+      "Fx.take",
+      "Fx.observe",
+      "Cause.fail",
+      "Sink.make",
+      "Subject.multicast",
+      "Subject.hold",
+      "Subject.replay",
+      "Subject.share",
+    ]);
+    expect(guide.body).toContain("```fx-marble");
+    expect(guide.body).toContain("/explore/fx-services-and-lifetime");
   });
 
   it("keeps every TypeScript example independently compilable", () => {
@@ -77,5 +90,15 @@ describe("Subject Fx guide", () => {
     } finally {
       fs.rmSync(staging, { recursive: true, force: true });
     }
+  });
+  it("keeps the authored failure-counting subscriber alive for reconnection", async () => {
+    const source = fs.readFileSync(guidePath, "utf8");
+    const result = await runGuideExample(
+      websiteRoot,
+      source,
+      "class ConnectionLost",
+      "Effect.runPromise(program)",
+    );
+    expect(result).toEqual({ failures: 1, values: ["reconnected"] });
   });
 });

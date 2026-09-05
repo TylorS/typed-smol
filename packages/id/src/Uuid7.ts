@@ -20,7 +20,7 @@ import { RandomValues } from "./RandomValues.js";
  * import { Schema } from "effect"
  * const id = Schema.decodeUnknownSync(Uuid7)("01890f2e-7d6c-7cc0-98c4-dc0c0c07398f")
  * ```
- * @category Schemas
+ * @category ID schemas
  * @since 1.0.0
  */
 export const Uuid7 = Schema.String.pipe(
@@ -41,7 +41,7 @@ export type Uuid7 = typeof Uuid7.Type;
  * import { isUuid7 } from "@typed/id/Uuid7"
  * const valid = isUuid7("01890f2e-7d6c-7cc0-98c4-dc0c0c07398f")
  * ```
- * @category Refinements
+ * @category ID validation
  * @since 1.0.0
  */
 export const isUuid7: (value: string) => value is Uuid7 = Schema.is(Uuid7);
@@ -58,7 +58,7 @@ export const isUuid7: (value: string) => value is Uuid7 = Schema.is(Uuid7);
  * import type { Uuid7Seed } from "@typed/id/Uuid7"
  * const seed: Uuid7Seed = { timestamp: 0, seq: 0, randomBytes: new Uint8Array(16) as Uuid7Seed["randomBytes"] }
  * ```
- * @category Models
+ * @category Sequence state
  * @since 1.0.0
  */
 export type Uuid7Seed = {
@@ -85,7 +85,7 @@ const maximumTimestamp = 2 ** 48 - 1;
  * import { Effect } from "effect"
  * const id = Effect.provide(uuid7, Uuid7State.Default)
  * ```
- * @category Services
+ * @category Sequence state
  * @since 1.0.0
  */
 export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7State", {
@@ -173,7 +173,7 @@ export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7St
    * The production default is explicit while remaining replaceable by deterministic service layers.
    * ## Ownership and lifetime
    * Layer acquisition creates one mutable sequence state owned by the surrounding Layer Scope.
-   * @category Layers
+   * @category Production layers
    * @since 1.0.0
    */
   static readonly Default = Layer.effect(Uuid7State, Uuid7State.make).pipe(
@@ -194,7 +194,7 @@ export class Uuid7State extends Context.Service<Uuid7State>()("@typed/id/Uuid7St
  * import { Effect } from "effect"
  * const id = Effect.provide(uuid7, Uuid7State.Default)
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const uuid7: Effect.Effect<Uuid7, Cause.IllegalArgumentError, Uuid7State> = Effect.map(

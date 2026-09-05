@@ -1,6 +1,21 @@
 import type { AstroIntegration } from "astro";
 
-/** Register Typed SSR and the browser renderer used by Astro's client directives. */
+/**
+ * Registers the Typed server and browser renderers with Astro.
+ * Add one instance to astro.config's integrations list. Client directives then
+ * select whether and when each branded Typed component starts in the browser.
+ *
+ * @example
+ * ```ts
+ * import { defineConfig } from "astro/config"
+ * import typed from "@typed/astro"
+ *
+ * export default defineConfig({ integrations: [typed()] })
+ * ```
+ *
+ * @since 1.0.0
+ * @category Integration setup
+ */
 export default function typed(): AstroIntegration {
   return {
     name: "@typed/astro",

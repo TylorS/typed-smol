@@ -30,7 +30,7 @@
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Persistent DOM ranges
  */
 export interface Wire {
   /** Native Element node constant exposed for DOM-diff compatibility.
@@ -43,7 +43,7 @@ export interface Wire {
    * Immutable numeric metadata.
    *
    * @since 1.0.0
-   * @category constants
+   * @category Persistent DOM ranges
    */
   readonly ELEMENT_NODE: 1;
   /** Native DocumentFragment node constant exposed for DOM-diff compatibility.
@@ -56,7 +56,7 @@ export interface Wire {
    * Immutable numeric metadata.
    *
    * @since 1.0.0
-   * @category constants
+   * @category Persistent DOM ranges
    */
   readonly DOCUMENT_FRAGMENT_NODE: 11;
   /** Wire-specific node sentinel used by public guards and reconciliation.
@@ -69,7 +69,7 @@ export interface Wire {
    * Immutable numeric metadata.
    *
    * @since 1.0.0
-   * @category discriminants
+   * @category Persistent DOM ranges
    */
   readonly nodeType: 111;
   /** Opening boundary of the represented DOM range.
@@ -82,7 +82,7 @@ export interface Wire {
    * Borrowed node identity retained by the Wire.
    *
    * @since 1.0.0
-   * @category boundaries
+   * @category Persistent DOM ranges
    */
   readonly firstChild: Node | null;
   /** Closing boundary of the represented DOM range.
@@ -95,7 +95,7 @@ export interface Wire {
    * Borrowed node identity retained by the Wire.
    *
    * @since 1.0.0
-   * @category boundaries
+   * @category Persistent DOM ranges
    */
   readonly lastChild: Node | null;
   /** Current concrete nodes in the represented range.
@@ -108,7 +108,7 @@ export interface Wire {
    * Returns borrowed node identities in current DOM order.
    *
    * @since 1.0.0
-   * @category data
+   * @category Persistent DOM ranges
    */
   readonly childNodes: Array<Node>;
   /** Reassembles the current range as a DocumentFragment for native insertion.
@@ -121,7 +121,7 @@ export interface Wire {
    * Moves the Wire's exact nodes into its retained fragment; no clones are made.
    *
    * @since 1.0.0
-   * @category conversions
+   * @category Consuming range conversion
    */
   readonly valueOf: () => DocumentFragment;
 }
@@ -162,7 +162,7 @@ const remove = ({ firstChild, lastChild }: Node, document: Document): Node => {
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category Range reconciliation
  * @stability internal-but-published
  */
 export const diffable =
@@ -204,7 +204,7 @@ export const diffable =
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Persistent DOM ranges
  */
 export const persistent = (
   document: Document,
@@ -245,7 +245,7 @@ export const persistent = (
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category Existing range boundaries
  * @stability internal-but-published
  */
 export const fromComments = (
@@ -315,7 +315,7 @@ export const fromComments = (
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category Range traversal
  * @stability internal-but-published
  */
 export function getAllSiblingsBetween(start: Node, end: Node): Array<Node> {
@@ -354,7 +354,7 @@ export function getAllSiblingsBetween(start: Node, end: Node): Array<Node> {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Native output shapes
  */
 export type Rendered = Rendered.Value | ReadonlyArray<Rendered>;
 
@@ -372,7 +372,7 @@ export namespace Rendered {
    * The alias owns no node.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Native output shapes
    */
   export type Value = Node | DocumentFragment | Wire;
 
@@ -389,7 +389,7 @@ export namespace Rendered {
    * This projection owns no values.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Native output shapes
    */
   export type Values<T extends Rendered> = [T] extends [ReadonlyArray<infer R>]
     ? ReadonlyArray<R | Exclude<T, ReadonlyArray<any>>>
@@ -408,7 +408,7 @@ export namespace Rendered {
    * This projection owns no elements.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Native output shapes
    */
   export type Elements<T extends Rendered> = ReadonlyArray<
     [Node] extends [Exclude<T, DocumentFragment | Wire | ReadonlyArray<Rendered>>]
@@ -437,7 +437,7 @@ export namespace Rendered {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Range recognition
  */
 export function isWire(node: Rendered): node is Wire {
   if (!isArray(node)) return node.nodeType === nodeType;
@@ -465,7 +465,7 @@ export function isWire(node: Rendered): node is Wire {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native node recognition
  */
 export function isNode(node: Rendered): node is Node {
   if (!isArray(node)) return node.nodeType !== node.DOCUMENT_FRAGMENT_NODE;
@@ -493,7 +493,7 @@ export function isNode(node: Rendered): node is Node {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native element recognition
  */
 export function isElement(node: Rendered): node is Element {
   return isNode(node) && node.nodeType === node.ELEMENT_NODE;
@@ -521,7 +521,7 @@ export function isElement(node: Rendered): node is Element {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native element recognition
  */
 export function isSvgElement(node: Rendered): node is SVGElement {
   return isElement(node) && "ownerSVGElement" in node;
@@ -548,7 +548,7 @@ export function isSvgElement(node: Rendered): node is SVGElement {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native element recognition
  */
 export function isHtmlElement(node: Rendered): node is HTMLElement {
   return isElement(node) && !("ownerSVGElement" in node);
@@ -575,7 +575,7 @@ export function isHtmlElement(node: Rendered): node is HTMLElement {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native node recognition
  */
 export function isText(node: Rendered): node is Text {
   return isNode(node) && node.nodeType === node.TEXT_NODE;
@@ -602,7 +602,7 @@ export function isText(node: Rendered): node is Text {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native node recognition
  */
 export function isAttr(node: Rendered): node is Attr {
   return isNode(node) && node.nodeType === node.ATTRIBUTE_NODE;
@@ -629,7 +629,7 @@ export function isAttr(node: Rendered): node is Attr {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native node recognition
  */
 export function isComment(node: Rendered): node is Comment {
   return isNode(node) && node.nodeType === node.COMMENT_NODE;
@@ -656,7 +656,7 @@ export function isComment(node: Rendered): node is Comment {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native node recognition
  */
 export function isDocumentFragment(node: Rendered): node is DocumentFragment {
   if (!isArray(node)) return node.nodeType === node.DOCUMENT_FRAGMENT_NODE;
@@ -684,7 +684,7 @@ export function isDocumentFragment(node: Rendered): node is DocumentFragment {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Output collection recognition
  */
 export function isArray(node: Rendered): node is ReadonlyArray<Rendered> {
   return Array.isArray(node);
@@ -718,7 +718,7 @@ export function isArray(node: Rendered): node is ReadonlyArray<Rendered> {
  * ```
  *
  * @since 1.0.0
- * @category utilities
+ * @category DOM serialization
  */
 export function toHtml(node: Rendered): string {
   if (isArray(node)) return node.map(toHtml).join("");
@@ -759,7 +759,7 @@ export function toHtml(node: Rendered): string {
  * ```
  *
  * @since 1.0.0
- * @category utilities
+ * @category Rendered element traversal
  */
 export function getElements(node: Rendered): Array<Element> {
   if (isArray(node)) return node.flatMap(getElements);

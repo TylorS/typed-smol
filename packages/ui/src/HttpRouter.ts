@@ -162,7 +162,7 @@ function getMatcherPath(path: string): `/${string}` {
  * ```
  *
  * @since 1.0.0
- * @category http
+ * @category Buffered server rendering
  */
 export const ssrForHttp: {
   <E, R>(input: Matcher<RenderEvent, E, R>): (router: HttpRouter) => SsrForHttpEffect<E, R>;
@@ -205,7 +205,7 @@ export const ssrForHttp: {
  * ```
  *
  * @since 1.0.0
- * @category http
+ * @category Streaming server rendering
  */
 export const streamingSsrForHttp: {
   <E, R>(input: Matcher<RenderEvent, E, R>): (router: HttpRouter) => SsrForHttpEffect<E, R>;
@@ -242,7 +242,7 @@ export const streamingSsrForHttp: {
  * ```
  *
  * @since 1.0.0
- * @category http
+ * @category HTTP error responses
  */
 export function handleHttpServerError(router: HttpRouter) {
   return router.addGlobalMiddleware(

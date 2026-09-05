@@ -33,7 +33,7 @@ import { map } from "./map.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const withLatestFrom: {
   <B, E2, R2>(
@@ -90,7 +90,7 @@ export const withLatestFrom: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const withLatestFromWith: {
   <A, B, E2, R2, C>(

@@ -21,7 +21,7 @@ import * as NativeDialog from "./NativeDialog.js";
  * ## Ownership and lifetime
  * Plain data retains no resources; RefSubject lifetime is Scope-owned.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface State {
   /** Whether the native dialog is open.
@@ -31,7 +31,7 @@ export interface State {
    * ## Ownership and lifetime
    * Plain data acquires no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open: boolean;
 }
@@ -48,7 +48,7 @@ const dialogs = new WeakMap<
  * ## Ownership and lifetime
  * Configuration is inert.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface InitialState {
   /** Initial open state, defaulting to false.
@@ -58,7 +58,7 @@ export interface InitialState {
    * ## Ownership and lifetime
    * Plain data retains no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open?: boolean;
 }
@@ -70,7 +70,7 @@ export interface InitialState {
  * ## Ownership and lifetime
  * The immutable schema acquires no resources.
  * @since 1.0.0
- * @category schemas
+ * @category Open state
  */
 export const StateSchema = Schema.Struct({ open: Schema.Boolean });
 
@@ -91,7 +91,7 @@ export const StateSchema = Schema.Struct({ open: Schema.Boolean });
  * })
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Open state
  */
 export function makeState(initial: InitialState = {}) {
   return RefSubject.hydrate(StateSchema, { open: initial.open ?? false });
@@ -114,7 +114,7 @@ export function makeState(initial: InitialState = {}) {
  * })
  * ```
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export function setOpen<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -141,7 +141,7 @@ export function setOpen<E, R>(
  * })
  * ```
  * @since 1.0.0
- * @category state
+ * @category Direct dismissal
  */
 export function close<E, R>(state: RefSubject.RefSubject<State, E, R>): Effect.Effect<State, E, R> {
   return setOpen(state, false);
@@ -169,7 +169,7 @@ export function close<E, R>(state: RefSubject.RefSubject<State, E, R>): Effect.E
  * })
  * ```
  * @since 1.0.0
- * @category lifecycle
+ * @category Cancelable dismissal
  */
 export function requestClose(
   state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>,
@@ -194,7 +194,7 @@ export function requestClose(
  * ## Ownership and lifetime
  * Options are inert; rendering owns listeners/subscriptions by Scope.
  * @since 1.0.0
- * @category models
+ * @category Opening controls
  */
 export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
   /** Hydrated state shared with dialog content.
@@ -204,7 +204,7 @@ export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * The trigger borrows state; its originating Scope owns it.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /** Dialog id targeted by native command attributes.
@@ -217,7 +217,7 @@ export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * The string is reflected and retains no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly controls?: string;
   /** Visible trigger content and accessible name.
@@ -227,7 +227,7 @@ export interface TriggerOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the trigger Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -273,7 +273,7 @@ type TriggerInternalProps<Options extends TriggerOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Opening controls
  */
 export function Trigger<
   const Options extends TriggerOptions,
@@ -342,7 +342,7 @@ type AccessibleName =
  * Options are inert; rendering owns dynamic values and native synchronization
  * for its Effect Scope.
  * @since 1.0.0
- * @category models
+ * @category Native content host
  */
 export type ContentOptions = ContentOptionsBase & AccessibleName;
 
@@ -354,7 +354,13 @@ function contentInternalProps<const Options extends ContentOptions>(options: Opt
     "aria-describedby": property("describedBy", undefined),
     "aria-label": property("label", undefined),
     oncancel: close(options.state),
-    onclose: close(options.state),
+    // Native close events are queued. The same dialog may already have reopened
+    // by the time an earlier close event is delivered.
+    onclose: EventHandler.make(
+      Effect.fn((event: Event) =>
+        setOpen(options.state, Dom.currentTarget<HTMLDialogElement>(event).open),
+      ),
+    ),
     ontoggle: EventHandler.make(
       Effect.fn((event: Event) =>
         setOpen(options.state, Dom.currentTarget<HTMLDialogElement>(event).open),
@@ -412,7 +418,7 @@ type ContentInternalProps<Options extends ContentOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Native content host
  */
 export function Content<
   const Options extends ContentOptions,
@@ -447,7 +453,7 @@ export function Content<
  * ## Ownership and lifetime
  * It has exactly the same native element and Scope ownership as `Content`.
  * @since 1.0.0
- * @category aliases
+ * @category Native content host
  */
 export const Dialog = Content;
 
@@ -460,7 +466,7 @@ export const Dialog = Content;
  * ## Ownership and lifetime
  * Options are inert; rendering owns listeners and dynamic content by Scope.
  * @since 1.0.0
- * @category models
+ * @category Direct dismissal
  */
 export interface CloseOptions extends Dom.HostOptions<HTMLButtonElement> {
   /** Hydrated state for fallback close behavior.
@@ -470,7 +476,7 @@ export interface CloseOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * The button borrows state; its original Scope owns it.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /** Dialog id targeted by native command attributes.
@@ -483,7 +489,7 @@ export interface CloseOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * The string is reflected and retains no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly controls?: string;
   /** Visible button content and accessible name.
@@ -493,7 +499,7 @@ export interface CloseOptions extends Dom.HostOptions<HTMLButtonElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the button Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -545,7 +551,7 @@ type CloseInternalProps<Options extends CloseOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Direct dismissal
  */
 export function Close<const Options extends CloseOptions, const Host extends HostResult = never>(
   options: Options,
@@ -581,7 +587,7 @@ export function Close<const Options extends CloseOptions, const Host extends Hos
  * ## Ownership and lifetime
  * It has exactly the same Scope and native button ownership as `Close`.
  * @since 1.0.0
- * @category aliases
+ * @category Direct dismissal
  */
 export const Dismiss = Close;
 
@@ -605,7 +611,7 @@ export const Dismiss = Close;
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Cancelable dismissal
  */
 export function RequestClose<
   const Options extends CloseOptions,
@@ -644,7 +650,7 @@ export function RequestClose<
  * ## Ownership and lifetime
  * Options are inert; dynamic values follow the component Scope.
  * @since 1.0.0
- * @category models
+ * @category Dialog naming and description
  */
 export interface HeadingOptions extends Dom.HostOptions<HTMLHeadingElement> {
   /** Heading content.
@@ -654,7 +660,7 @@ export interface HeadingOptions extends Dom.HostOptions<HTMLHeadingElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the heading Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /** Optional id referenced by `Content.labelledBy`.
@@ -664,7 +670,7 @@ export interface HeadingOptions extends Dom.HostOptions<HTMLHeadingElement> {
    * ## Ownership and lifetime
    * The id is reflected and retains no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly id?: string;
   /** ARIA heading level, defaulting to two.
@@ -674,7 +680,7 @@ export interface HeadingOptions extends Dom.HostOptions<HTMLHeadingElement> {
    * ## Ownership and lifetime
    * The value is reflected and retains no resources.
    * @since 1.0.0
-   * @category accessibility
+   * @category Accessible naming
    */
   readonly level?: 1 | 2 | 3 | 4 | 5 | 6;
 }
@@ -706,7 +712,7 @@ type HeadingInternalProps<Options extends HeadingOptions> = ReturnType<
  * const title = Heading({ id: "confirm-title", content: "Confirm" })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Dialog naming and description
  */
 export function Heading<
   const Options extends HeadingOptions,
@@ -745,7 +751,7 @@ export function Heading<
  * ## Ownership and lifetime
  * Options are inert; dynamic content follows the component Scope.
  * @since 1.0.0
- * @category models
+ * @category Dialog naming and description
  */
 export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement> {
   /** Descriptive content.
@@ -755,7 +761,7 @@ export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement
    * ## Ownership and lifetime
    * Dynamic content follows the description Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /** Optional id referenced by `Content.describedBy`.
@@ -765,7 +771,7 @@ export interface DescriptionOptions extends Dom.HostOptions<HTMLParagraphElement
    * ## Ownership and lifetime
    * The id is reflected and retains no resources.
    * @since 1.0.0
-   * @category relationships
+   * @category Identity and relationships
    */
   readonly id?: string;
 }
@@ -792,7 +798,7 @@ type DescriptionInternalProps<Options extends DescriptionOptions> = ReturnType<
  * const detail = Description({ id: "confirm-detail", content: "This cannot be undone." })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Dialog naming and description
  */
 export function Description<
   const Options extends DescriptionOptions,

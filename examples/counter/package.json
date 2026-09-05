@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@typed/ui": "workspace:*",
     "@typed/fx": "workspace:*",
     "@typed/template": "workspace:*",
     "effect": "catalog:"

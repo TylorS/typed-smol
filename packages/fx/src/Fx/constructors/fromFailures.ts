@@ -38,6 +38,6 @@ const fromFailuresCause = <E>(failures: Iterable<E>): Cause.Cause<E> =>
  * @param failures - An iterable of failures.
  * @returns An `Fx` that fails with the combined failures.
  * @since 1.0.0
- * @category constructors
+ * @category Failure sources
  */
 export const fromFailures = /*#__PURE__*/ flow(fromFailuresCause, failCause);

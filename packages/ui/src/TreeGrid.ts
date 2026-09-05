@@ -8,6 +8,8 @@
  * the state and pure operations without mounting UI, or supply custom hosts without replacing native
  * events and browser-owned focus.
  *
+ * Learn the interaction in the [TreeGrid guide](/explore/ui-tree-grid).
+ *
  * @since 1.0.0
  * @category modules
  * @packageDocumentation
@@ -31,64 +33,24 @@ import type { HostResult } from "./Dom/Types.js";
 import * as Tree from "./Tree.js";
 
 /**
- * Complete renderer-independent state for TreeGrid.
+ * Tree expansion state reused for a grid whose active ID names a cell.
+ * `expandedIds` names parent rows, while `activeId` names the active cell within a row.
  *
- * @remarks
- * ## Why
- *
- * Applications can inspect, update, and test TreeGrid behavior without mounting or coupling the
- * state to a renderer.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { State } from "@typed/ui/TreeGrid";` Extend the [TreeGrid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Inside the linked program,
- * `const snapshot: State = yield* state` exposes active and expanded ids using Tree state
- * semantics.
  * @since 1.0.0
- * @category models
+ * @category Hierarchy and cell focus
  */
 export type State = Tree.State;
 /**
  * Initial TreeGrid values. Uses Tree state and defaults.
  *
- * @remarks
- * ## Why
- *
- * Making initialization explicit documents hydration-sensitive defaults and lets servers and
- * clients construct matching state.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InitialState } from "@typed/ui/TreeGrid";` Extend the
- * [TreeGrid.makeState runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Construct
- * an expanded row with
- * `const initial: InitialState = { activeId: "src-name", expandedIds: ["src"] }; const state = yield* TreeGrid.makeState(initial)`.
  * @since 1.0.0
- * @category models
+ * @category Hierarchy and cell focus
  */
 export type InitialState = Tree.InitialState;
 /**
  * Effect Schema used by makeState to encode, decode, and hydrate TreeGrid state.
  *
  * @remarks
- * ## Why
- *
- * A public schema makes hydration and serialized state use the same runtime validation as direct
- * construction.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
  * @example
  * ```ts
  * import * as Schema from "effect/Schema";
@@ -97,19 +59,13 @@ export type InitialState = Tree.InitialState;
  * const decodeState = Schema.decodeUnknownEffect(TreeGrid.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Hierarchy and cell focus
  */
 export const StateSchema = Tree.StateSchema;
 /**
  * Creates hydrated TreeGrid state. Uses Tree state and defaults.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect creates the RefSubject when run. That state is renderer-independent;
  * collection registrations belong to the separate Scope that runs register or ref, not to state
  * creation.
@@ -128,7 +84,7 @@ export const StateSchema = Tree.StateSchema;
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Hierarchy and cell focus
  */
 export const makeState = Tree.makeState;
 /**
@@ -136,12 +92,8 @@ export const makeState = Tree.makeState;
  * the TreeGrid entrypoint.
  *
  * @remarks
- * ## Why
- *
  * Separating this deterministic policy from event wiring lets applications test it directly and
  * reuse it in custom composites.
- *
- * ## Ownership and lifetime
  *
  * This is a synchronous calculation. It acquires no resources and does not mutate the input array,
  * state, event, or DOM.
@@ -153,77 +105,40 @@ export const makeState = Tree.makeState;
  * const expanded = TreeGrid.isExpanded({ activeId: null, expandedIds: ["parent"], loop: true }, "parent");
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Row expansion
  */
 export const isExpanded = Tree.isExpanded;
 /**
  * Adds a row id once to expandedIds using the Tree state transition.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes TreeGrid's transition directly so callers can compose it in Effect
  * programs and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { expand } from "@typed/ui/TreeGrid";` Extend the [TreeGrid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Inside the linked Effect
- * program run `yield* expand(state, "parent")`, then read state to observe the id in expandedIds.
  * @since 1.0.0
- * @category combinators
+ * @category Row expansion
  */
 export const expand = Tree.expand;
 /**
  * Removes a row id from expandedIds using the Tree state transition.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes TreeGrid's transition directly so callers can compose it in Effect
  * programs and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { collapse } from "@typed/ui/TreeGrid";` Extend the [TreeGrid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Inside the linked Effect
- * program run `yield* collapse(state, "parent")`, then read state to observe the id removed from
- * expandedIds.
  * @since 1.0.0
- * @category combinators
+ * @category Row expansion
  */
 export const collapse = Tree.collapse;
 /**
  * Sets the active TreeGrid row or cell id without changing expansion.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes TreeGrid's transition directly so callers can compose it in Effect
  * programs and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { activate } from "@typed/ui/TreeGrid";` Extend the [TreeGrid.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Inside the linked Effect
- * program run `yield* activate(state, "cell-1")`, then read state to observe activeId.
  * @since 1.0.0
- * @category combinators
+ * @category Hierarchy and cell focus
  */
 export const activate = Tree.activate;
 
@@ -231,35 +146,23 @@ export const activate = Tree.activate;
  * Logical coordinates stored with each registered TreeGrid cell.
  *
  * @remarks
- * ## Why
- *
  * The public model lets custom composites reuse TreeGrid's deterministic policy without copying an
  * internal shape.
  *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { CellPosition } from "@typed/ui/TreeGrid";` Extend the
- * [TreeGrid.makeState runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). A
- * hierarchical cell position combines grid and tree identity:
- * `const position: CellPosition = { rowId: "src", columnIndex: 1, parentId: "root", hasChildren: true }`.
  * @since 1.0.0
- * @category models
+ * @category Cell registration
  */
 export interface CellPosition extends Grid.CellPosition {
   /**
    * Id whose expansion controls this descendant group.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly parentId?: string;
   /**
    * Whether aria-expanded is emitted and hierarchical keys may open descendants.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly hasChildren: boolean;
 }
@@ -268,12 +171,6 @@ export interface CellPosition extends Grid.CellPosition {
  * Creates a scoped Collection for TreeGrid items.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
  * owned by the Scope that runs register, independently of this construction Effect.
  *
@@ -290,55 +187,39 @@ export interface CellPosition extends Grid.CellPosition {
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Cell registration
  */
 export const makeCollection = Collection.makeState<CellPosition>;
 
 /**
  * Inputs accepted by TreeGrid.Root in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { RootOptions } from "@typed/ui/TreeGrid";` Extend the
- * [TreeGrid.makeState runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Enable
- * tree-grid navigation with
- * `const options: RootOptions = { state, collection, label: "Files", content: "Rows" }`.
  * @since 1.0.0
- * @category models
+ * @category Treegrid surface
  */
 export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<CellPosition>>;
   /**
    * Accessible label rendered through aria-label.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly label: Renderable.Any<string | null | undefined>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -381,25 +262,12 @@ type RootInternalProps<Options extends RootOptions> = ReturnType<
  * Renders the focus-owning treegrid root and applies combined grid and expansion keys.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Root } from "@typed/ui/TreeGrid";` Extend the [TreeGrid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Replace the linked program's final
- * snapshot read with `Root({ state, label: "Files", content: "Rows" })`; render that Fx before the
- * same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Treegrid surface
  */
 export function Root<const Options extends RootOptions, const Host extends HostResult = never>(
   options: Options,
@@ -427,60 +295,44 @@ export function Root<const Options extends RootOptions, const Host extends HostR
 /**
  * Inputs accepted by TreeGrid.Row in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { RowOptions } from "@typed/ui/TreeGrid";` Extend the
- * [TreeGrid.makeState runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). A
- * hierarchical row is
- * `const options: RowOptions = { state, rowId: "src", level: 1, hasChildren: true, content: "Cells" }`.
  * @since 1.0.0
- * @category models
+ * @category Hierarchical rows
  */
 export interface RowOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Stable logical row identity used by vertical grid movement.
    * @since 1.0.0
-   * @category models
+   * @category Row identity
    */
   readonly rowId: string;
   /**
    * Id whose expansion controls this descendant group.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly parentId?: string;
   /**
    * One-based hierarchy level exposed through aria-level.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly level?: number;
   /**
    * Whether aria-expanded is emitted and hierarchical keys may open descendants.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly hasChildren?: boolean;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -505,25 +357,12 @@ type RowInternalProps<Options extends RowOptions> = ReturnType<
  * Renders a hierarchical row with level and optional expanded state.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Row } from "@typed/ui/TreeGrid";` Extend the [TreeGrid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Replace the linked program's final
- * snapshot read with `Row({ state, rowId: "src", content: "Cells" })`; render that Fx before the
- * same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Hierarchical rows
  */
 export function Row<const Options extends RowOptions, const Host extends HostResult = never>(
   options: Options,
@@ -555,73 +394,57 @@ export function Row<const Options extends RowOptions, const Host extends HostRes
 /**
  * Inputs accepted by TreeGrid.Cell in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { CellOptions } from "@typed/ui/TreeGrid";` Extend the
- * [TreeGrid.makeState runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). A navigable
- * cell is
- * `const options: CellOptions = { state, collection, id: "src-name", rowId: "src", columnIndex: 1, content: "src" }`.
  * @since 1.0.0
- * @category models
+ * @category Navigable cells
  */
 export interface CellOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<CellPosition>>;
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Stable logical row identity used by vertical grid movement.
    * @since 1.0.0
-   * @category models
+   * @category Row identity
    */
   readonly rowId: string;
   /**
    * Caller-supplied column index used for movement and emitted unchanged as aria-colindex; ARIA
    * indexes are one-based.
    * @since 1.0.0
-   * @category models
+   * @category Cell position
    */
   readonly columnIndex: number;
   /**
    * Id whose expansion controls this descendant group.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly parentId?: string;
   /**
    * Whether aria-expanded is emitted and hierarchical keys may open descendants.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly hasChildren?: boolean;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -658,25 +481,12 @@ type CellInternalProps<Options extends CellOptions> = ReturnType<
  * Renders and optionally registers one gridcell with row and column coordinates.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Cell } from "@typed/ui/TreeGrid";` Extend the [TreeGrid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Replace the linked program's final
- * snapshot read with `Cell({ state, id: "src-name", rowId: "src", columnIndex: 1, content: "src"
- * })`; render that Fx before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Navigable cells
  */
 export function Cell<const Options extends CellOptions, const Host extends HostResult = never>(
   options: Options,
@@ -704,42 +514,26 @@ export function Cell<const Options extends CellOptions, const Host extends HostR
 /**
  * Inputs accepted by TreeGrid.Group in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { GroupOptions } from "@typed/ui/TreeGrid";` Extend the
- * [TreeGrid.makeState runnable setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Relate
- * descendant rows to their branch with
- * `const options: GroupOptions = { state, parentId: "src", content: "Rows" }`.
  * @since 1.0.0
- * @category models
+ * @category Child row visibility
  */
 export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Id whose expansion controls this descendant group.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly parentId: string;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -759,25 +553,12 @@ type GroupInternalProps<Options extends GroupOptions> = ReturnType<
  * Renders a rowgroup and hides it while its parent row is collapsed.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Group } from "@typed/ui/TreeGrid";` Extend the [TreeGrid.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTreeGrid%23makeState). Replace the linked program's final
- * snapshot read with `Group({ state, parentId: "src", content: "Rows" })`; render that Fx before
- * the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Child row visibility
  */
 export function Group<const Options extends GroupOptions, const Host extends HostResult = never>(
   options: Options,

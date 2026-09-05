@@ -25,7 +25,7 @@ import { make } from "./make.js";
  * @param value - The value to emit.
  * @returns An `Fx` that emits the value.
  * @since 1.0.0
- * @category constructors
+ * @category Value sources
  */
 export const succeed = <A>(value: A): Fx<A> =>
   /*#__PURE__*/ make<A>((sink) => sink.onSuccess(value));
@@ -51,7 +51,7 @@ export const succeed = <A>(value: A): Fx<A> =>
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Value sources
  */
 export const succeedNull = succeed<null>(null);
 export { succeedNull as null };
@@ -77,7 +77,7 @@ export { succeedNull as null };
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Value sources
  */
 export const succeedUndefined = succeed<undefined>(undefined);
 export { succeedUndefined as undefined };
@@ -103,7 +103,7 @@ export { succeedUndefined as undefined };
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Value sources
  */
 export const succeedVoid = succeed<void>(void 0);
 export { succeedVoid as void };

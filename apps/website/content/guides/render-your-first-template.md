@@ -1,110 +1,127 @@
 ---
 title: "Render your first template"
 summary: "Write a static template, add one live value, and mount it in the browser."
-section: "Templates"
+section: "Template authoring"
 kind: "guide"
-order: 3
+order: 1
 ---
 
-`html` describes output; it does not create a DOM node when the tag runs. A renderer turns that
-description into DOM or HTML later. This first path stays deliberately small: author a page, mount
-it in one owned host, then make one value live.
+Build one interactive field before learning the rest of the renderer. The field will store a search
+query, show it in an output, and release its event listener when the containing application stops.
+You need a TypeScript browser entry and an existing `<div id="app"></div>` in the document.
 
-Install the public packages:
+Install the public packages in your application:
 
 ```sh
 pnpm add effect@^4 @typed/fx @typed/template @typed/ui
 ```
 
-## Write and mount a static template
+## Describe the view before running it
 
-Use ordinary HTML in the tag. Interpolations (`${...}`) are the places Typed can later update. This
-first template has none, so it is a fixed page fragment.
+Start with direct `html` for fixed markup. It needs no component setup; keeping the first view this
+small makes the browser boundary visible before introducing state:
+
+```ts
+import { html } from "@typed/template";
+
+export const SearchPage = html`<main>
+  <h1>Saved articles</h1>
+  <label>Search terms <input type="search" /></label>
+</main>`;
+```
+
+`SearchPage` is the Fx value returned by the tag. It is not a DOM element or a Promise.
+Constructing it starts no work. The `html` tag
+keeps the static markup and dynamic positions available for the renderer that eventually runs it.
+
+## Give that program a browser owner
+
+The following entry is complete. It repeats the small template so it can be copied independently:
 
 ```ts
 import { Effect, Fiber } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 
-const page = html`<main>
-  <h1>Hello, Typed</h1>
-  <p>This markup is ordinary HTML.</p>
+const SearchPage = html`<main>
+  <h1>Saved articles</h1>
+  <label>Search terms <input type="search" /></label>
 </main>`;
 
 const host = document.querySelector<HTMLElement>("#app");
+if (host === null) throw new Error("Create #app before starting the application");
 
-if (host === null) {
-  throw new Error("Expected #app to exist before mounting the application");
-}
-
-const application = Effect.scoped(
-  render(page, host).pipe(
-    Fx.drain,
-    Effect.provide(DomRenderTemplate),
-  ),
+const application = SearchPage.pipe(
+  render(host),
+  Fx.drain,
+  Effect.provide(DomRenderTemplate.using(host.ownerDocument)),
+  Effect.scoped,
 );
 
-// This is the browser entry-point boundary, for example main.ts.
 const fiber = Effect.runFork(application);
-
-// The host keeps `fiber` and interrupts it during its own shutdown sequence.
-const stop = () => Effect.runPromise(Fiber.interrupt(fiber));
+export const stop = () => Effect.runPromise(Fiber.interrupt(fiber));
 ```
 
-`render(page, host)` owns the content it places in `host`; use a dedicated host when another system
-owns nearby DOM. `DomRenderTemplate` is the browser implementation of the renderer service. `Fx.drain`
-keeps the render running, and `Effect.scoped` owns its listeners, subscriptions, and cleanup until the
-host interrupts `fiber`. `runFork` belongs at this platform boundary, not inside a view; the host's
-shutdown path calls `stop` rather than pretending a live render is a Promise that should complete.
+Read this from the view outward. `render(host)` places its output in a dedicated element.
+`Fx.drain` runs the output program without collecting a history of emitted values.
+`DomRenderTemplate` provides the service that interprets templates as native DOM.
+`Effect.scoped` gives the work a resource lifetime. The browser entry starts that lifetime with
+`runFork` and retains the fiber so its shutdown path can interrupt it.
 
-## Add one live value
+A live view is expected to remain running. Waiting for it to finish before displaying it would be
+waiting for the wrong event. Conversely, interrupting it immediately after its first output would
+close the subscriptions and listeners that make it interactive.
 
-`RefSubject` is current state plus a stream of changes. `component` creates the lazy view and gives
-its setup and rendered output the same subscription lifetime.
+Use a dedicated host. Fresh root output can replace that host's children; the static navigation,
+another application's widgets, and unrelated nodes belong beside that host.
+
+## Connect one user action to one value
+
+The interactive version needs scoped state, so introduce `component` for that setup. Replace the
+view with this version, leaving the mounting code unchanged:
 
 ```ts
 import { RefSubject } from "@typed/fx";
-import { html } from "@typed/template";
 import { component } from "@typed/ui/Component";
+import { html } from "@typed/template";
+import * as EventHandler from "@typed/template/EventHandler";
 
-const Counter = component(function* () {
-  const count = yield* RefSubject.make(0);
-
-  return html`<section>
-    <p>Count: ${count}</p>
-    <button type="button" onclick=${RefSubject.increment(count)}>Increment</button>
-  </section>`;
+export const SearchPage = component(function* () {
+  const query = yield* RefSubject.make("");
+  const readInput = EventHandler.make((event: Event) =>
+    RefSubject.set(query, (event.currentTarget as HTMLInputElement).value),
+  );
+  return html`<main>
+    <h1>Saved articles</h1>
+    <label>
+      Search terms
+      <input type="search" .value=${query} oninput=${readInput} />
+    </label>
+    <output>Current query: ${query}</output>
+  </main>`;
 });
 ```
 
-Replace `page` in the mount with `Counter` to render it. The button receives the increment Effect
-directly, so each click updates the same subject. The `${count}` hole is a scalar DOM part:
-after the first render, the DOM renderer retains its exact text target and updates that target when the
-state changes. It does not walk the surrounding document.
+A zero-argument component generator produces an Fx value directly. Its subject provides the initial
+empty string and later changes. `.value` writes the input's live
+property. `oninput` receives the browser event and returns an Effect that stores the edit. The output
+subscribes to the same subject. Typing changes those retained parts; it does not recreate the main,
+label, or input and does not rerun the component's setup generator.
 
-An interpolation can also accept ordinary values, an `Effect`, a stream, a nested template, or existing
-renderer output. Read [What a template can render](/explore/renderable-normalization) before mixing
-those forms, and [Attributes, properties, and boolean state](/explore/template-element-bindings)
-before binding native element fields.
+This is a controlled editing loop, not a search request implementation. Request timing, cancellation,
+and results can be added above the field once this loop works.
 
-## Render HTML on the server
+## Check the boundaries you just created
 
-The same `html` value can be rendered without a browser: provide `HtmlRenderTemplate` to
-`renderToHtml` or `renderToHtmlString`. Server rendering consumes the initial value of a live source,
-so it finishes the response instead of opening a browser-style subscription. See
-[Rendering HTML on the server](/explore/rendering-html-on-the-server) for response code and hydration.
+Type into the input and observe the output. Keep a reference to the input in DevTools and confirm
+it remains the same node after another edit. Then call the entry's `stop`: later input events should
+no longer run this render's handler. Scope closure releases running work; an outer host may separately
+clear its dedicated children as part of its teardown policy.
 
-## Next steps
+If nothing appears, check the host and the rendering fiber's failure before debugging the handler.
+If typing changes the input but not the output, check whether the render is still alive. If each
+edit produces duplicate work, check whether the entry started two render programs for the same host.
 
-- [Handle native events with Effect](/explore/native-events-with-effect) adds a real `onclick` handler.
-- [What a template can render](/explore/renderable-normalization) covers `Effect`, `Fx`, arrays, and
-  foreign output.
-- [Attributes, properties, and boolean state](/explore/template-element-bindings) explains scalar
-  fields; [spread props and data records](/explore/template-spreads-data) covers record-shaped parts.
-- [Reference the native element](/explore/template-references-and-element-access) covers browser APIs
-  that need the exact element.
-- [DOM scalar parts and attributes](/explore/dom-parts-and-attributes) follows those parts into the
-  renderer; [direct updates and local reconciliation](/explore/dom-updates-and-reconciliation) covers
-  structural changes.
-- [Schedule DOM rendering](/explore/render-scheduling) changes when updates run without changing which
-  DOM part they own.
+Continue with [Authoring Typed templates](/explore/authoring-typed-templates) to extract a reusable
+field and move its state to the page. [Mounting DOM output](/explore/mounting-dom-output) develops the
+same lifetime boundary for a panel embedded in an existing application.

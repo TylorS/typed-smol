@@ -55,7 +55,7 @@ const invalidGroupSize = (): Cause.IllegalArgumentError =>
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const grouped: {
   (
@@ -131,7 +131,7 @@ export const grouped: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export const groupedWithin: {
   (

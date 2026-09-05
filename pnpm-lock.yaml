@@ -192,6 +192,9 @@ importers:
       '@typed/template':
         specifier: workspace:*
         version: link:../../packages/template
+      '@typed/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       effect:
         specifier: 'catalog:'
         version: 4.0.0-rc.112
@@ -285,13 +288,13 @@ importers:
       '@typed/template':
         specifier: workspace:*
         version: link:../template
+      '@typed/ui':
+        specifier: workspace:*
+        version: link:../ui
       effect:
         specifier: 'catalog:'
         version: 4.0.0-rc.112
     devDependencies:
-      '@typed/ui':
-        specifier: workspace:*
-        version: link:../ui
       '@vitest/browser-playwright':
         specifier: 'catalog:'
         version: 5.0.0(playwright@1.62.1)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))(vitest@5.0.0)

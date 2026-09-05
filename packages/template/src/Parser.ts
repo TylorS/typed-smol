@@ -66,7 +66,7 @@ let parser: Parser | undefined;
  * @param template - The template strings array from a tagged template literal.
  * @returns A `Template` object representing the parsed structure.
  * @since 1.0.0
- * @category parsing
+ * @category Template parsing
  */
 export function parse(template: ReadonlyArray<string>): Template.Template {
   parser ??= new Parser();

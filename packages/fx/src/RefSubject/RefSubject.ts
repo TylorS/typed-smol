@@ -4,6 +4,7 @@
 import * as Array from "effect/Array";
 import type * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
+import * as Effectable from "effect/Effectable";
 import * as Semaphore from "effect/Semaphore";
 import { equals } from "effect/Equal";
 import type { Equivalence } from "effect/Equivalence";
@@ -54,7 +55,7 @@ import { hasProperty } from "effect/Predicate";
  * source errors, services, and lifetime.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Type identity
  */
 export const RefSubjectTypeId = Symbol.for("@typed/fx/RefSubject");
 /**
@@ -71,7 +72,7 @@ export const RefSubjectTypeId = Symbol.for("@typed/fx/RefSubject");
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category type-level
+ * @category Type utilities
  */
 export type RefSubjectTypeId = typeof RefSubjectTypeId;
 
@@ -89,7 +90,7 @@ export type RefSubjectTypeId = typeof RefSubjectTypeId;
  * source errors, services, and lifetime.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Type identity
  */
 export const ComputedTypeId = Symbol.for("@typed/fx/Computed");
 /**
@@ -106,7 +107,7 @@ export const ComputedTypeId = Symbol.for("@typed/fx/Computed");
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category type-level
+ * @category Type utilities
  */
 export type ComputedTypeId = typeof ComputedTypeId;
 
@@ -124,7 +125,7 @@ export type ComputedTypeId = typeof ComputedTypeId;
  * source errors, services, and lifetime.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Type identity
  */
 export const FilteredTypeId = Symbol.for("@typed/fx/Filtered");
 /**
@@ -141,7 +142,7 @@ export const FilteredTypeId = Symbol.for("@typed/fx/Filtered");
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category type-level
+ * @category Type utilities
  */
 export type FilteredTypeId = typeof FilteredTypeId;
 
@@ -188,7 +189,7 @@ export type FilteredTypeId = typeof FilteredTypeId;
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Read-only state
  */
 export interface Computed<out A, out E = never, out R = never> extends Versioned.Versioned<
   R,
@@ -215,7 +216,7 @@ export interface Computed<out A, out E = never, out R = never> extends Versioned
    * source errors, services, and lifetime.
    *
    * @since 1.18.0
-   * @category combinators
+   * @category State protocol
    */
   readonly [ComputedTypeId]: ComputedTypeId;
 }
@@ -235,7 +236,7 @@ export interface Computed<out A, out E = never, out R = never> extends Versioned
  * members retain their own errors, services, and Scope-owned observation lifetimes.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Read-only state
  */
 export declare namespace Computed {
   /**
@@ -252,7 +253,7 @@ export declare namespace Computed {
    * interruption, and Scope requirements expressed by its members.
    *
    * @since 1.18.0
-   * @category type-level
+   * @category Type utilities
    */
   export type Any =
     | Computed<any, any, any>
@@ -303,7 +304,7 @@ export declare namespace Computed {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Read-only state
  */
 export interface Filtered<out A, out E = never, out R = never> extends Versioned.Versioned<
   R,
@@ -330,7 +331,7 @@ export interface Filtered<out A, out E = never, out R = never> extends Versioned
    * source errors, services, and lifetime.
    *
    * @since 1.18.0
-   * @category combinators
+   * @category State protocol
    */
   readonly [FilteredTypeId]: FilteredTypeId;
 
@@ -354,7 +355,7 @@ export interface Filtered<out A, out E = never, out R = never> extends Versioned
    *   console.log(Option.isNone(option)) // true (no number > 5)
    * })
    * ```
-   * @category combinators
+   * @category Optional queries
    * @since 1.18.0
    * @remarks
    * ## Why
@@ -386,7 +387,7 @@ export interface Filtered<out A, out E = never, out R = never> extends Versioned
  * current reads with `NoSuchElementError` while absent; their observing Scope owns Fx cleanup.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Read-only state
  */
 export declare namespace Filtered {
   /**
@@ -404,7 +405,7 @@ export declare namespace Filtered {
    * interruption, and Scope requirements expressed by its members.
    *
    * @since 1.18.0
-   * @category type-level
+   * @category Type utilities
    */
   export type Any =
     | Filtered<any, any, any>
@@ -426,7 +427,7 @@ export declare namespace Filtered {
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.0.0
- * @category models
+ * @category Transactions
  */
 export interface GetSetDelete<A, E = never, R = never> {
   /**
@@ -443,7 +444,7 @@ export interface GetSetDelete<A, E = never, R = never> {
    * used by `updates`, it observes that transaction's buffered value.
    *
    * @since 1.18.0
-   * @category combinators
+   * @category Current reads
    */
   readonly get: Effect.Effect<A, E, R>;
   /**
@@ -461,7 +462,7 @@ export interface GetSetDelete<A, E = never, R = never> {
    * acquires no resource and preserves source failures and services.
    *
    * @since 1.18.0
-   * @category combinators
+   * @category State updates
    */
   readonly set: (a: A) => Effect.Effect<A, E, R>;
   /**
@@ -479,7 +480,7 @@ export interface GetSetDelete<A, E = never, R = never> {
    * It acquires no resource and preserves source failures and services.
    *
    * @since 1.18.0
-   * @category combinators
+   * @category State updates
    */
   readonly delete: Effect.Effect<Option.Option<A>, E, R>;
 }
@@ -530,7 +531,7 @@ export interface GetSetDelete<A, E = never, R = never> {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Writable state
  */
 export interface RefSubject<A, E = never, R = never>
   extends Computed<A, E, R>, Subject.Subject<A, E, R> {
@@ -549,7 +550,7 @@ export interface RefSubject<A, E = never, R = never>
    * source errors, services, and lifetime.
    *
    * @since 1.18.0
-   * @category combinators
+   * @category State protocol
    */
   readonly [RefSubjectTypeId]: RefSubjectTypeId;
 
@@ -578,7 +579,7 @@ export interface RefSubject<A, E = never, R = never>
    *   )
    * })
    * ```
-   * @category combinators
+   * @category Transactions
    * @since 1.18.0
    * @remarks
    * ## Why
@@ -612,7 +613,7 @@ export interface RefSubject<A, E = never, R = never>
    *   yield* ref.interrupt
    * })
    * ```
-   * @category combinators
+   * @category Lifetime
    * @since 1.18.0
    * @remarks
    * ## Why
@@ -645,7 +646,7 @@ export interface RefSubject<A, E = never, R = never>
  * update boundary.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Writable state
  */
 export declare namespace RefSubject {
   /**
@@ -663,7 +664,7 @@ export declare namespace RefSubject {
    * interruption, and Scope requirements expressed by its members.
    *
    * @since 1.18.0
-   * @category type-level
+   * @category Type utilities
    */
   export type Any =
     | RefSubject<any, any, any>
@@ -687,7 +688,7 @@ export declare namespace RefSubject {
    * ownership to that installed subject.
    *
    * @since 1.18.0
-   * @category models
+   * @category Services
    */
   export interface Service<Self, Id extends string, A, E> extends RefSubject<A, E, Self> {
     /**
@@ -704,7 +705,7 @@ export declare namespace RefSubject {
      * source errors, services, and lifetime.
      *
      * @since 1.18.0
-     * @category combinators
+     * @category Services
      */
     readonly id: Id;
 
@@ -723,7 +724,7 @@ export declare namespace RefSubject {
      * RefSubject and its scoped initializer; operations retrieving it require `Self`.
      *
      * @since 1.18.0
-     * @category combinators
+     * @category Services
      */
     readonly service: Context.Service<Self, RefSubject<A, E>>;
 
@@ -742,7 +743,7 @@ export declare namespace RefSubject {
      * and cleanup; source failures and services stay on reads and pushes.
      *
      * @since 1.18.0
-     * @category constructors
+     * @category Constructors
      */
     readonly make: <R = never>(
       value: A | Effect.Effect<A, E, R> | Fx<A, E, R>,
@@ -764,7 +765,7 @@ export declare namespace RefSubject {
      * `E2` is a Layer-construction failure, while the subject's `E` remains on later state access.
      *
      * @since 1.18.0
-     * @category combinators
+     * @category Service layers
      */
     readonly layer: <E2, R2>(
       make: Effect.Effect<RefSubject<A, E>, E2, R2 | Scope.Scope>,
@@ -785,7 +786,7 @@ export declare namespace RefSubject {
    * services, interruption, and Scope requirements expressed by its members.
    *
    * @since 1.18.0
-   * @category models
+   * @category Services
    */
   export interface Class<Self, Id extends string, A, E> extends RefSubject.Service<Self, Id, A, E> {
     /**
@@ -803,7 +804,7 @@ export declare namespace RefSubject {
      * acquire a RefSubject. The matching Layer owns the installed state and its Scope.
      *
      * @since 1.18.0
-     * @category type-level
+     * @category Type utilities
      */
     new (): RefSubject.Service<Self, Id, A, E>;
   }
@@ -825,7 +826,7 @@ export declare namespace RefSubject {
  * still owns any subscription created by `"multiple"`.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Observation policy
  */
 export const CurrentComputedBehavior = Context.Reference("@typed/fx/CurrentComputedBehavior", {
   defaultValue: (): "one" | "multiple" => "multiple",
@@ -833,6 +834,20 @@ export const CurrentComputedBehavior = Context.Reference("@typed/fx/CurrentCompu
 
 const checkIsMultiple = (ctx: Context.Context<any>): ctx is Context.Context<"multiple"> =>
   Context.getUnsafe(ctx, CurrentComputedBehavior) === "multiple";
+
+function holdInContext<A, E, R>(fx: Fx<A, E, R>): Fx<A, E, R | Scope.Scope> {
+  const contexts = new WeakMap<Context.Context<R>, Fx<A, E, R | Scope.Scope>>();
+  return unwrap(
+    Effect.map(Effect.context<R>(), (context) => {
+      let shared = contexts.get(context);
+      if (!shared) {
+        shared = Subject.hold(fx);
+        contexts.set(context, shared);
+      }
+      return shared;
+    }),
+  );
+}
 
 class ComputedImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
   extends Versioned.VersionedTransform<
@@ -868,7 +883,7 @@ class ComputedImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
     this.input = input;
     this.f = f;
 
-    this._computed = Subject.hold(
+    this._computed = holdInContext(
       unwrap(
         Effect.map(Effect.context(), (ctx) => {
           if (checkIsMultiple(ctx)) {
@@ -901,12 +916,13 @@ class ComputedImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
  *
  * ## Ownership and lifetime
  *
- * Current reads directly sample and transform the input. The pushed channel uses `Subject.hold`:
- * concurrent observers share one active upstream session and its latest retained projection; the
- * last observer ends the session and clears that held value. The observing Scope owns cleanup.
+ * Current reads cache the transformed input by source version within each Effect Context. The
+ * pushed channel uses `Subject.hold`: observers with the same Context object share one upstream
+ * session and its retained projection; distinct Context objects have separate sessions. The last
+ * observer ends its session and clears its held value. The observing Scope owns cleanup.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Derived queries
  */
 export function makeComputed<R0, E0, A, E, R, E2, R2, C, E3, R3>(
   input: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
@@ -933,16 +949,14 @@ export function makeComputed<R0, E0, A, E, R, E2, R2, C, E3, R3>(
  *
  * ## Ownership and lifetime
  *
- * Calling `scan` allocates one private `MutableRef` for the returned Computed's Effect-read
- * accumulator. Every Effect read of that same Computed shares it and advances it after a
- * successful fold; separate `scan` calls do not share state. The pushed channel runs
- * `Fx.scanEffect` from `initial` inside `Subject.hold`: concurrent observers share the active scan
- * and its latest retained result, while the last observer ends that session and clears the held
- * value. The observing Scope owns subscription cleanup. The private read accumulator has no
- * finalizer and is collected with the returned Computed.
+ * Each Effect Context object gets a private current-read accumulator, advanced after a successful
+ * fold for a new source version. The pushed channel runs `Fx.scanEffect` from `initial` inside
+ * `Subject.hold`: observers using the same Context share that active scan and retained result.
+ * The last observer ends its session and clears its held value. The observing Scope owns
+ * subscription cleanup. Read accumulators are weakly held by Context and need no finalizer.
  *
  * @since 1.0.0
- * @category combinators
+ * @category Accumulation
  */
 export const scan: {
   <S, A>(
@@ -989,16 +1003,15 @@ export const scan: {
  *
  * ## Ownership and lifetime
  *
- * Calling `scanEffect` allocates one private `MutableRef` for the returned Computed's Effect-read
- * accumulator. Every Effect read of that same Computed shares it; the accumulator advances only
- * after `f` succeeds, so a typed failure leaves the previous state intact. The pushed channel runs
- * `Fx.scanEffect` from `initial` inside `Subject.hold`: concurrent observers share the active scan
- * and latest retained result, and each fold requires `R3`. The last observer ends that session and
- * clears the held value. The observing Scope owns cleanup; the private read accumulator has no
- * finalizer and is collected with the returned Computed.
+ * Each Effect Context object gets a private current-read accumulator. It advances only after `f`
+ * succeeds, so a typed failure leaves the previous state intact. The pushed channel runs
+ * `Fx.scanEffect` from `initial` inside `Subject.hold`: observers using the same Context share
+ * that active scan and retained result; each fold requires `R3`. The last observer ends its
+ * session and clears its held value. The observing Scope owns cleanup. Read accumulators are
+ * weakly held by Context and need no finalizer.
  *
  * @since 1.0.0
- * @category combinators
+ * @category Accumulation
  */
 export const scanEffect: {
   <S, A, E3, R3>(
@@ -1067,27 +1080,35 @@ class ComputedScanImpl<R0, E0, A, E, R, E2, R2, S, E3, R3>
     initial: S,
     f: (s: S, a: A) => Effect.Effect<S, E3, R3>,
   ) {
-    const state = MutableRef.make(initial);
+    const states = new WeakMap<Context.Context<never>, MutableRef.MutableRef<S>>();
 
     super(
       input,
       (fx) => fxScanEffect(fx, initial, f) as any,
       (effect) =>
-        Effect.flatMap(effect, (a) =>
-          Effect.flatMap(f(MutableRef.get(state), a), (next) =>
-            Effect.sync(() => {
-              MutableRef.set(state, next);
-              return next;
-            }),
-          ),
-        ),
+        Effect.contextWith((context) => {
+          let state = states.get(context);
+          if (!state) {
+            state = MutableRef.make(initial);
+            states.set(context, state);
+          }
+          const current = state;
+          return Effect.flatMap(effect, (a) =>
+            Effect.flatMap(f(MutableRef.get(current), a), (next) =>
+              Effect.sync(() => {
+                MutableRef.set(current, next);
+                return next;
+              }),
+            ),
+          );
+        }),
     );
 
     this.input = input;
     this.initial = initial;
     this.f = f;
 
-    this._computed = Subject.hold(
+    this._computed = holdInContext(
       unwrap(
         Effect.map(Effect.context(), (ctx) => {
           if (checkIsMultiple(ctx)) {
@@ -1120,11 +1141,12 @@ class ComputedScanImpl<R0, E0, A, E, R, E2, R2, S, E3, R3>
  *
  * ## Ownership and lifetime
  *
- * The make filtered view retains no independent value. Its Effect read fails with NoSuchElement
- * while absent; the observing Scope owns and finalizes its Fx subscription.
+ * Sampled results and pushed sessions are isolated by Effect Context identity. Within one Context,
+ * current reads cache by source version and observers share the active held projection. Its
+ * Effect read fails with NoSuchElement while absent; the observing Scope owns its subscription.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Optional queries
  */
 export function makeFiltered<R0, E0, A, E, R, E2, R2, C, E3, R3>(
   input: Versioned.Versioned<R0, E0, A, E, R, A, E2, R2>,
@@ -1171,7 +1193,7 @@ class FilteredImpl<R0, E0, A, E, R, E2, R2, C, E3, R3>
     this.input = input;
     this.f = f;
 
-    this._computed = Subject.hold(
+    this._computed = holdInContext(
       unwrap(
         Effect.map(Effect.context(), (ctx) => {
           if (checkIsMultiple(ctx)) {
@@ -1461,7 +1483,7 @@ function sendCurrentEvent(
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category Construction options
  */
 export interface RefSubjectOptions<A> {
   /**
@@ -1479,7 +1501,7 @@ export interface RefSubjectOptions<A> {
    * source errors, services, and lifetime.
    *
    * @since 1.18.0
-   * @category combinators
+   * @category Equality
    */
   readonly eq?: Equivalence<A>;
 }
@@ -1612,7 +1634,7 @@ class RefSubjectImpl<A, E, R, R2>
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Constructors
  */
 export function make<A, E = never, R = never>(
   effect: A | Effect.Effect<A, E, R> | Stream.Stream<A, E, R> | Fx<A, E, R>,
@@ -1661,7 +1683,7 @@ export function make<A, E = never, R = never>(
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Source adapters
  */
 export function fromEffect<A, E, R>(
   effect: Effect.Effect<A, E, R>,
@@ -1704,7 +1726,7 @@ export function fromEffect<A, E, R>(
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Source adapters
  */
 export function fromFx<A, E, R>(
   fx: Fx<A, E, R>,
@@ -1747,7 +1769,7 @@ export function fromFx<A, E, R>(
  * expose `E`.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Source adapters
  */
 export function fromStream<A, E, R>(
   stream: Stream.Stream<A, E, R>,
@@ -1798,7 +1820,7 @@ export function fromStream<A, E, R>(
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Source adapters
  */
 export function fromOption<A>(
   option: Option.Option<A>,
@@ -1827,7 +1849,7 @@ export function fromOption<A>(
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Source adapters
  */
 function optionFromNullable<A>(value: A | null | undefined): Option.Option<NonNullable<A>> {
   return value === null || value === undefined
@@ -1851,7 +1873,7 @@ function optionFromNullable<A>(value: A | null | undefined): Option.Option<NonNu
  * fail. The returned RefSubject owns and publishes subsequent Option writes.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Source adapters
  */
 export function fromNullable<A>(
   value: A | null | undefined,
@@ -1919,8 +1941,10 @@ function initializeCoreEffect<A, E, R, R2>(
   core: RefSubjectCore<A, E, R, R2>,
   lock: boolean,
 ): Effect.Effect<Fiber.Fiber<A, E>, never, Exclude<R, R2>> {
+  let completed = false;
   const initialize = Effect.onExit(Effect.provide(core.initial, core.services), (exit) =>
     Effect.sync(() => {
+      completed = true;
       core._fiber = undefined;
       core.deferredRef.done(exit);
     }),
@@ -1932,8 +1956,15 @@ function initializeCoreEffect<A, E, R, R2>(
     Effect.forkIn(
       lock && !isSourceBacked ? core.semaphore.withPermits(1)(initialize) : initialize,
       core.scope,
+      // Acquire the initializer's permit before a competing update can hold it while awaiting us.
+      { startImmediately: true },
     ),
-    (fiber) => Effect.sync(() => (core._fiber = fiber)),
+    (fiber) =>
+      Effect.sync(() => {
+        // A synchronous initializer has already cleared its ownership in onExit.
+        if (!completed) core._fiber = fiber;
+        return fiber;
+      }),
   );
 }
 
@@ -2114,7 +2145,7 @@ function sendEvent<A, E, R, R2>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category State updates
  */
 export const set: {
   <A>(value: A): <E, R>(ref: RefSubject<A, E, R>) => Effect.Effect<A, E, R>;
@@ -2160,7 +2191,7 @@ export const set: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category State updates
  */
 export function reset<A, E, R>(ref: RefSubject<A, E, R>): Effect.Effect<Option.Option<A>, E, R> {
   return ref.updates((ref) => ref.delete);
@@ -2191,7 +2222,7 @@ export {
    * ```
    *
    * @since 1.20.0
-   * @category combinators
+   * @category State updates
    */
   reset as delete,
 };
@@ -2229,7 +2260,7 @@ export {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category State updates
  */
 export const updateEffect: {
   <A, E2, R2>(
@@ -2293,7 +2324,7 @@ export const updateEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category State updates
  */
 export const update: {
   <A>(f: (value: A) => A): <E, R>(ref: RefSubject<A, E, R>) => Effect.Effect<A, E, R>;
@@ -2337,7 +2368,7 @@ export const update: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transactions
  */
 export const modifyEffect: {
   <A, B, E2, R2>(
@@ -2394,7 +2425,7 @@ export const modifyEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transactions
  */
 export const modify: {
   <A, B>(
@@ -2440,7 +2471,7 @@ export const modify: {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Type guards
  */
 export function isRefSubject(value: any): value is RefSubject<any, any, any> {
   return hasProperty(value, RefSubjectTypeId) && value[RefSubjectTypeId] === RefSubjectTypeId;
@@ -2462,7 +2493,7 @@ const isRefSubjectDataFirst = (args: IArguments) => isRefSubject(args[0]);
  * This synchronous predicate performs no Effect, subscription, or acquisition.
  *
  * @since 1.18.0
- * @category guards
+ * @category Type guards
  */
 export function isComputed(value: any): value is Computed<any, any, any> {
   return hasProperty(value, ComputedTypeId) && value[ComputedTypeId] === ComputedTypeId;
@@ -2512,7 +2543,7 @@ export function isComputed(value: any): value is Computed<any, any, any> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transactions
  */
 export const runUpdates: {
   <A, E, R, B, E2, R2, R3 = never, E3 = never, C = never>(
@@ -2590,7 +2621,7 @@ export const runUpdates: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category State updates
  */
 export function increment<E, R>(ref: RefSubject<number, E, R>): Effect.Effect<number, E, R> {
   return update(ref, (value) => value + 1);
@@ -2629,7 +2660,7 @@ export function increment<E, R>(ref: RefSubject<number, E, R>): Effect.Effect<nu
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category State updates
  */
 export function decrement<E, R>(ref: RefSubject<number, E, R>): Effect.Effect<number, E, R> {
   return update(ref, (value) => value - 1);
@@ -2659,7 +2690,7 @@ const Variance: Fx.Variance<any, any, any> = {
  * while consumers require only the generated `Self` service.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Services
  */
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): RefSubject.Class<Self, Id, A, E> => {
@@ -2673,6 +2704,11 @@ export function Service<Self, A, E = never>() {
         // @effect-diagnostics-next-line floatingEffect:off
         Object.assign(this, service);
         Object.setPrototypeOf(this, Object.getPrototypeOf(service));
+        // @effect-diagnostics-next-line floatingEffect:off
+        Object.assign(this, Effectable.Prototype<Effect.Effect<A, E, Self>>({
+          label: "RefSubject.Service",
+          evaluate: () => Effect.flatMap(service, identity),
+        }));
       }
 
       static readonly id = id;
@@ -2719,7 +2755,7 @@ export function Service<Self, A, E = never>() {
       ) => Effect.flatMap(service, (ref) => ref.updates(f));
 
       // Yieldable
-      static readonly override = service;
+      static readonly override = Effect.flatten(service);
       static readonly [Symbol.iterator] = function* () {
         const ref = yield* service;
         return yield* ref;
@@ -2790,7 +2826,7 @@ function getDefaultBounds(options?: Partial<Bounds>): Bounds | undefined {
  * ```
  *
  * @since 2.0.0
- * @category combinators
+ * @category Derived queries
  */
 export const proxy: {
   <A extends ReadonlyArray<any> | Readonly<Record<PropertyKey, any>>, E, R>(
@@ -2826,7 +2862,7 @@ export const proxy: {
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category type-level
+ * @category Type utilities
  */
 export type Services<T> =
   T extends RefSubject<infer _A, infer _E, infer R>
@@ -2851,7 +2887,7 @@ export type Services<T> =
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category type-level
+ * @category Type utilities
  */
 export type Error<T> =
   T extends RefSubject<infer _A, infer E, infer _R>
@@ -2876,7 +2912,7 @@ export type Error<T> =
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category type-level
+ * @category Type utilities
  */
 export type Success<T> =
   T extends RefSubject<infer A, infer _E, infer _R>
@@ -2901,7 +2937,7 @@ export type Success<T> =
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category type-level
+ * @category Type utilities
  */
 export type Identifier<T> =
   T extends RefSubject.Service<infer R, infer _Id, infer _A, infer _E> ? R : never;
@@ -2949,7 +2985,7 @@ export type Identifier<T> =
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Derived queries
  */
 export const mapEffect: {
   <T extends RefSubject.Any | Computed.Any | Filtered.Any, B, E2, R2>(
@@ -3039,7 +3075,7 @@ export const mapEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Derived queries
  */
 export const map: {
   <T extends RefSubject.Any | Computed.Any | Filtered.Any, B>(
@@ -3108,7 +3144,7 @@ export const map: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Optional queries
  */
 export const filterMapEffect: {
   <A, B, E2, R2>(
@@ -3183,7 +3219,7 @@ export const filterMapEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Optional queries
  */
 export const filterMap: {
   <A, B>(
@@ -3258,7 +3294,7 @@ export const filterMap: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Optional queries
  */
 export const compact: {
   <A, E, R>(ref: Computed<Option.Option<A>, E, R>): Filtered<A, E, R>;
@@ -3312,7 +3348,7 @@ export const compact: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Optional queries
  */
 export const getOrElse: {
   <A>(
@@ -3404,7 +3440,7 @@ class RefSubjectSimpleTransform<A, E, R, R2, R3>
  * source RefSubject.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Observation policy
  */
 export const slice: {
   (skip: number, take: number): <A, E, R>(ref: RefSubject<A, E, R>) => RefSubject<A, E, R>;
@@ -3518,7 +3554,7 @@ class RefSubjectTransform<A, B, E, R>
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Writable views
  */
 export const transform: {
   <A, B>(
@@ -3750,7 +3786,7 @@ type RefSubjectTupleFrom<
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category State composition
  */
 export function struct<
   const Refs extends Readonly<Record<string, RefSubject.Any | Computed.Any | Filtered.Any>>,
@@ -3805,7 +3841,7 @@ export function struct<
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category State composition
  */
 export function tuple<const Refs extends ReadonlyArray<Ref>>(refs: Refs): TupleFrom<Refs> {
   const kind = getRefKind(refs);
@@ -3833,6 +3869,36 @@ const sampleRefSubject = (ref: RefSubject.Any): Effect.Effect<any, any, any> =>
     return yield* ref;
   });
 
+function versionedInContext<R0, E0, A, E, R, B, E2, R2>(
+  make: () => Versioned.Versioned<R0, E0, A, E, R, B, E2, R2>,
+): Versioned.Versioned<R0, E0, A, E, R, B, E2, R2> {
+  // Automatic composites share both pushed sessions and in-flight reads only within one Context.
+  const contexts = new WeakMap<
+    Context.Context<never>,
+    Versioned.Versioned<R0, E0, A, E, R, B, E2, R2>
+  >();
+  const current = Effect.map(Effect.context<never>(), (context) => {
+    let versioned = contexts.get(context);
+    if (!versioned) {
+      versioned = make();
+      contexts.set(context, versioned);
+    }
+    return versioned;
+  });
+  return new (class extends YieldableFx<A, E, R, B, E2, R2> {
+    readonly version = Effect.flatMap(current, (versioned) => versioned.version);
+    readonly interrupt = Effect.flatMap(current, (versioned) => versioned.interrupt);
+
+    run<RSink>(sink: Sink.Sink<A, E, RSink>) {
+      return Effect.flatMap(current, (versioned) => versioned.run(sink));
+    }
+
+    toEffect() {
+      return Effect.flatMap(current, identity);
+    }
+  })();
+}
+
 function makeCompositeVersioned(
   refs: ReadonlyArray<RefSubject.Any>,
   current: Effect.Effect<any, any, any>,
@@ -3846,7 +3912,7 @@ function makeCompositeVersioned(
   );
   const changes = skipRepeats(fxMapEffect(fxMergeAll(...refs), () => current));
 
-  return Versioned.hold(Versioned.make(version, changes, current));
+  return versionedInContext(() => Versioned.hold(Versioned.make(version, changes, current)));
 }
 
 class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>>>
@@ -3901,7 +3967,7 @@ class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>
     this.versioned = (
       refs.length > 0 && getTupleTransactionAccess(refs)
         ? makeCompositeVersioned(refs, Effect.all(refs.map(sampleRefSubject), UNBOUNDED))
-        : Versioned.hold(Versioned.tuple(refs))
+        : versionedInContext(() => Versioned.hold(Versioned.tuple(refs)))
     ) as any;
     this.version = this.versioned.version;
     this.interrupt = Effect.all(
@@ -4000,13 +4066,19 @@ class RefSubjectTuple<const Refs extends ReadonlyArray<RefSubject<any, any, any>
 function makeTupleComputed<const Refs extends ReadonlyArray<Computed<any, any, any>>>(
   refs: Refs,
 ): ComputedTupleFrom<Refs> {
-  return new ComputedImpl(Versioned.tuple(refs) as any, Effect.succeed) as any;
+  return new ComputedImpl(
+    versionedInContext(() => Versioned.tuple(refs)) as any,
+    Effect.succeed,
+  ) as any;
 }
 
 function makeTupleFiltered<
   const Refs extends ReadonlyArray<Computed<any, any, any> | Filtered<any, any, any>>,
 >(refs: Refs): FilteredTupleFrom<Refs> {
-  return new FilteredImpl(Versioned.tuple(refs) as any, Effect.succeedSome) as any;
+  return new FilteredImpl(
+    versionedInContext(() => Versioned.tuple(refs)) as any,
+    Effect.succeedSome,
+  ) as any;
 }
 
 function makeStructRef<const Refs extends Readonly<Record<string, RefSubject.Any>>>(
@@ -4078,7 +4150,7 @@ class RefSubjectStruct<const Refs extends Readonly<Record<string, RefSubject.Any
     this.versioned = (
       keys.length > 0 && getStructTransactionAccess(refs)
         ? makeCompositeVersioned(Object.values(refs), current)
-        : Versioned.hold(Versioned.struct(refs))
+        : versionedInContext(() => Versioned.hold(Versioned.struct(refs)))
     ) as any;
     this.version = this.versioned.version;
     this.interrupt = Effect.all(
@@ -4166,13 +4238,19 @@ class RefSubjectStruct<const Refs extends Readonly<Record<string, RefSubject.Any
 function makeStructComputed<const Refs extends Readonly<Record<string, Computed<any, any, any>>>>(
   refs: Refs,
 ): ComputedStructFrom<Refs> {
-  return new ComputedImpl(Versioned.struct(refs) as any, Effect.succeed) as any;
+  return new ComputedImpl(
+    versionedInContext(() => Versioned.struct(refs)) as any,
+    Effect.succeed,
+  ) as any;
 }
 
 function makeStructFiltered<
   const Refs extends Readonly<Record<string, Computed<any, any, any> | Filtered<any, any, any>>>,
 >(refs: Refs): FilteredStructFrom<Refs> {
-  return new FilteredImpl(Versioned.struct(refs) as any, Effect.succeedSome) as any;
+  return new FilteredImpl(
+    versionedInContext(() => Versioned.struct(refs)) as any,
+    Effect.succeedSome,
+  ) as any;
 }
 
 /**
@@ -4191,7 +4269,7 @@ function makeStructFiltered<
  * failures remain `E`, and the observing Scope owns the delegated subscription.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Services
  */
 export function computedFromService<R, A, E, R2>(
   effect: Effect.Effect<Computed<A, E, R2>, never, R>,
@@ -4242,7 +4320,7 @@ class ComputedFromService<R, A, E, R2>
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Services
  */
 export function filteredFromService<R, A, E, R2>(
   effect: Effect.Effect<Filtered<A, E, R2>, never, R>,

@@ -1,257 +1,187 @@
 ---
 title: "Overlays, disclosure, and transient UI"
-summary: "Choose the smallest public UI contract for expanded content, top-layer information, modal work, and commands."
-section: "UI"
+summary: "Develop a report's explanation, legend, and archive decision with distinct native visibility and dismissal contracts."
+section: "UI / Overlays"
 kind: "guide"
-order: 4.4
+order: 279
 ---
 
-"Opens something" is not one interaction. A section that expands in the document, a small
-top-layer panel, a modal decision, a short description, and an interactive card make different
-promises about focus, dismissal, and keyboard interaction. Choose that promise first; do not style
-one generic overlay into every one of these jobs.
+A report screen needs three kinds of extra content: an explanation of its calculation, a compact
+legend, and an archive confirmation. Treating all three as the same open/closed panel would conceal
+the decisions that matter: whether opening moves the document, whether other controls remain usable,
+where focus goes, and whether closing means an action succeeded.
 
-Typed builds these families on native browser semantics: [HTML `details`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/details),
-the [Popover API](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API), and [the `dialog` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog).
-The corresponding accessibility decisions are described by the APG [disclosure](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/),
-[modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/), and [tooltip](https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/) patterns.
+Read [choosing UI components](/explore/choosing-ui-components) first. This lesson builds those three
+pieces around one report. The dedicated family lessons continue into the native event and focus
+contracts rather than repeating the same introduction.
 
-## Choose by the job of the content
+## Begin with content that belongs in the document
 
-| The content needs to… | Use | It is not for… |
-| --- | --- | --- |
-| Remain in document flow while being revealed or hidden | `Disclosure` | A floating command surface or a blocking decision |
-| Appear in the top layer without becoming a dialog | `Popover` | Required focus management or a task that blocks the page |
-| Take focused interaction, usually while the rest of the page is inert | `Dialog` | A small description or an anchored preview |
-| Describe an anchor; contain no required controls | `Tooltip` | Links, fields, buttons, or persistent instructions |
-| Let pointer or focus move into an interactive, named preview | `Hovercard` | A modal task or a non-interactive tooltip |
-| Offer a keyboard-navigable set of commands | `Menu` | Persistent form values or arbitrary document content |
-
-`Disclosure` renders native `<details>` and `<summary>`. `Popover`, `Tooltip`, and
-`Hovercard` render `popover="manual"` content in the native top layer. A manual popover is not
-the browser's auto/light-dismiss popover: model dismissal explicitly in state, and use the supplied
-Escape behavior where it matches the interaction. `Dialog` renders a real `<dialog>` and opens
-modally by default, so the browser owns top-layer placement, page inertness, and the dialog focus
-lifecycle.
-
-## Compose state, trigger, and content
-
-Every family exposes a renderer-independent hydrated `state`. Create it in the Effect that owns the
-widget, then give the same state to its public parts. `makeState` is Scope-owned because it creates a
-`RefSubject`; the returned parts are inert `Fx` values. Rendering those values later owns DOM
-listeners, native-element synchronization, and reactive props for the renderer's Scope.
-
-Use `Disclosure` when the additional material is part of the page. The browser toggles its summary;
-Typed observes the native `toggle` event and keeps `state.open` synchronized. Application code can
-also use `Disclosure.setOpen(state, open)` without a mounted renderer.
+The calculation explanation belongs directly below the total it explains. Native details keeps it
+there, lets the browser handle activation, and needs no application state:
 
 ```ts
-import { Effect } from "effect";
-import * as Disclosure from "@typed/ui/Disclosure";
+import { html } from "@typed/template";
 
-const advancedSettings = Effect.gen(function* () {
-  const state = yield* Disclosure.makeState();
-
-  return Disclosure.Content({
-    state,
-    content: [
-      Disclosure.Button({ content: "Advanced settings" }),
-      "These controls remain in the page flow.",
-    ],
-  });
-});
+const calculation = html`
+  <details>
+    <summary>How revenue is calculated</summary>
+    <p>Revenue includes paid invoices and subtracts refunds issued during this period.</p>
+  </details>
+`;
 ```
 
-For a top-layer panel, compose `Popover.Trigger` and `Popover.Content`. Supplying matching
-`controls` and `props.id` emits the native `popovertarget` relationship. Omitting `controls` selects
-the public state-driven trigger fallback, which is the portable choice when native target attributes
-are unavailable. Both forms synchronize native `beforetoggle`/`toggle` events back to the same
-state.
+Opening this explanation moves later content down. It does not cover controls or pull the person
+into a separate task. Use [Disclosure](/explore/ui-disclosure) when other application parts must
+observe or request its open state. That family still renders details/summary; its added value is
+synchronization, not replacing the native interaction. See [MDN details](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/details).
+
+## Move a short legend into the top layer
+
+The legend should not reflow the report. A manual popover supplies native top-layer visibility while
+leaving the rest of the page available. The application supplies a visible dismissal control because
+manual popovers do not receive automatic outside-click dismissal.
 
 ```ts
-import { Effect } from "effect";
+import { html } from "@typed/template";
+import { component } from "@typed/ui/Component";
+import * as Button from "@typed/ui/Button";
 import * as Popover from "@typed/ui/Popover";
 
-const preferencesPanel = Effect.gen(function* () {
+const RevenueLegend = component(function* () {
   const state = yield* Popover.makeState();
-
   return [
-    Popover.Trigger({ state, controls: "preferences", content: "Preferences" }),
+    Popover.Trigger({ state, content: "Chart legend" }),
     Popover.Content({
       state,
-      props: { id: "preferences" },
-      content: "A short settings panel.",
+      content: html`
+        <section aria-labelledby="legend-heading">
+          <h2 id="legend-heading">Revenue legend</h2>
+          <p>Green means recognized revenue. Gray means forecast revenue.</p>
+          ${Button.Button({ content: "Close legend", onclick: Popover.setOpen(state, false) })}
+        </section>
+      `,
     }),
   ];
 });
 ```
 
-Use `Dialog` when the interaction needs dialog behavior. `Dialog.Content` requires exactly one
-accessible naming strategy: `label` or `labelledBy`. It uses `showModal()` by default; set
-`modal: false` only when the interaction is intentionally non-modal. Its trigger, close, and
-request-close controls use state fallbacks when `controls` is omitted. Supplying `controls` instead
-selects native `commandfor` commands and therefore requires browser command-attribute support.
+The trigger's click changes state. The content ref observes that state and calls the native show/hide
+methods. Native toggle events travel in the opposite direction, keeping application state aware of
+the browser. These are two directions of one synchronization loop, not two separately authoritative
+booleans.
+
+Typed uses `popover="manual"` here. Escape handling is local to the trigger and content; it is not
+a document-wide dismissal listener. The browser's top layer also does not choose placement beside
+the trigger. Supply layout appropriate to the report and test scrolling, zoom, and narrow screens.
+[Popover](/explore/ui-popover) covers these decisions; [MDN Popover API](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API)
+explains the underlying manual/auto distinction.
+
+## Give a decision its own task boundary
+
+Archiving is different from reading a legend. The person must understand the action, either accept
+or cancel, and recover if the operation fails. Native modal dialog behavior makes the underlying
+report inert while this decision is active. Its application state still must distinguish successful
+archiving from cancellation.
 
 ```ts
-import { Effect } from "effect";
-import * as Dialog from "@typed/ui/Dialog";
-
-const deleteAccountDialog = Effect.gen(function* () {
-  const state = yield* Dialog.makeState();
-
-  return [
-    Dialog.Trigger({ state, content: "Delete account" }),
-    Dialog.Content({
-      state,
-      labelledBy: "delete-account-title",
-      describedBy: "delete-account-description",
-      content: [
-        Dialog.Heading({ id: "delete-account-title", content: "Delete account" }),
-        Dialog.Description({
-          id: "delete-account-description",
-          content: "This action cannot be undone.",
-        }),
-        Dialog.RequestClose({ state, content: "Cancel" }),
-        Dialog.Close({ state, content: "Delete" }),
-      ],
-    }),
-  ];
-});
-```
-
-`RequestClose` deliberately takes the cancelable close-request path; a consumer can prevent its
-native `cancel` event. `Close` is the direct close path, appropriate after an accepted action. The
-native dialog also reports `cancel`, `close`, and `toggle` back into `state.open`. Give the dialog a
-clear exit and a sensible first focusable control; verify the browser's resulting focus behavior for
-the task rather than recreating a focus trap around an ordinary `div`.
-
-### Close after the application action succeeds
-
-The example above demonstrates dialog controls; its “Delete” control only closes the dialog.
-Closing is not deletion. For actual work, pass an Effect to a native Button and compose the domain
-action before `Dialog.close`. A failed action then leaves the dialog available for recovery.
-
-```ts
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
+import { RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
 import { component } from "@typed/ui/Component";
 import * as Button from "@typed/ui/Button";
 import * as Dialog from "@typed/ui/Dialog";
 
-const ConfirmArchive = component(function* (archive: Effect.Effect<void>) {
-  const state = yield* Dialog.makeState();
-  const confirm = archive.pipe(Effect.andThen(Dialog.close(state)));
+class ArchiveRejected extends Data.TaggedError("ArchiveRejected")<{
+  readonly message: string;
+}> {}
 
+const ArchiveReport = component(function* (archive: Effect.Effect<void, ArchiveRejected>) {
+  const state = yield* Dialog.makeState();
+  const busy = yield* RefSubject.make(false);
+  const status = yield* RefSubject.make("");
+  const confirm = Effect.gen(function* () {
+    if (yield* busy) return;
+    yield* RefSubject.set(busy, true);
+    yield* RefSubject.set(status, "Archiving…");
+    yield* archive.pipe(
+      Effect.andThen(Dialog.close(state)),
+      Effect.catchTag("ArchiveRejected", ({ message }) => RefSubject.set(status, message)),
+      Effect.ensuring(RefSubject.set(busy, false)),
+    );
+  });
   return [
-    Dialog.Trigger({ state, content: "Archive project" }),
+    Dialog.Trigger({ state, content: "Archive report" }),
     Dialog.Content({
       state,
-      label: "Archive project",
-      content: [
-        "The project will remain available in your archive.",
-        Dialog.RequestClose({ state, content: "Keep project" }),
-        Button.Button({ content: "Archive", onclick: confirm }),
-      ],
+      labelledBy: "archive-report-heading",
+      content: html`
+        <h2 id="archive-report-heading">Archive this report?</h2>
+        <p>You can restore it from the archive later.</p>
+        <p role="status">${status}</p>
+        ${Dialog.RequestClose({ state, content: "Keep report" })}
+        ${Button.Button({ content: "Archive", disabled: busy, onclick: confirm })}
+      `,
     }),
   ];
 });
-
-const archiveDialog = ConfirmArchive(Effect.void);
+const archiveReport = ArchiveReport(Effect.void);
 ```
 
-This example accepts work whose expected failures have already been handled. When archive can
-fail, render that failure beside the confirmation and close only the success branch. Use the
-[busy-state pattern](/explore/building-ui-components) when repeated activation could submit twice.
-Do not equate Escape, cancellation, successful submission, and route removal: each may need a
-different application result even though all can leave the surface closed.
+The generator acquires instance-local interaction state. The supplied Effect performs the domain
+action; no button named Archive merely pretends to perform work by closing. Success calls `close`,
+while a recoverable rejection updates visible status and leaves the decision available. The busy
+check protects this instance from repeated activation; cross-screen serialization belongs in the
+archive service.
 
-The trigger and content need one shared state, but not an extra application-wide overlay manager.
-Create independent state for independent dialogs. If nested surfaces must coordinate dismissal,
-make that relationship explicit at their owner and test where focus returns when an inner surface
-closes or its trigger disappears.
+`RequestClose` uses the native cancelable close-request lifecycle. `close` bypasses that request and
+sets state false, which is appropriate after successful acceptance. Escape, a keep button, route
+removal, and successful archiving can all end visibility but are not interchangeable domain results.
+[Dialog](/explore/ui-dialog) develops cancellation, command support, naming, and focus return.
 
-## Keep a tooltip descriptive; use a hovercard for interaction
+## Understand what the browser owns and what it cannot decide
 
-`Tooltip.makeState` and `Hovercard.makeState` require a stable `id`. It is the server/client-safe
-relationship between their anchor and their content. Their default anchors are `<span>` elements:
-they receive pointer events, but not focus until the host itself is focusable. Set `props.tabindex`
-or supply a natively focusable host; focus on a descendant does not bubble to the default span.
+`Dialog.Content` uses a real dialog and calls `showModal()` by default. The browser supplies modal
+inertness and native focus behavior. The author chooses a meaningful name and sensible content and
+checks the resulting initial focus and exit. Use the [APG modal dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
+when checking those user-facing expectations.
 
-`Tooltip.Anchor` adds `aria-describedby`, and `Tooltip.Content` is a manual popover with
-`role="tooltip"`. It opens on pointer entry or direct host focus, closes on Escape, and keeps itself
-open while the pointer moves from anchor to description. Its content must remain explanatory; do
-not put a needed interactive action inside it.
+In the examples, omitted `controls` selects Typed's state-driven trigger path. With dialog controls,
+a target ID instead selects native `commandfor` commands and removes the click fallback. With
+popover controls it selects native `popovertarget`. These mechanisms have distinct platform support;
+an ID is not merely decorative metadata. [Native dialog documentation](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog)
+explains the native command and modal mechanisms.
 
-```ts
-import { Effect } from "effect";
-import * as Tooltip from "@typed/ui/Tooltip";
+A hidden surface's subtree is not automatically unmounted. If fetching or animation should stop
+while closed, express that lifetime intentionally; do not assume CSS visibility interrupts Effects.
+Conversely, render-Scope teardown stops the mounted listeners and observers. Work that must survive
+navigation needs an explicitly longer-lived service owner.
 
-const saveHelp = Effect.gen(function* () {
-  const state = yield* Tooltip.makeState({ id: "save-help" });
+## Distinguish a description from an interactive preview
 
-  return [
-    Tooltip.Anchor({ state, props: { tabindex: 0 }, content: "Save" }),
-    Tooltip.Content({ state, content: "Stores your current changes." }),
-  ];
-});
-```
+Use [Tooltip](/explore/ui-tooltip) for a short description of an already named control. Its
+`aria-describedby` relationship and tooltip role explain the anchor; putting a required link inside
+would create an interaction that descriptive content does not support. Keep essential instructions
+visible in the page.
 
-When the content includes a link, button, or other focusable interaction, use `Hovercard` instead.
-It gives its manual popover `role="dialog"` and requires exactly one of `label` or `labelledBy`.
-Its anchor uses `aria-controls`; focus moving from that anchor into the card keeps it open, but the
-card is not modal and does not trap focus. Escape, pointer departure, and focus leaving the card
-close it through the shared state.
+When a preview includes a profile link, use [Hovercard](/explore/ui-hovercard) or ordinary visible
+content. A hovercard allows focus transfer into a named non-modal dialog-like surface. Its default
+anchor is a span: focus on a nested link does not reach the span's non-bubbling focus handler. The
+family lesson shows applying anchor props directly to the actual link. This is a DOM relationship
+problem, not a delay-tuning problem.
 
-```ts
-import { Effect } from "effect";
-import { html } from "@typed/template";
-import * as Hovercard from "@typed/ui/Hovercard";
+## Debug one synchronization boundary at a time
 
-const authorCard = Effect.gen(function* () {
-  const state = yield* Hovercard.makeState({ id: "ada-lovelace-card" });
+First inspect the native element: details.open, dialog.open, or `:popover-open`. Then inspect Typed
+state. If they disagree after native dismissal, the reverse event path is missing. If state changes
+but the native element does not, inspect the ref, connection, host tag, and platform support. Finally
+check focus and positioning; matching booleans cannot prove either.
 
-  return [
-    Hovercard.Anchor({ state, props: { tabindex: 0 }, content: "Ada Lovelace" }),
-    Hovercard.Content({
-      state,
-      label: "Ada Lovelace",
-      content: html`<a href="/authors/ada-lovelace">Read profile</a>`,
-    }),
-  ];
-});
-```
+State-only tests cover `setOpen` and direct close. Browser tests cover summary activation, native
+toggle, cancel prevention, modal focus, and pointer/focus transfer. `Dialog.requestClose` needs mounted
+content because it consults the registered element; without one it does nothing.
 
-For a command list, choose `Menu`, not any of the five families above. `Menu` combines its state
-with a collection so Arrow keys, typeahead, enabled-item movement, Escape, and focus restoration
-have a command-specific contract. See [UI collections, focus, and keyboard behavior](/explore/ui-collections-and-focus).
-
-## What to test
-
-Typed provides native hosts, public `setOpen` transitions, state synchronization from native
-`toggle`/`cancel`/`close` lifecycles, and type-level accessible-name constraints for `Dialog` and
-`Hovercard`. Authors must provide the correct family, a meaningful trigger name, stable ids where
-required, an accessible dialog/card name, content that matches the chosen contract, and an
-intentional dismissal/result policy. A custom host must preserve the semantic props, event handlers,
-and composed ref that the public part supplies.
-
-Test the domain transition without rendering: create the state, call the relevant `setOpen`,
-`Dialog.close`, or `Dialog.requestClose`, and assert the value or cancellation policy. Then add a
-focused browser test at the native boundary:
-
-| Family | Browser assertion worth making |
-| --- | --- |
-| `Disclosure` | Activating `<summary>` changes native `details.open` and `state.open`. |
-| `Popover` | The target relationship or fallback opens the manual popover; `toggle` and Escape return state to closed. |
-| `Dialog` | Opening creates the expected modal/non-modal behavior; accepted close and a prevented `cancel` request have different results. |
-| `Tooltip` | Pointer and direct host focus open it; Escape closes it; required instructions are not trapped in its content. |
-| `Hovercard` | Pointer/focus transfer from anchor into card keeps it open; Escape and leaving both regions close it. |
-
-That split keeps application policy independently testable while proving the browser behavior that
-only a real `<details>`, Popover API host, or `<dialog>` can provide.
-
-For the exact options and native lifecycle hooks, see
-[Dialog](/reference/modules/%40typed%2Fui%2FDialog),
-[Disclosure](/reference/modules/%40typed%2Fui%2FDisclosure),
-[Popover](/reference/modules/%40typed%2Fui%2FPopover),
-[Tooltip](/reference/modules/%40typed%2Fui%2FTooltip), and
-[Hovercard](/reference/modules/%40typed%2Fui%2FHovercard).
-Their state transitions are ordinary [Effect v4](https://effect.website/docs/v4) programs.
+When application-owned markup needs only the observer, study [NativeDetails](/explore/ui-native-details),
+[NativePopover](/explore/ui-native-popover), or [NativeDialog](/explore/ui-native-dialog). Each leaves
+reverse events, naming, and interaction policy to its caller. For custom hosts, [Dom](/explore/ui-dom)
+shows how to retain events, refs, and the single hydration owner on the same real element.

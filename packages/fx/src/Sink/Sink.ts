@@ -13,8 +13,9 @@ import * as Context from "effect/Context";
  * @remarks
  * ## Why
  * `Sink` gives an `Fx` producer one uniform destination while retaining Effect's typed service
- * requirements and complete failure `Cause`. The callback effects cannot fail: handling a value or
- * cause is the terminal consumer boundary.
+ * requirements and complete failure `Cause`. Callback Effects have no typed failure channel, but
+ * they may still defect or be interrupted. Handling an incoming Cause is the consumer's policy;
+ * accepting it successfully does not mean the failed producer operation succeeded.
  *
  * ## Ownership and lifetime
  * A sink is inert until a producer invokes one of its callbacks. The producer's fiber controls
@@ -33,7 +34,7 @@ import * as Context from "effect/Context";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Consumer contracts
  */
 export interface Sink<A, E = never, R = never> {
   /**
@@ -80,7 +81,7 @@ export declare namespace Sink {
    * ## Ownership and lifetime
    * This type alias acquires no resources and does not change the matched sink's lifetime.
    * @since 1.0.0
-   * @category models
+   * @category Type contracts
    */
   export type Any = Sink<any, any, any>;
 
@@ -94,7 +95,7 @@ export declare namespace Sink {
    * ## Ownership and lifetime
    * This conditional type is compile-time only and acquires no resources.
    * @since 1.0.0
-   * @category type-level
+   * @category Type contracts
    */
   export type Success<T> = T extends Sink<infer _A, infer _E, infer _R> ? _A : never;
 
@@ -108,7 +109,7 @@ export declare namespace Sink {
    * ## Ownership and lifetime
    * This conditional type is compile-time only and acquires no resources.
    * @since 1.0.0
-   * @category type-level
+   * @category Type contracts
    */
   export type Error<T> = T extends Sink<infer _A, infer _E, infer _R> ? _E : never;
 
@@ -122,7 +123,7 @@ export declare namespace Sink {
    * ## Ownership and lifetime
    * This conditional type is compile-time only and acquires no resources.
    * @since 1.0.0
-   * @category type-level
+   * @category Type contracts
    */
   export type Services<T> = T extends Sink<infer _A, infer _E, infer _R> ? _R : never;
 
@@ -147,7 +148,7 @@ export declare namespace Sink {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Sink services
    */
   export interface Service<Self, Id extends string, A, E> extends Sink<A, E, Self> {
     /**
@@ -216,7 +217,7 @@ export declare namespace Sink {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Sink services
    */
   export interface Class<Self, Id extends string, A, E> extends Service<Self, Id, A, E> {
     /**
@@ -247,7 +248,7 @@ export declare namespace Sink {
  * This conditional type is compile-time only and acquires no resources.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Type contracts
  */
 export type Success<T> = Sink.Success<T>;
 /**
@@ -261,7 +262,7 @@ export type Success<T> = Sink.Success<T>;
  * This conditional type is compile-time only and acquires no resources.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Type contracts
  */
 export type Error<T> = Sink.Error<T>;
 /**
@@ -275,7 +276,7 @@ export type Error<T> = Sink.Error<T>;
  * This conditional type is compile-time only and acquires no resources.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Type contracts
  */
 export type Services<T> = Sink.Services<T>;
 
@@ -287,8 +288,9 @@ export type Services<T> = Sink.Services<T>;
  * `make` is the smallest adapter from ordinary Effect programs to an `Fx` consumer.
  *
  * ## Ownership and lifetime
- * Construction is pure and acquires nothing. Each callback runs in producer order and is
- * interrupted with the producer. Requirements from both callbacks are combined in the returned
+ * Construction is pure and acquires nothing. Callback ordering and concurrency belong to the
+ * invoking producer; this adapter adds no queue. Callbacks are interrupted with their delivery
+ * owners. Requirements from both callbacks are combined in the returned
  * sink; callback defects remain defects, while typed producer failures arrive through `onFailure`.
  *
  * @param onFailure - Callback for handling failures.
@@ -302,7 +304,7 @@ export type Services<T> = Sink.Services<T>;
  * const sink = Sink.make(Effect.logError, (value: number) => Effect.log(value))
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Sink construction
  */
 export function make<A, E = never, R = never, R2 = R>(
   onFailure: (cause: Cause.Cause<E>) => Effect<unknown, never, R>,
@@ -334,7 +336,7 @@ export declare namespace Sink {
    * const stop = (sink: Sink.Sink.WithEarlyExit<unknown, never, never>) => sink.earlyExit
    * ```
    * @since 1.0.0
-   * @category models
+   * @category Stopping delivery
    */
   export interface WithEarlyExit<A, E, R> extends Sink<A, E, R> {
     /**
@@ -372,7 +374,7 @@ export declare namespace Sink {
    *   Ref.update(sink.state, (n) => n + 1)
    * ```
    * @since 1.0.0
-   * @category models
+   * @category Stateful delivery
    */
   export interface WithState<A, E, R, B> extends WithEarlyExit<A, E, R> {
     /**
@@ -411,7 +413,7 @@ export declare namespace Sink {
    *   sink.updateEffect((n) => Effect.succeed(n + 1))
    * ```
    * @since 1.0.0
-   * @category models
+   * @category Stateful delivery
    */
   export interface WithStateSemaphore<A, E, R, B> extends WithEarlyExit<A, E, R> {
     /**
@@ -491,7 +493,7 @@ export declare namespace Sink {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Sink services
  */
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): Sink.Class<Self, Id, A, E> => {

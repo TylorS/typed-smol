@@ -53,7 +53,7 @@ import type { Fx } from "../Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const race: {
   <AR, ER, RR>(that: Fx<AR, ER, RR>): <AL, EL, RL>(self: Fx<AL, EL, RL>) => Fx<AL | AR, EL | ER, RL | RR>;
@@ -106,7 +106,7 @@ export const race: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const raceAll = <FX extends ReadonlyArray<Fx<any, any, any>>>(
   ...fxs: FX

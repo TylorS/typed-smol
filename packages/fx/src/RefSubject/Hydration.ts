@@ -33,7 +33,7 @@ import {
  * services and Scope requirements.
  *
  * @since 2.0.0
- * @category combinators
+ * @category Hydration protocol
  */
 export const HydrationRefTypeId = Symbol.for("@typed/fx/RefSubjectRef");
 /**
@@ -51,7 +51,7 @@ export const HydrationRefTypeId = Symbol.for("@typed/fx/RefSubjectRef");
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 2.0.0
- * @category type-level
+ * @category Hydration types
  */
 export type HydrationRefTypeId = typeof HydrationRefTypeId;
 
@@ -70,7 +70,7 @@ export type HydrationRefTypeId = typeof HydrationRefTypeId;
  * services and Scope requirements.
  *
  * @since 2.0.0
- * @category combinators
+ * @category Hydration protocol
  */
 export const HYDRATION_ATTRIBUTE = "data-typed-refsubject";
 
@@ -92,7 +92,7 @@ const allUnbounded = <A, E, R>(effects: Iterable<Effect.Effect<A, E, R>>) =>
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 2.0.0
- * @category models
+ * @category Hydration protocol
  */
 export interface HydrationAttribute {
   /**
@@ -109,7 +109,7 @@ export interface HydrationAttribute {
    * services and Scope requirements.
    *
    * @since 2.0.0
-   * @category combinators
+   * @category Hydration protocol
    */
   readonly name: string;
   /**
@@ -127,7 +127,7 @@ export interface HydrationAttribute {
    * services and Scope requirements.
    *
    * @since 2.0.0
-   * @category combinators
+   * @category Hydration protocol
    */
   readonly value: string;
 }
@@ -147,7 +147,7 @@ export interface HydrationAttribute {
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 2.0.0
- * @category models
+ * @category Hydration protocol
  */
 export interface HydrationElement {
   /**
@@ -164,7 +164,7 @@ export interface HydrationElement {
    * services and Scope requirements.
    *
    * @since 2.0.0
-   * @category combinators
+   * @category DOM attribute protocol
    */
   getAttribute(name: string): string | null;
   /**
@@ -181,7 +181,7 @@ export interface HydrationElement {
    * services and Scope requirements.
    *
    * @since 2.0.0
-   * @category combinators
+   * @category DOM attribute protocol
    */
   setAttribute(name: string, value: string): void;
   /**
@@ -198,7 +198,7 @@ export interface HydrationElement {
    * services and Scope requirements.
    *
    * @since 2.0.0
-   * @category combinators
+   * @category DOM attribute protocol
    */
   removeAttribute(name: string): void;
 }
@@ -228,7 +228,7 @@ interface HydrationMember {
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 2.0.0
- * @category models
+ * @category Hydration protocol
  */
 export interface HydrationRef<E = never, R = never> {
   /**
@@ -247,7 +247,7 @@ export interface HydrationRef<E = never, R = never> {
    * member metadata rather than becoming DOM exceptions.
    *
    * @since 2.0.0
-   * @category type-level
+   * @category Hydration types
    */
   (element: HydrationElement): Effect.Effect<void, never, R | Scope.Scope>;
   /**
@@ -265,7 +265,7 @@ export interface HydrationRef<E = never, R = never> {
    * finalized by the required Scope.
    *
    * @since 2.0.0
-   * @category combinators
+   * @category Hydration protocol
    */
   readonly [HydrationRefTypeId]: {
     readonly members: ReadonlyArray<HydrationMember>;
@@ -289,7 +289,7 @@ export interface HydrationRef<E = never, R = never> {
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 2.0.0
- * @category models
+ * @category Hydration protocol
  */
 export interface HydratedRefSubject<A, E = never, R = never, RH = R>
   extends RefSubject<A, E, R>, HydrationRef<E, RH> {}
@@ -309,7 +309,7 @@ export interface HydratedRefSubject<A, E = never, R = never, RH = R>
  * finalized by the required Scope.
  *
  * @since 2.0.0
- * @category combinators
+ * @category Hydration protocol
  */
 export declare namespace HydratedRefSubject {
   /**
@@ -326,7 +326,7 @@ export declare namespace HydratedRefSubject {
    * interruption, and Scope requirements expressed by its members.
    *
    * @since 2.0.0
-   * @category type-level
+   * @category Hydration types
    */
   export type Any = HydratedRefSubject<any, any, any, any>;
   /**
@@ -343,7 +343,7 @@ export declare namespace HydratedRefSubject {
    * services, interruption, and Scope requirements expressed by its members.
    *
    * @since 2.0.0
-   * @category type-level
+   * @category Hydration types
    */
   export type HydrationError<T> = T extends HydrationRef<infer E, any> ? E : never;
   /**
@@ -360,7 +360,7 @@ export declare namespace HydratedRefSubject {
    * errors, services, interruption, and Scope requirements expressed by its members.
    *
    * @since 2.0.0
-   * @category type-level
+   * @category Hydration types
    */
   export type HydrationServices<T> = T extends HydrationRef<any, infer R> ? R : never;
 }
@@ -380,7 +380,7 @@ export declare namespace HydratedRefSubject {
  * services and Scope requirements.
  *
  * @since 2.0.0
- * @category guards
+ * @category Type guards
  */
 export function isHydrationRef(value: unknown): value is HydrationRef<any, any> {
   return (
@@ -406,7 +406,7 @@ export function isHydrationRef(value: unknown): value is HydrationRef<any, any> 
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 2.0.0
- * @category models
+ * @category Hydration protocol
  */
 export interface HydrateOptions<A> extends RefSubjectOptions<A> {
   /**
@@ -423,7 +423,7 @@ export interface HydrateOptions<A> extends RefSubjectOptions<A> {
    * services and Scope requirements.
    *
    * @since 2.0.0
-   * @category combinators
+   * @category Hydration protocol
    */
   readonly name?: string;
 }
@@ -481,7 +481,7 @@ type HydrateEffect<S extends Schema.Top, E, R> = Effect.Effect<
  * ```
  *
  * @since 2.0.0
- * @category constructors
+ * @category Hydration construction
  */
 export function hydrate<S extends Schema.Codec<any, string, any, any>, E = never, R = never>(
   schema: S,
@@ -503,7 +503,7 @@ export function hydrate<S extends Schema.Codec<any, string, any, any>, E = never
  * server/client coordination. Schema errors and codec services remain typed.
  *
  * @since 2.0.0
- * @category constructors
+ * @category Hydration construction
  */
 export function hydrate<S extends Schema.Top, E = never, R = never>(
   schema: S,
@@ -525,7 +525,7 @@ export function hydrate<S extends Schema.Top, E = never, R = never>(
  * server/client coordination. Schema errors and codec services remain typed.
  *
  * @since 2.0.0
- * @category constructors
+ * @category Hydration construction
  */
 export function hydrate<S extends Schema.Top, E = never, R = never>(
   schema: S,
@@ -694,7 +694,7 @@ function normalizeHydrationInitializer<A, E, R>(
  * ```
  *
  * @since 2.0.0
- * @category combinators
+ * @category Hydration construction
  */
 export function hydrateAll<
   const Refs extends readonly [HydratedRefSubject.Any, ...HydratedRefSubject.Any[]],

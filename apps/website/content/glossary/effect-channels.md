@@ -7,6 +7,10 @@ related: [effect, service, scope]
 links: [https://www.effect.website/docs/v4/getting-started/the-effect-type/]
 ---
 
-In `Effect<A, E, R>` and `Fx<A, E, R>`, `A` is the success value, `E` is an expected error a caller
-can handle, and `R` names the [services](#service) needed to run the work. A channel is a contract in
-the type; it does not itself acquire a resource. [Scope](#scope) controls acquired-resource lifetime.
+In `Effect<A, E, R>` and `Fx<A, E, R>`, `A` is the value, `E` is an expected failure, and `R` names
+required services. An invoice lookup might produce invoice data, fail with a repository error, and
+require an invoice repository service.
+
+A wrapper should preserve that information. Declaring `never` for errors or requirements makes a
+stronger promise than the implementation supports. Channels describe contracts; [Scope](#scope)
+controls resource lifetime. See [library development](/explore/library-developers).

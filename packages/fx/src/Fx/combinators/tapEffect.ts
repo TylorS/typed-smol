@@ -26,7 +26,7 @@ import type { Fx } from "../Fx.js";
  * @param f - An effectful function to apply to each element.
  * @returns An `Fx` that emits the original elements.
  * @since 1.0.0
- * @category combinators
+ * @category Transforming values
  */
 export const tap: {
   <A, E2 = never, R2 = never>(

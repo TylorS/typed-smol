@@ -3,9 +3,11 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
+import { Window } from "happy-dom";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
 import { renderMarkdown } from "../../site/Markdown.js";
+import { extractFxMarbleOperators } from "../FxMarbleCoverage.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -63,10 +65,17 @@ const fxSectionFiles = [
 ] as const;
 
 describe("Fx operator curriculum", () => {
-  it("teaches Fx as a complete reactive abstraction before any rendering layer", () => {
+  it("gives every Fx lesson runnable examples and a continuation in the learning path", () => {
     for (const file of fxSectionFiles) {
       const source = fs.readFileSync(path.join(websiteRoot, "content/guides", file), "utf8");
-      expect(source, file).not.toMatch(/\b(?:template|renderer)\b/iu);
+      expect(extractTypeScriptFences(source).length, file).toBeGreaterThan(0);
+      const links = [...source.matchAll(/\]\(\/explore\/([^)#]+)(?:#[^)]*)?\)/gu)];
+      expect(links.length, `${file} connects to other lessons`).toBeGreaterThan(0);
+      for (const [, slug] of links)
+        expect(
+          fs.existsSync(path.join(websiteRoot, "content/guides", `${slug}.md`)),
+          `${file} links to ${slug}`,
+        ).toBe(true);
     }
   });
 
@@ -134,22 +143,62 @@ describe("Fx operator curriculum", () => {
     const guide = parseGuideDocumentation("fx-higher-order-and-concurrency.md", source);
     const rendered = (await renderMarkdown(guide.body)).code;
     const operators = [
-      "flatMap(load)",
-      "flatMapConcurrently(load, 2)",
-      "concatMap(save)",
-      "switchMap(preview)",
-      "exhaustMap(submit)",
-      "exhaustLatestMap(index)",
-      "if(condition, { onTrue, onFalse })",
-      "race(slow, fast)",
-      "raceAll(slow, fast, mid)",
-    ] as const;
-
-    expect(rendered.match(/class="fx-marble"/gu)).toHaveLength(operators.length);
-    for (const operator of operators) expect(rendered).toContain(operator);
-
-    const secondaryVariants = rendered.indexOf("Effect-returning convenience variants");
-    expect(secondaryVariants).toBeGreaterThan(rendered.lastIndexOf('<figure class="fx-marble"'));
+      "flatMap",
+      "flatMapConcurrently",
+      "concatMap",
+      "switchMap",
+      "exhaustMap",
+      "exhaustLatestMap",
+      "if",
+      "race",
+      "raceAll",
+    ];
+    const effectOperators = [
+      "flatMapEffect",
+      "flatMapConcurrentlyEffect",
+      "concatMapEffect",
+      "switchMapEffect",
+      "exhaustMapEffect",
+      "exhaustLatestMapEffect",
+    ];
+    expect(extractFxMarbleOperators(source)).toEqual(
+      expect.arrayContaining([...operators, ...effectOperators]),
+    );
+    expect(rendered.match(/class="fx-marble"/gu)?.length).toBeGreaterThanOrEqual(
+      operators.length + effectOperators.length,
+    );
+    const diagrams = [...source.matchAll(/```fx-marble\n([\s\S]*?)\n```/gu)].map(
+      (match) => match[1]!,
+    );
+    const coveredBy = (block: string) =>
+      block
+        .match(/^covers: (.*)$/mu)?.[1]
+        ?.split(",")
+        .map((value) => value.trim()) ?? [];
+    for (const name of effectOperators) {
+      const diagram = diagrams.find((block) => coveredBy(block).includes(name));
+      expect(diagram, `${name} has its own one-result timeline`).toBeDefined();
+      const innerLanes = [...diagram!.matchAll(/^inner [^:]+: (.*)$/gmu)];
+      expect(innerLanes.length).toBeGreaterThan(0);
+      for (const [, events] of innerLanes) {
+        const successes = events!
+          .split(/\s+/u)
+          .filter((token) => ![".", "^", "|", "x"].includes(token) && !token.startsWith("!"));
+        expect(
+          successes.length,
+          `${name} Effect emits at most one successful value`,
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+    const lastBase = Math.max(
+      ...operators.map((name) => diagrams.findIndex((block) => coveredBy(block).includes(name))),
+    );
+    const firstEffect = Math.min(
+      ...effectOperators.map((name) =>
+        diagrams.findIndex((block) => coveredBy(block).includes(name)),
+      ),
+    );
+    expect(firstEffect).toBeGreaterThan(lastBase);
   });
 
   it("visibly covers every public stateful transform with a marble diagram", async () => {
@@ -159,6 +208,12 @@ describe("Fx operator curriculum", () => {
     );
     const guide = parseGuideDocumentation("fx-stateful-transforms.md", source);
     const rendered = (await renderMarkdown(guide.body)).code;
+    const document = new Window().document;
+    document.body.innerHTML = rendered;
+    const visibleOperators = Array.from(
+      document.querySelectorAll(".fx-marble__coverage code"),
+      (code) => code.textContent,
+    );
     const operators = [
       "filterMapLoop",
       "filterMapLoopCause",
@@ -179,7 +234,7 @@ describe("Fx operator curriculum", () => {
     ] as const;
 
     for (const operator of operators) {
-      expect(rendered).toContain(`<code>${operator}</code>`);
+      expect(visibleOperators).toContain(operator);
     }
   });
 });

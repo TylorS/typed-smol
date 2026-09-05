@@ -80,7 +80,7 @@ const toHtmlString = (event: RenderEvent | null | undefined): Option<string> => 
  * @param renderable - The RenderEvents to render.
  * @returns An `Fx` stream of HTML strings.
  * @since 1.0.0
- * @category rendering
+ * @category Streaming HTML
  */
 export function renderToHtml<const T extends Renderable.Any>(
   renderable: T,
@@ -138,7 +138,7 @@ export function renderToHtml<const T extends Renderable.Any>(
  * @param renderable - The RenderEvents to render.
  * @returns An `Effect` that resolves to the full HTML string.
  * @since 1.0.0
- * @category rendering
+ * @category Buffered HTML
  */
 export function renderToHtmlString<const T extends Renderable.Any>(
   renderable: T,
@@ -175,7 +175,7 @@ export function renderToHtmlString<const T extends Renderable.Any>(
  * ```
  *
  * @since 1.0.0
- * @category services
+ * @category HTML rendering policy
  */
 export const StaticRendering = Context.Reference<boolean>("@typed/template/Html/StaticRendering", {
   defaultValue: () => false,
@@ -228,7 +228,7 @@ type HtmlEntry = ReadonlyArray<HtmlChunk>;
  * ```
  *
  * @since 1.0.0
- * @category layers
+ * @category Hydratable HTML rendering
  */
 export const HtmlRenderTemplate = Layer.effect(
   RenderTemplate,
@@ -295,7 +295,7 @@ export const HtmlRenderTemplate = Layer.effect(
  * ```
  *
  * @since 1.0.0
- * @category layers
+ * @category Static HTML rendering
  */
 export const StaticHtmlRenderTemplate = HtmlRenderTemplate.pipe(
   Layer.provideMerge(Layer.succeed(StaticRendering, true)),

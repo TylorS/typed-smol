@@ -15,21 +15,16 @@ describe("Template element bindings guide", () => {
     const guide = parseGuideDocumentation(fileName, source);
 
     expect(guide).toMatchObject({
-      section: "Templates",
+      section: "Template bindings",
       kind: "deep-dive",
-      order: 3.15,
     });
-    expect(guide.headings).toEqual(
-      expect.arrayContaining([
-        "Attributes serialize values",
-        "Properties write live element state",
-        "Boolean attributes use presence",
-      ]),
-    );
-    expect(source).toContain("?disabled=${disabled}");
-    expect(source).toMatch(/null.*undefined.*remove the attribute/su);
-    expect(source).toContain("O(1) with respect to the surrounding tree");
-    expect(extractTypeScriptFences(guide.body)).toHaveLength(3);
+    const examples = extractTypeScriptFences(guide.body).join("\n");
+    for (const syntax of ["title=${description}", ".value=${query}", "oninput=${readQuery}", "?disabled=${readOnly}"]) {
+      expect(examples).toContain(syntax);
+    }
+    expect(guide.body).toContain("/explore/dom-parts-and-attributes");
+    expect(guide.body).toContain("/explore/template-spreads-data");
+    expect(extractTypeScriptFences(guide.body)).not.toHaveLength(0);
     expect(validateAuthoredExampleQuality([guide])).toEqual([]);
   });
 });

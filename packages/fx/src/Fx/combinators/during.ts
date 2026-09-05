@@ -43,7 +43,7 @@ type Phase = "waiting" | "active" | "stopped";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export function during<A, E, R, Start extends Fx.Any, E2, R2>(
   events: Fx<A, E, R>,

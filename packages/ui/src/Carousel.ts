@@ -8,6 +8,8 @@
  * the state and pure operations without mounting UI, or supply custom hosts without replacing native
  * events and browser-owned focus.
  *
+ * Learn the interaction in the [Carousel guide](/explore/ui-carousel).
+ *
  * @since 1.0.0
  * @category modules
  * @packageDocumentation
@@ -24,38 +26,23 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /**
- * Complete renderer-independent state for Carousel.
+ * The visible slide identity and explicit paused flag.
+ * Changing `paused` does not start a timer; an application scheduler must honor the flag.
  *
- * @remarks
- * ## Why
- *
- * Applications can inspect, update, and test Carousel behavior without mounting or coupling the
- * state to a renderer.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { State } from "@typed/ui/Carousel";` Extend the [Carousel.makeState
- * runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Inside the linked program,
- * `const snapshot: State = yield* state` exposes `activeId` and `paused` as a renderer-independent
- * value.
  * @since 1.0.0
- * @category models
+ * @category Slide and rotation state
  */
 export interface State {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly activeId: string;
   /**
    * Whether automatic carousel rotation is suspended.
    * @since 1.0.0
-   * @category models
+   * @category Rotation policy
    */
   readonly paused: boolean;
 }
@@ -63,36 +50,20 @@ export interface State {
 /**
  * Initial Carousel values. activeId is required and paused defaults to true.
  *
- * @remarks
- * ## Why
- *
- * Making initialization explicit documents hydration-sensitive defaults and lets servers and
- * clients construct matching state.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InitialState } from "@typed/ui/Carousel";` Extend the
- * [Carousel.makeState runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Construct
- * state with
- * `const initial: InitialState = { activeId: "slide-1", paused: true }; const state = yield* Carousel.makeState(initial)`.
  * @since 1.0.0
- * @category models
+ * @category Slide and rotation state
  */
 export interface InitialState {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly activeId: string;
   /**
    * Whether automatic carousel rotation is suspended.
    * @since 1.0.0
-   * @category models
+   * @category Rotation policy
    */
   readonly paused?: boolean;
 }
@@ -101,15 +72,6 @@ export interface InitialState {
  * Effect Schema used by makeState to encode, decode, and hydrate Carousel state.
  *
  * @remarks
- * ## Why
- *
- * A public schema makes hydration and serialized state use the same runtime validation as direct
- * construction.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
  * @example
  * ```ts
  * import * as Schema from "effect/Schema";
@@ -118,7 +80,7 @@ export interface InitialState {
  * const decodeState = Schema.decodeUnknownEffect(Carousel.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Slide and rotation state
  */
 export const StateSchema = Schema.Struct({ activeId: Schema.String, paused: Schema.Boolean });
 
@@ -126,12 +88,6 @@ export const StateSchema = Schema.Struct({ activeId: Schema.String, paused: Sche
  * Creates hydrated Carousel state. activeId is required and paused defaults to true.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect creates the RefSubject when run. That state is renderer-independent;
  * collection registrations belong to the separate Scope that runs register or ref, not to state
  * creation.
@@ -150,7 +106,7 @@ export const StateSchema = Schema.Struct({ activeId: Schema.String, paused: Sche
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Slide and rotation state
  */
 export function makeState(initial: InitialState) {
   return RefSubject.hydrate(StateSchema, {
@@ -163,12 +119,6 @@ export function makeState(initial: InitialState) {
  * Creates a scoped Collection for Carousel items.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
  * owned by the Scope that runs register, independently of this construction Effect.
  *
@@ -185,7 +135,7 @@ export function makeState(initial: InitialState) {
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Slide registration
  */
 export const makeCollection = Collection.makeState<string>;
 
@@ -193,24 +143,11 @@ export const makeCollection = Collection.makeState<string>;
  * Sets activeId without changing paused state.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes Carousel's transition directly so callers can compose it in Effect
  * programs and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { select } from "@typed/ui/Carousel";` Extend the [Carousel.makeState
- * runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Inside the linked Effect
- * program invoke `yield* select(state, "slide-2")`, then read state to observe `activeId` become
- * `"slide-2"` without changing `paused`.
  * @since 1.0.0
- * @category combinators
+ * @category Slide navigation
  */
 export function select<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -224,24 +161,11 @@ export function select<E, R>(
  * for an empty collection.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes Carousel's transition directly so callers can compose it in Effect
  * programs and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { move } from "@typed/ui/Carousel";` Extend the [Carousel.makeState runnable
- * setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Inside the linked Effect program invoke
- * `yield* move(state, collection, "next")`, then read the state snapshot to observe the transition
- * described above.
  * @since 1.0.0
- * @category combinators
+ * @category Slide navigation
  */
 export function move<E, R, E2, R2>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -262,24 +186,11 @@ export function move<E, R, E2, R2>(
  * Flips paused and preserves activeId.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes Carousel's transition directly so callers can compose it in Effect
  * programs and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { toggleRotation } from "@typed/ui/Carousel";` Extend the [Carousel.makeState
- * runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Inside the linked Effect
- * program invoke `yield* toggleRotation(state)`, then read state to observe `paused` invert without
- * changing `activeId`.
  * @since 1.0.0
- * @category combinators
+ * @category Rotation policy
  */
 export function toggleRotation<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -290,41 +201,26 @@ export function toggleRotation<E, R>(
 /**
  * Inputs accepted by Carousel.Root in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { RootOptions } from "@typed/ui/Carousel";` Extend the
- * [Carousel.makeState runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). The root
- * input is concrete: `const options: RootOptions = { state, label: "Featured", content: "Slides" }`.
  * @since 1.0.0
- * @category models
+ * @category Carousel region
  */
 export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Accessible label rendered through aria-label.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly label: Renderable.Any<string | null | undefined>;
 }
@@ -371,25 +267,12 @@ type RootInternalProps<Options extends RootOptions> = ReturnType<
  * replacing its child nodes.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Root } from "@typed/ui/Carousel";` Extend the [Carousel.makeState runnable
- * setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Replace the linked program's final
- * snapshot read with `Root({ state, content: "Slides", label: "Featured" })`; render that Fx before
- * the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Carousel region
  */
 export function Root<const Options extends RootOptions, const Host extends HostResult = never>(
   options: Options,
@@ -417,54 +300,38 @@ export function Root<const Options extends RootOptions, const Host extends HostR
 /**
  * Inputs accepted by Carousel.Slide in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { SlideOptions } from "@typed/ui/Carousel";` Extend the
- * [Carousel.makeState runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Register a
- * slide when desired with
- * `const options: SlideOptions = { state, collection, id: "slide-1", label: "1 of 3", content: "First slide" }`.
  * @since 1.0.0
- * @category models
+ * @category Slide content
  */
 export interface SlideOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Accessible label rendered through aria-label.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly label: Renderable.Any<string | null | undefined>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -497,25 +364,12 @@ type SlideInternalProps<Options extends SlideOptions> = ReturnType<
  * activeId.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Slide } from "@typed/ui/Carousel";` Extend the [Carousel.makeState runnable
- * setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Replace the linked program's final
- * snapshot read with `Slide({ state, id: "slide-1", label: "1 of 3", content: "First slide" })`;
- * render that Fx before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Slide content
  */
 export function Slide<const Options extends SlideOptions, const Host extends HostResult = never>(
   options: Options,
@@ -543,42 +397,26 @@ export function Slide<const Options extends SlideOptions, const Host extends Hos
 /**
  * Inputs accepted by Carousel.Control in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { ControlOptions } from "@typed/ui/Carousel";` Extend the
- * [Carousel.makeState runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). A
- * collection is optional for controls:
- * `const options: ControlOptions = { state, collection, content: "Next" }`.
  * @since 1.0.0
- * @category models
+ * @category Slide controls
  */
 export interface ControlOptions extends Dom.HostOptions<HTMLButtonElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -621,25 +459,12 @@ function control<const Options extends ControlOptions, const Host extends HostRe
  * Renders a button whose native click selects the previous registered slide with wrapping enabled.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Previous } from "@typed/ui/Carousel";` Extend the [Carousel.makeState
- * runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Replace the linked program's
- * final snapshot read with `Previous({ state, content: "Previous" })`; render that Fx before the
- * same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Slide controls
  */
 export function Previous<
   const Options extends ControlOptions,
@@ -665,25 +490,12 @@ export function Previous<
  * Renders a button whose native click selects the next registered slide with wrapping enabled.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Next } from "@typed/ui/Carousel";` Extend the [Carousel.makeState runnable
- * setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Replace the linked program's final
- * snapshot read with `Next({ state, content: "Next" })`; render that Fx before the same Scope
- * closes.
  * @since 1.0.0
- * @category components
+ * @category Slide controls
  */
 export function Next<const Options extends ControlOptions, const Host extends HostResult = never>(
   options: Options,
@@ -706,25 +518,12 @@ export function Next<const Options extends ControlOptions, const Host extends Ho
  * Renders a button whose native click toggles the explicit paused state.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { RotationControl } from "@typed/ui/Carousel";` Extend the
- * [Carousel.makeState runnable setup](/reference/%40typed%2Fui%2FCarousel%23makeState). Replace the
- * linked program's final snapshot read with `RotationControl({ state, content: "Pause rotation"
- * })`; render that Fx before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Rotation policy
  */
 export function RotationControl<
   const Options extends Omit<ControlOptions, "collection">,

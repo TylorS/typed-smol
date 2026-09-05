@@ -27,7 +27,7 @@ import { Result } from "effect";
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefTrie<in out V, in out E = never, out R = never> extends RefSubject.RefSubject<
   Trie.Trie<V>,
@@ -49,7 +49,7 @@ export interface RefTrie<in out V, in out E = never, out R = never> extends RefS
  * and cleanup; source failures and services stay on reads and pushes.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<V, E = never, R = never>(
   initial: Trie.Trie<V> | Effect.Effect<Trie.Trie<V>, E, R> | Fx.Fx<Trie.Trie<V>, E, R>,
@@ -75,7 +75,7 @@ export function make<V, E = never, R = never>(
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const insert: {
   <V>(key: string, value: V): <E, R>(ref: RefTrie<V, E, R>) => Effect.Effect<Trie.Trie<V>, E, R>;
@@ -98,7 +98,7 @@ export const insert: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const insertMany: {
   <V>(
@@ -126,7 +126,7 @@ export const insertMany: {
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const remove: {
   (key: string): <V, E, R>(ref: RefTrie<V, E, R>) => Effect.Effect<Trie.Trie<V>, E, R>;
@@ -149,7 +149,7 @@ export const remove: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const removeMany: {
   (keys: Iterable<string>): <V, E, R>(ref: RefTrie<V, E, R>) => Effect.Effect<Trie.Trie<V>, E, R>;
@@ -172,7 +172,7 @@ export const removeMany: {
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const modify: {
   <V>(
@@ -198,7 +198,7 @@ export const modify: {
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const clear = <V, E, R>(ref: RefTrie<V, E, R>): Effect.Effect<Trie.Trie<V>, E, R> =>
   RefSubject.update(ref, () => Trie.empty());
@@ -217,7 +217,7 @@ export const clear = <V, E, R>(ref: RefTrie<V, E, R>): Effect.Effect<Trie.Trie<V
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const map: {
   <V>(
@@ -245,7 +245,7 @@ export const map: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filter: {
   <V>(
@@ -277,7 +277,7 @@ export const filter: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filterMap: {
   <V>(
@@ -321,7 +321,7 @@ export const filterMap: {
  * source errors, services, and lifetime.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const compact = <V, E, R>(ref: RefTrie<Option.Option<V>, E, R>) =>
   RefSubject.map(ref, Trie.compact);
@@ -340,7 +340,7 @@ export const compact = <V, E, R>(ref: RefTrie<Option.Option<V>, E, R>) =>
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, Trie.size);
@@ -359,7 +359,7 @@ export const size = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<number
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, Trie.isEmpty);
@@ -378,7 +378,7 @@ export const isEmpty = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<boo
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNonEmpty = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, (t) => !Trie.isEmpty(t));
@@ -397,7 +397,7 @@ export const isNonEmpty = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const has: {
   (key: string): <V, E, R>(ref: RefTrie<V, E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -420,7 +420,7 @@ export const has: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const keys = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<Array<string>, E, R> =>
   RefSubject.map(ref, (t) => Array.from(Trie.keys(t)));
@@ -439,7 +439,7 @@ export const keys = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<Array<
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const values = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<Array<V>, E, R> =>
   RefSubject.map(ref, (t) => Array.from(Trie.values(t)));
@@ -458,7 +458,7 @@ export const values = <V, E, R>(ref: RefTrie<V, E, R>): RefSubject.Computed<Arra
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const entries = <V, E, R>(
   ref: RefTrie<V, E, R>,
@@ -478,7 +478,7 @@ export const entries = <V, E, R>(
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const keysWithPrefix: {
   (prefix: string): <V, E, R>(ref: RefTrie<V, E, R>) => RefSubject.Computed<Array<string>, E, R>;
@@ -501,7 +501,7 @@ export const keysWithPrefix: {
  * once; Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const valuesWithPrefix: {
   (prefix: string): <V, E, R>(ref: RefTrie<V, E, R>) => RefSubject.Computed<Array<V>, E, R>;
@@ -524,7 +524,7 @@ export const valuesWithPrefix: {
  * once; Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const entriesWithPrefix: {
   (
@@ -549,7 +549,7 @@ export const entriesWithPrefix: {
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const longestPrefixOf: {
   (
@@ -574,7 +574,7 @@ export const longestPrefixOf: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapValues: {
   <V, B>(
@@ -602,7 +602,7 @@ export const mapValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduce: {
   <V, B>(
@@ -641,7 +641,7 @@ export const reduce: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const get: {
   (key: string): <V, E, R>(ref: RefTrie<V, E, R>) => RefSubject.Filtered<V, E, R>;

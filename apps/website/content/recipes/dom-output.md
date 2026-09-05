@@ -4,8 +4,9 @@ title: "Pass existing DOM into Typed"
 summary: "Keep the nodes your renderer created. Typed places them without taking over their descendants."
 ---
 
-Use `DomRenderEvent` when an adapter already has real DOM. It passes those exact objects into a Typed
-template. There is no virtual-node conversion and no wrapper element.
+Suppose a third-party editor already mounts into a `div`. Create that host once, acquire the editor instance in the component's Scope, and return `DomRenderEvent(host)`. Feed document changes through the editor's update API. Typed can now move the editor alongside a sidebar without translating its DOM into template instructions.
+
+The important design choice is whether a new document should reuse the editor or replace it. Reuse preserves selection, undo history, and plugin state; replacement is appropriate when that state belongs exclusively to the previous document. A new `DomRenderEvent` wrapper around the same host still represents the same node. Creating a new host for every change represents replacement.
 
 ## What `DomRenderEvent` carries
 
@@ -52,7 +53,7 @@ returns a `Wire`: a transparent range bounded by comments, not an element added 
 argument identifies that template range; use a stable ID or template hash, not a component label. If the
 range crosses SSR and hydration, the server and browser must use the same identity.
 
-## Who may change what
+## Give the editor one descendant range
 
 The adapter owns the node and its descendants. It may render, patch, or replace anything inside that host.
 Typed owns only the host's position inside the surrounding dynamic part.
@@ -82,7 +83,7 @@ browser-managed state that can be reset by a remove-and-insert move.
 
 This is local reconciliation. Typed does not walk the adapter's descendants or inspect a component tree.
 
-## Make the output live
+## Allocate the host when its view subscribes
 
 `DomRenderEvent` is the output value. Wrap it in the smallest producer that matches the renderer. For a host
 created once per subscription, that is `Fx.sync`:
@@ -97,6 +98,28 @@ const editor = Fx.sync(() => DomRenderEvent(document.createElement("div")));
 export const workspace = html`<main>${editor}</main>`;
 ```
 
+For a native text editor, the host can be the actual textarea rather than an extra wrapper. Allocate it lazily, seed its initial document, and let the browser own editing. This concrete value has selection and undo state that a serialization-only test cannot observe.
+
+```ts
+import * as Fx from "@typed/fx/Fx";
+import { html } from "@typed/template";
+import { DomRenderEvent } from "@typed/template/RenderEvent";
+
+const DraftEditor = (initial: string) => Fx.sync(() => {
+  const editor = document.createElement("textarea");
+  editor.value = initial;
+  editor.setAttribute("aria-label", "Document draft");
+  return DomRenderEvent(editor);
+});
+
+export const documentPanel = html`<section>
+  <h2>Release notes</h2>
+  ${DraftEditor("Describe the changes in this release.")}
+</section>`;
+```
+
+This native editor needs no external disposal method. A library editor hosted in a `div` usually does: acquire its instance in the component Scope and register its real shutdown operation. Its update API, not a fresh textarea or host allocation, should apply ordinary document edits.
+
 Use `Fx.callback` only when the renderer actually exposes a callback subscription. The React, Svelte, Vue,
 and Web Component recipes show their real mount and update APIs; this page does not invent a generic one.
 
@@ -108,6 +131,12 @@ renderer's real cleanup operation to the subscription Scope: `root.unmount()`, S
 
 That separation is deliberate. Typed knows where output is placed; the adapter knows what was acquired to
 produce it.
+
+## Prove the editor survives placement changes
+
+A serialization assertion cannot prove node identity. In a browser test, retain the actual host and input references, edit a selection, reorder the surrounding Typed list, and assert that the references still match. Test both native `moveBefore` and the fallback behavior when browser-managed state matters. Identity preservation alone does not promise equivalent focus behavior on every browser; the [DOM move contract](https://developer.mozilla.org/en-US/docs/Web/API/Element/moveBefore) documents the platform distinction.
+
+Next remove the adapter and verify its disposal callback, event listeners, and observers. If the host disappears but the editor continues processing, the bug is in the acquisition/finalization bridge. If the editor's children change unexpectedly, inspect whether a Typed template also targets that host. Start with [components](/explore/building-ui-components), then use a concrete [React](/integrate/react), [Svelte](/integrate/svelte), or [Vue](/integrate/vue) integration.
 
 ## Related APIs
 

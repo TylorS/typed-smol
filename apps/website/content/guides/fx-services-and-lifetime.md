@@ -6,16 +6,19 @@ kind: "guide"
 order: 1.9
 ---
 
-Imagine one market-price monitor that should run for the lifetime of a workflow. The price socket is
-a service because the process needs it; the audit sink is another service because observation needs
-it. Keep both requirements in the types until the owner chooses their live Layers. This assumes the
-source and its transformations are already chosen: [Building Fx values](/explore/building-fx),
-[Transforming Fx](/explore/transforming-fx), and [Composing Fx](/explore/composing-fx) cover those
-choices.
+A price monitor runs while a workspace is open. Its feed opens a connection; its observer writes to
+an audit destination. When the workspace closes, both pending work and the connection must stop.
+The service requirements and the resource lifetime answer different questions: what must be supplied,
+and how long the acquired resource remains usable.
 
-The marbles on this page are subscription diagrams, not value-transform diagrams. The value lane is
-usually unchanged; named service, resource, lifecycle, and trace lanes show the work that happens
-around it.
+Begin with [Building Fx](/explore/building-fx) and [Consuming Fx](/explore/consuming-fx). This lesson
+follows one monitor from acquisition through delivery and shutdown, then considers what changes
+when two consumers need the same feed.
+
+## Give the monitor an explicit acquisition and shutdown path
+
+The fake feed below uses Effect's clock to stand in for a live connection. The `MarketFeed` contract
+can supply a real callback-backed feed without changing who owns it:
 
 ```ts
 import { Context, Effect, Fiber, Layer } from "effect";
@@ -73,17 +76,16 @@ const monitorFiber = Effect.runFork(observeQuotes);
 const stopMarketMonitor = () => Effect.runPromise(Fiber.interrupt(monitorFiber));
 ```
 
-`Fx.provide` builds `MarketFeedLive` for this subscription; it does not erase failure or dependency
-information the Layer itself introduces. `Fx.genScoped` then gives `open`, `quotes`, and `close` one
-subscription Scope. When the host calls `stopMarketMonitor`, it interrupts the observer, which
-closes the Fx Scope and runs `socket.close`. The owner can instead await `observeQuotes` directly
-when completion or failure is part of the workflow's result.
+Running `observeQuotes` provides `MarketFeed`, opens its handle, and observes quotes. The downstream
+callback separately requires `PriceAudit`; its Layer supplies the destination. The service channels
+remain visible until those providers are installed. `stopMarketMonitor` interrupts the root Fiber,
+which closes the source scope and runs `socket.close`.
 
-## Own resourceful setup for one subscription
+A service instance is not necessarily its resource. One `MarketFeed` service can open multiple
+connections; providing it does not automatically share the Fx. Conversely, an already-open resource
+may have an application owner that outlives this particular monitor.
 
-`genScoped` runs its generator and returned Fx in one child Scope for each subscription. Resources
-acquired during setup remain alive while values flow, then release after completion, failure, or
-interruption; no caller Scope requirement escapes from that ownership boundary.
+## Keep setup and delivery inside the same resource scope
 
 ```fx-marble
 title: genScoped keeps a resource alive through its subscription and releases it afterward
@@ -95,13 +97,15 @@ inner selected Fx: . . ^ a b | .
 output values: . . . a b . |
 ```
 
-`genScoped` keeps the acquired resource open for exactly one subscription and removes `Scope` from
-the returned Fx's requirements.
+`genScoped` owns one child Scope per observation. The resource opens before the selected source
+begins and releases after it exits. The output completion waits for cleanup. Acquisition failure
+starts no selected producer; interruption of a silent source still releases its handle.
 
-## Provide services without changing values
+If setup ran in a scope that closed before returning the feed, the first quote would arrive through
+a closed connection. Enclose the returned Fx as well as acquisition. [Dynamic producers](/explore/fx-dynamic-producers)
+works through that placement using `Fx.fn`, `gen`, `unwrap`, and their scoped forms.
 
-`provide` builds a Layer for every subscription, makes its services available to the whole run, and
-closes that Layer Scope after the source exits. The source values remain the same.
+## Choose whether the provider builds or reuses the service
 
 ```fx-marble
 title: provide acquires a Layer before forwarding the source values and releases it afterward
@@ -112,8 +116,9 @@ inner service Layer: ^ build ready . . release |
 output values: . . . a b . |
 ```
 
-`provideContext` and `provideService` instead reuse instances their caller already owns. They make
-them available for each run but neither acquire nor finalize them.
+[`provide`](/reference/symbols/QHR5cGVkL2Z4L0Z4I3Byb3ZpZGU) builds the Layer for this subscription,
+then releases that Layer's Scope when the run ends. The Layer's own errors and dependencies remain
+part of the resulting type contract. Supplying a Layer is acquisition, not merely a cast removing `R`.
 
 ```fx-marble
 title: existing services stay available while provideContext and provideService forward values
@@ -124,9 +129,8 @@ inner existing service: ready ready ready ready
 output values: . a b |
 ```
 
-`provideServiceEffect` is the effectful convenience form. Its service Effect runs once when a
-subscription starts; a failed acquisition prevents the source from starting. If that Effect itself
-needs `Scope`, the returned Fx still requires a caller-owned Scope.
+`provideContext` and `provideService` reuse existing instances. The flat service lane means the
+caller already owns them; these operators neither acquire nor finalize those instances.
 
 ```fx-marble
 title: provideServiceEffect runs one service Effect before forwarding the source values
@@ -137,15 +141,26 @@ inner service effect: ^ acquire ready . . |
 output values: . . . a b |
 ```
 
-Prefer the existing-value forms when the application already owns the instance. Use the effectful
-form only when acquisition belongs to each subscription; a named Layer is clearer when that setup
-has more than one service or a reusable lifecycle.
+`provideServiceEffect` runs its service Effect once before starting the source. If that Effect needs
+Scope, the returned Fx retains the caller-owned Scope requirement. Prefer a named Layer when several
+services share acquisition or their lifecycle should be reused as one application capability.
 
-## Keep one lifetime per stable key
+## Trace a second observer before choosing sharing
 
-`keyed` gives each newly added key a `RefSubject` and child Scope. Updating or moving a stable key
-reuses that child; removing it closes only its child Scope. Its returned Fx retains the outer Scope
-requirement, because the parent owns the key workers and any remaining children.
+A chart and a status badge observing ordinary `quotes` each open a connection. Removing the chart
+releases only its connection; the badge keeps running. If both should use one connection, construct
+one `Subject.multicast(quotes)` wrapper and expose it to both. Two independently constructed wrappers
+still represent two sharing populations. The first subscriber starts the shared source, the last
+leaving interrupts it, and a later subscriber starts a fresh execution.
+
+Sharing decides the source population; Scope decides its owner. Do not fork an observer into a scope
+that immediately returns and assume the connection remains live. Keep the scope open for the actual
+feature lifetime, or use the existing application scope.
+
+## Keep independently keyed work alive across collection updates
+
+A watchlist adds and removes symbols while preserving existing rows. `keyed` gives each new key a
+RefSubject and child Scope:
 
 ```fx-marble
 title: keyed reuses b, closes removed a, and creates c under separate child scopes
@@ -158,12 +173,12 @@ inner key c scope: . . . ^ c |
 output ready rows: . . [a,b] . [b,c] |
 ```
 
-## Attach terminal lifecycle work
+`b` reuses its existing child when `[a,b]` becomes `[b,c]`; `a` closes; `c` starts. Stable identity
+preserves the child's work through moves and updates. The parent Scope owns remaining children, so
+that requirement remains on the returned Fx. A changing key restarts work even if the displayed row
+looks similar—identity is a lifecycle decision.
 
-`ensuring` runs its finalizer after every terminal outcome. `onExit` also runs after every terminal
-outcome, but receives the `Exit` so it can distinguish completion from failure or interruption. The
-diagram shows the successful case; the value lane is only delayed at terminal completion until the
-lifecycle Effect finishes.
+## Attach the exit work to the boundary it describes
 
 ```fx-marble
 title: ensuring and onExit forward values, then run terminal lifecycle work
@@ -174,9 +189,9 @@ inner lifecycle: . . . finalize |
 output values: . a b . |
 ```
 
-`onInterrupt` is narrower: ordinary completion and typed failure do not invoke it. When the source
-reports an interrupt or its observing Fiber is interrupted, cleanup runs before the cancellation is
-finished; make cleanup idempotent if both paths can occur.
+`ensuring` runs after every terminal outcome. `onExit` also sees the Exit so the callback can classify
+completion, failure, or interruption. The source values are unchanged; final completion waits for the
+lifecycle Effect. Use these for unconditional resource/reporting work at the source boundary.
 
 ```fx-marble
 title: onInterrupt forwards prior values and runs cancellation cleanup only for interruption
@@ -187,9 +202,8 @@ inner interruption lifecycle: . . . abort |
 output values: . a . . x
 ```
 
-`onError` is failure-only observation. It delivers the original failure downstream first, then runs
-cleanup only if that delivery succeeds; cleanup has no typed-error channel, but its defect or
-interruption can still affect the run.
+`onInterrupt` is cancellation-only. It can observe a reported interruption or interruption of the
+observing Fiber, so keep cleanup idempotent when both paths can reach the same action.
 
 ```fx-marble
 title: onError forwards the original failure before starting failure-only cleanup
@@ -200,11 +214,12 @@ inner error lifecycle: . . . . log |
 output values: . a . !offline . .
 ```
 
-## Trace the whole subscription
+`onError` forwards the original Cause first and runs its callback only if downstream failure delivery
+succeeds. If the Sink interrupts while receiving the Cause, that hook may not run. Its callback has
+no typed failure channel, but a callback defect can still affect the run. It is not a substitute for
+an unconditional finalizer or for supervising the owning Effect's final outcome.
 
-`withSpan` preserves values, errors, and requirements. It creates one span for the source run and a
-child delivery span for each downstream success or failure callback, so tracing includes the push
-boundary rather than only setup.
+## Observe setup, delivery, and background failure separately
 
 ```fx-marble
 title: withSpan adds trace lifetimes around an otherwise unchanged subscription
@@ -216,15 +231,17 @@ inner delivery spans: . success(a) success(b) |
 output values: . a b |
 ```
 
-## Put background infrastructure in an application Layer
+`withSpan` surrounds the subscription and creates child spans around downstream deliveries. A slow
+setup, slow observer, and slow finalizer are different delays; the diagram places each within its
+own lifetime instead of attributing all of them to the network.
 
-If the monitor is application infrastructure rather than one workflow, `Fx.observeLayer` gives it
-the application's Layer Scope. Recover or report source and observer failures before doing this:
-Layer acquisition does not await the background Fiber's exit. `Fx.drainLayer` is the equivalent
-when the Fx already performs the useful work and values need no observer. [Consuming Fx](/explore/consuming-fx)
-has the runner trade-offs.
+For application infrastructure, `Fx.observeLayer` and `Fx.drainLayer` attach background subscriptions to
+the Layer scope. Layer acquisition does not await the background Fiber's eventual exit. Decide how
+source and observer failures are recovered or reported before installing that infrastructure.
 
-Every independent subscription above opens its own socket. Share only when two consumers genuinely
-need the same live connection: public `Subject.multicast(quotes)` from `@typed/fx/Subject` shares
-one active execution, has no replay for late subscribers, and stops it when the final subscriber
-leaves. It adds a `Scope` requirement, so the shared connection still has an explicit owner.
+Verify the monitor with acquisition/release counts: two ordinary observers should acquire twice;
+two subscribers to one shared wrapper should acquire once while demand remains. Remove them one at
+a time, then reenter the feature and expect a fresh acquisition. Exercise normal completion, failure,
+and interruption while silent. Those checks verify the ownership promise that a value-only assertion
+cannot. Continue with [Subject sharing](/explore/subject-event-publications) or
+[Sink services](/explore/sink-writing-effects) for the public capability exposed to other features.

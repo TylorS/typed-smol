@@ -24,7 +24,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefBigDecimal<in out E = never, out R = never> extends RefSubject.RefSubject<
   BigDecimal.BigDecimal,
@@ -59,7 +59,7 @@ export interface RefBigDecimal<in out E = never, out R = never> extends RefSubje
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<E = never, R = never>(
   initial:
@@ -88,7 +88,7 @@ export function make<E = never, R = never>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const add: {
   (
@@ -116,7 +116,7 @@ export const add: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const subtract: {
   (
@@ -144,7 +144,7 @@ export const subtract: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const multiply: {
   (
@@ -172,7 +172,7 @@ export const multiply: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const divide: {
   (
@@ -202,7 +202,7 @@ export const divide: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const abs = <E, R>(
   ref: RefBigDecimal<E, R>,
@@ -222,7 +222,7 @@ export const abs = <E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const negate = <E, R>(
   ref: RefBigDecimal<E, R>,
@@ -242,7 +242,7 @@ export const negate = <E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const round: {
   (options?: {
@@ -274,7 +274,7 @@ export const round: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const truncate: {
   (
@@ -302,7 +302,7 @@ export const truncate: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const ceil: {
   (
@@ -330,7 +330,7 @@ export const ceil: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const floor: {
   (
@@ -358,7 +358,7 @@ export const floor: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isZero = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, BigDecimal.isZero);
@@ -377,7 +377,7 @@ export const isZero = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<bool
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNegative = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, BigDecimal.isNegative);
@@ -396,7 +396,7 @@ export const isNegative = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isPositive = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, BigDecimal.isPositive);
@@ -415,7 +415,7 @@ export const isPositive = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isInteger = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, BigDecimal.isInteger);
@@ -434,7 +434,7 @@ export const isInteger = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<b
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const sign = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, BigDecimal.sign);
@@ -453,7 +453,7 @@ export const sign = <E, R>(ref: RefBigDecimal<E, R>): RefSubject.Computed<number
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isLessThan: {
   (
@@ -478,7 +478,7 @@ export const isLessThan: {
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isGreaterThan: {
   (
@@ -503,7 +503,7 @@ export const isGreaterThan: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const equals: {
   (

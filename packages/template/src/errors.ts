@@ -15,7 +15,7 @@
  * ```
  *
  * @since 1.0.0
- * @category errors
+ * @category Hydration range failures
  */
 export class CouldNotFindCommentError extends Error {
   readonly partIndex: number;
@@ -42,7 +42,7 @@ export class CouldNotFindCommentError extends Error {
  * ```
  *
  * @since 1.0.0
- * @category errors
+ * @category Hydration host failures
  */
 export class CouldNotFindRootElement extends Error {
   readonly partIndex: number;
@@ -69,7 +69,7 @@ export class CouldNotFindRootElement extends Error {
  * ```
  *
  * @since 1.0.0
- * @category errors
+ * @category Keyed hydration failures
  */
 export class CouldNotFindManyCommentError extends Error {
   readonly manyIndex: string;
@@ -96,7 +96,7 @@ export class CouldNotFindManyCommentError extends Error {
  * ```
  *
  * @since 1.0.0
- * @category errors
+ * @category Template identity failures
  */
 export class CouldNotFindTemplateHashError extends Error {
   readonly hash: string;
@@ -123,7 +123,7 @@ export class CouldNotFindTemplateHashError extends Error {
  * ```
  *
  * @since 1.0.0
- * @category errors
+ * @category Hydration range failures
  */
 export class CouldNotFindTemplateEndError extends Error {
   readonly hash: string;
@@ -145,7 +145,7 @@ const constructors = [
  * A union type of all hydration-related errors.
  *
  * @since 1.0.0
- * @category errors
+ * @category Hydration failures
  */
 export type HydrationError = InstanceType<(typeof constructors)[number]>;
 
@@ -166,7 +166,7 @@ export type HydrationError = InstanceType<(typeof constructors)[number]>;
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Hydration failure recognition
  */
 export function isHydrationError(e: unknown): e is HydrationError {
   return constructors.some((c) => e instanceof c);

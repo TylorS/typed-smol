@@ -29,7 +29,7 @@ import type { Fx } from "../Fx.js";
  * @param f - A function that returns an `Option` for each element.
  * @returns An `Fx` that emits values for which `f` returns `Some`.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const filterMap: {
   <A, B>(f: (a: A) => Option.Option<B>): <E, R>(self: Fx<A, E, R>) => Fx<B, E, R>;

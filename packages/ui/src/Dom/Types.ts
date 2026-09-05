@@ -18,7 +18,7 @@ import type { EventHandler, Renderable, RenderEvent, RenderTemplate } from "@typ
  * alias itself acquires nothing.
  *
  * @since 1.0.0
- * @category models
+ * @category Host input types
  */
 export type RenderableInput<A = any> = Renderable.Any<A>;
 
@@ -34,7 +34,7 @@ export type RenderableInput<A = any> = Renderable.Any<A>;
  * The Effect stays lazy and is owned by the Scope that renders the host.
  *
  * @since 1.0.0
- * @category models
+ * @category Host input types
  */
 export type EffectInput<A = any> =
   | Effect.Effect<A, any, any>
@@ -53,7 +53,7 @@ export type EffectInput<A = any> =
  * Supplying an Fx starts no work. Its rendering Scope owns subscription and interruption.
  *
  * @since 1.0.0
- * @category models
+ * @category Host input types
  */
 export type FxInput<A = any> =
   | Fx<A, any, any>
@@ -72,7 +72,7 @@ export type FxInput<A = any> =
  * `renderHost` lifts an Effect into Fx; the component Scope owns either form.
  *
  * @since 1.0.0
- * @category models
+ * @category Host rendering types
  */
 export type HostResult = FxInput<RenderEvent> | EffectInput<RenderEvent>;
 
@@ -88,7 +88,7 @@ export type HostResult = FxInput<RenderEvent> | EffectInput<RenderEvent>;
  * The key owns nothing; the rendered template installs and removes the real DOM listener.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Event input types
  */
 export type EventHandlerProperty = `on${string}` | `@${string}`;
 
@@ -104,7 +104,7 @@ export type EventHandlerProperty = `on${string}` | `@${string}`;
  * Type-only; listener lifetime remains owned by the rendered template Scope.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Event input types
  */
 export type EventOf<Handler> =
   NonNullable<Handler> extends (...args: infer Args) => any
@@ -125,7 +125,7 @@ export type EventOf<Handler> =
  * Handlers run as Effects and are detached with the rendering Scope.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Event input types
  */
 export type ElementEventHandlers<Element extends globalThis.Element> = {
   readonly [K in keyof Element as K extends `on${string}` ? K : never]?:
@@ -146,7 +146,7 @@ export type ElementEventHandlers<Element extends globalThis.Element> = {
  * The template Scope owns listener installation, abortion, and removal.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Event input types
  */
 export type TemplateEventHandlers = {
   readonly [K in `@${string}`]?: EffectInput | EventHandler.EventHandler<Event, any, any> | null;
@@ -165,7 +165,7 @@ export type TemplateEventHandlers = {
  * is interrupted when that Scope closes.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Element ref types
  */
 export type ElementRefCallback<Element extends globalThis.Element> = (
   element: Element,
@@ -190,7 +190,7 @@ export type ElementRefCallback<Element extends globalThis.Element> = (
  * share the rendering Scope and must not outlive the element.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Element ref types
  */
 export type ElementRef<Element extends globalThis.Element> = {
   /** The callback or sole hydration owner for the mounted element. */
@@ -208,7 +208,7 @@ export type ElementRef<Element extends globalThis.Element> = {
  * Type-only and resource-free.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Property type utilities
  */
 export type IfEquals<X, Y, Output> =
   (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? Output : never;
@@ -224,7 +224,7 @@ export type IfEquals<X, Y, Output> =
  * Type-only and resource-free.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Property type utilities
  */
 export type WritableKeys<T> = {
   [K in keyof T]-?: IfEquals<{ [P in K]: T[P] }, { -readonly [P in K]: T[P] }, K>;
@@ -243,7 +243,7 @@ export type WritableKeys<T> = {
  * element remains browser-owned DOM rather than a virtual-node copy.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Host input types
  */
 export type ElementProperties<Element extends globalThis.Element> = {
   readonly [
@@ -267,7 +267,7 @@ export type ElementProperties<Element extends globalThis.Element> = {
  * unrelated classes, attributes, children, and surrounding nodes.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Host input types
  */
 export type ElementOptions<Element extends globalThis.Element> = ElementEventHandlers<Element> &
   TemplateEventHandlers &
@@ -308,7 +308,7 @@ type CommandValue = RenderableInput<
  * The renderer removes only values installed through the corresponding part.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Host input types
  */
 export type TemplateAttributeProps = {
   readonly id?: StringAttributeValue;
@@ -354,7 +354,7 @@ type BoundElementProperty = "checked" | "indeterminate" | "selected" | "selected
  * the element or synthesize browser state.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Host input types
  */
 export type BoundElementProperties<Element extends globalThis.Element> = {
   readonly [K in Extract<keyof Element, BoundElementProperty> as `.${K}`]?: RenderableInput<
@@ -375,7 +375,7 @@ export type BoundElementProperties<Element extends globalThis.Element> = {
  * attributes, and external listeners remain untouched.
  *
  * @since 1.0.0
- * @category dom-types
+ * @category Host input types
  */
 export type HostProps<Element extends globalThis.Element> = Omit<
   ElementOptions<Element>,
@@ -397,7 +397,7 @@ export type HostProps<Element extends globalThis.Element> = Omit<
  * the returned Effect or Fx and any nodes represented by its render events.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Host rendering types
  */
 export type HostRenderer<
   Element extends globalThis.Element,
@@ -421,7 +421,7 @@ export type HostRenderer<
  * so event ordering, disabled behavior, refs, and accessibility remain intact.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Host rendering types
  */
 export type HostOverride<
   Props,
@@ -441,7 +441,7 @@ export type HostOverride<
  * remains outside the component's ownership.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Host input types
  */
 export interface HostOptions<Element extends globalThis.Element> extends ElementRef<Element> {
   /** User-owned DOM props merged with the component's required internal props. */
@@ -460,7 +460,7 @@ export interface HostOptions<Element extends globalThis.Element> extends Element
  * Type-only and resource-free.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Host input types
  */
 export type ElementByTagName = HTMLElementTagNameMap &
   Omit<SVGElementTagNameMap, keyof HTMLElementTagNameMap> &
@@ -477,7 +477,7 @@ export type ElementByTagName = HTMLElementTagNameMap &
  * Type-only; rendered options follow the selected host's Scope.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Host input types
  */
 export type OptionsByTagName = {
   readonly [Tag in keyof ElementByTagName]: ElementOptions<ElementByTagName[Tag]>;
@@ -494,7 +494,7 @@ export type OptionsByTagName = {
  * Type-only; rendering determines lifetime.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Host input types
  */
 export type OptionsForTag<Tag extends keyof ElementByTagName> = OptionsByTagName[Tag];
 
@@ -509,7 +509,7 @@ export type OptionsForTag<Tag extends keyof ElementByTagName> = OptionsByTagName
  * Type-only; rendered prop parts are Scope-owned.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Host input types
  */
 export type HostPropsByTagName = {
   readonly [Tag in keyof ElementByTagName]: HostProps<ElementByTagName[Tag]>;
@@ -526,7 +526,7 @@ export type HostPropsByTagName = {
  * Type-only; rendered prop parts are Scope-owned.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Host input types
  */
 export type HostPropsForTag<Tag extends keyof ElementByTagName> = HostPropsByTagName[Tag];
 
@@ -542,7 +542,7 @@ export type HostPropsForTag<Tag extends keyof ElementByTagName> = HostPropsByTag
  * The running rendering Scope owns returned work and its output range.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Host rendering types
  */
 export type HostRendererForTag<
   Tag extends keyof ElementByTagName,
@@ -564,7 +564,7 @@ export type HostRendererForTag<
  * Props become Scope-owned render parts when the host is mounted.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Host input types
  */
 export interface HostOptionsForTag<Tag extends keyof ElementByTagName> {
   /** User props for the selected native tag. */
@@ -584,7 +584,7 @@ export interface HostOptionsForTag<Tag extends keyof ElementByTagName> {
  * option may end the handler sooner.
  *
  * @since 1.0.0
- * @category events
+ * @category Event input types
  */
 export type EventHandlerInput<Ev extends Event = Event, E = any, R = any> =
   | Effect.Effect<unknown, E, R>
@@ -603,7 +603,7 @@ export type EventHandlerInput<Ev extends Event = Event, E = any, R = any> =
  * Type-only and resource-free.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Property type utilities
  */
 export type Nullish = null | undefined;
 
@@ -618,7 +618,7 @@ export type Nullish = null | undefined;
  * Type-only and resource-free.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Property type utilities
  */
 export type NonNullish<Value> = Exclude<Value, Nullish>;
 
@@ -633,7 +633,7 @@ export type NonNullish<Value> = Exclude<Value, Nullish>;
  * Type-only and resource-free.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Property type utilities
  */
 export type Property<Value, Key extends PropertyKey> = Value extends object
   ? Key extends keyof Value
@@ -653,7 +653,7 @@ export type Property<Value, Key extends PropertyKey> = Value extends object
  * Helpers retain only the options object during synchronous prop construction.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Internal prop defaults
  */
 export interface InternalPropsHelpers<Options> {
   /** Reads an option and substitutes `fallback` only for `null` or `undefined`. */
@@ -676,7 +676,7 @@ export interface InternalPropsHelpers<Options> {
  * cleanup. The host may modify only its represented DOM range.
  *
  * @since 1.0.0
- * @category models
+ * @category Host rendering types
  */
 export type HostComponent<Inputs> = Fx<
   RenderEvent,

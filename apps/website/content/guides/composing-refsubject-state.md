@@ -1,111 +1,141 @@
 ---
-title: "Composing RefSubject state"
-summary: "Combine writable state, read-only projections, conditional views, services, and external sources without copying values between stores."
+title: "Compose state around the invariant"
+summary: "Build a workspace review model whose writable state, derived selection, and public capabilities agree."
 section: "State"
 kind: "guide"
 order: 2.1
 ---
 
-`RefSubject` has three related state shapes:
+The [selection model](/explore/refsubject-renderer-independent-state) becomes more interesting when
+an application adds a workspace selector. Changing workspace must clear selected issues. A toolbar
+still needs only the selection count, while a bulk action needs the workspace and IDs together.
+How should those pieces be represented?
 
-| Shape | Current read | Pushed updates | Write access |
-| --- | --- | --- | --- |
-| `RefSubject<A, E, R>` | `Effect<A, E, R>` | `Fx<A, E, R>` | yes |
-| `Computed<A, E, R>` | `Effect<A, E, R>` | `Fx<A, E, R>` | no |
-| `Filtered<A, E, R>` | `Effect<A, E | NoSuchElementError, R>` | emits only present values | no |
+Start with the invariant: selected IDs belong to the current workspace. If the workspace and IDs
+are written independently, another consumer can observe the new workspace with the old selection.
+Combining refs later does not eliminate that intermediate state. Put values that must change
+together in one parent and derive smaller capabilities for consumers.
 
-The distinction prevents accidental ownership. A model exposes a writable `RefSubject`; consumers
-receive a `Computed` or `Filtered` whenever they do not own transitions.
-
-## Derive values without mirroring state
-
-`map` and `mapEffect` project one source. `filterMap` produces a `Filtered` view when a current value
-may be absent. `compact` does the same for an `Option`. None of them allocates a second mutable store:
-the derived value samples and observes the original source.
+## Commit related values as one model
 
 ```ts
-import { Effect, Option } from "effect";
-import { RefSubject } from "@typed/fx";
+import { Effect, Option } from "effect"
+import { RefSubject } from "@typed/fx"
 
-const program = Effect.gen(function* () {
-  const query = yield* RefSubject.make("");
-  const normalized = RefSubject.map(query, (value) => value.trim().toLowerCase());
-  const submitted = RefSubject.filterMap(normalized, (value) =>
-    value.length === 0 ? Option.none() : Option.some(value),
-  );
-
-  yield* RefSubject.set(query, "  Typed  ");
-  return yield* submitted;
-}).pipe(Effect.scoped);
+const makeReviewState = Effect.fn("makeReviewState")(function* () {
+  const state = yield* RefSubject.make({
+    workspaceId: "typed",
+    selectedIds: [] as ReadonlyArray<string>,
+    focusedId: Option.none<string>(),
+  })
+  const fields = RefSubject.proxy(state)
+  const count = RefSubject.map(fields.selectedIds, (ids) => ids.length)
+  const changeWorkspace = (workspaceId: string) => RefSubject.update(state, () => ({
+    workspaceId,
+    selectedIds: [] as ReadonlyArray<string>,
+    focusedId: Option.none<string>(),
+  }))
+  return { workspaceId: fields.workspaceId, selectedIds: fields.selectedIds, count, changeWorkspace }
+})
 ```
 
-The current read of `submitted` can fail while the query is empty because absence is meaningful.
-Its Fx side simply waits until a present value is committed. That is different from inventing an
-empty string, `undefined`, or another sentinel.
+One `update` expresses the workspace transition. `proxy` creates memoized field-view objects as
+properties are accessed; it does not split the parent into separately writable stores or cache old
+field values. The count remains derived from the same selection. `RefStruct` provides typed field
+writes when a caller owns that authority; `proxy` is useful when consumers should only read fields.
 
-## Combine refs and preserve the weakest capability
+Keeping a parent object does not mean every application value belongs there. Audio-player state and
+a temporary search input can have independent owners. Group by invariant and lifetime, not merely
+by which screen happens to render the values.
 
-`struct` and `tuple` combine current reads and pushed updates. Their result is writable only when
-every input is writable. Adding a `Computed` makes the combined value computed; adding a `Filtered`
-makes it filtered. Errors and services are unions of the inputs.
+## Combine independent capabilities for a consumer
+
+Suppose a search box and a display-density preference really are independent. A view can combine
+them without inventing another synchronization process.
 
 ```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
+import { Effect } from "effect"
+import { RefSubject } from "@typed/fx"
 
-const program = Effect.gen(function* () {
-  const first = yield* RefSubject.make("Ada");
-  const last = yield* RefSubject.make("Lovelace");
-  const full = RefSubject.map(RefSubject.tuple([first, last]), ([a, b]) => `${a} ${b}`);
-  const profile = RefSubject.struct({ first, last, full });
-
-  yield* RefSubject.set(first, "Augusta");
-  return yield* profile;
-}).pipe(Effect.scoped);
+const model = Effect.gen(function* () {
+  const query = yield* RefSubject.make("")
+  const density = yield* RefSubject.make("comfortable")
+  const normalized = RefSubject.map(query, (value) => value.trim().toLowerCase())
+  const presentation = RefSubject.struct({ query: normalized, density })
+  const rawInputs = RefSubject.tuple([query, density])
+  return { presentation, rawInputs, query, density }
+})
 ```
 
-`profile` is read-only because `full` is read-only. The writable inputs remain independently
-available to the model that owns them.
+`struct` preserves property names; `tuple` preserves positional types. They combine current reads
+and pushed values. Their writable capability depends on every input:
 
-## Project object fields lazily
+| Inputs | Combined result | Consequence |
+| --- | --- | --- |
+| All writable RefSubjects | RefSubject | Consumer can write the combined representation |
+| At least one Computed, no Filtered | Computed | Consumer can only read and observe |
+| At least one Filtered | Filtered | Current read may be absent; observations skip absent combinations |
 
-`proxy(source)` turns each accessed object or tuple property into a memoized `Computed` or
-`Filtered`. It caches projection objects, not values. Use it when several consumers need individual
-fields but the model should still commit one coherent object.
+`presentation` is read-only because its normalized query is read-only. `rawInputs` is writable
+because both inputs are writable. Input errors and services form unions; adding a service-backed
+input adds that requirement to the combined capability. A composition does not silently satisfy it.
 
-Use `RefStruct` or `RefTuple` instead when callers also need typed field/index transitions. Those
-specialized modules are covered in [Choosing specialized RefSubject modules](/explore/specialized-refsubject-state).
+Independent writers remain independent. Do not treat `struct` as a global transaction manager for
+a set of separately changing refs. The parent-object model above is clearer when a transition must
+preserve a cross-field invariant.
 
-## Adapt a source once
+## Choose whether a missing selection is observable
 
-`fromEffect`, `fromFx`, and `fromStream` create current state from Effect ecosystem producers.
-`fromOption` and `fromNullable` store optional values in writable state; apply `compact` when a
-consumer needs a `Filtered` view of present values.
-Creation requires `Scope`; that Scope owns the live source subscription and interruption.
+A focused row may not exist. Keeping Option in state preserves both focus and loss of focus. A
+Filtered view is useful for commands or consumers interested only in present IDs.
 
-Do not subscribe to a source and manually copy every value into another ref. Use the constructor
-whose source contract is already true. The source's errors remain visible on current reads and pushed updates. Source services are
-required and captured when constructing the ref; later reads do not require those services again.
-See [sources and lifetime](/explore/refsubject-sources-equality-and-lifetime) for initialization timing.
+```ts
+import { Effect, Option } from "effect"
+import { RefSubject } from "@typed/fx"
 
-## Put shared state in Context
+const focusModel = Effect.gen(function* () {
+  const focusedId = yield* RefSubject.fromOption(Option.none<string>())
+  const presentId = RefSubject.compact(focusedId)
+  const label = RefSubject.getOrElse(presentId, () => "No focused issue")
+  yield* RefSubject.set(focusedId, Option.some("42"))
+  return { focusedId, presentId, label }
+})
+```
 
-`RefSubject.Service` defines a service whose implementation is the ref itself. `Service.make(initial)`
-builds a Layer, while `computedFromService` and `filteredFromService` expose read-only service-backed
-views. Use that boundary for application state shared across routes, workers, commands, and UI.
+Reading `presentId` while absent fails with `NoSuchElementError`; observing it skips absence.
+That is useful when an operation requires an ID. A detail pane that must disappear on deselection
+should observe the Option-valued source or `presentId.asComputed()`. Otherwise it receives the last
+present ID and no later value telling it to clear. The [derived-state guide](/explore/derived-conditional-and-accumulated-state)
+explores this distinction and the error channels it creates.
 
-Keep local state local. A ref created inside an already-scoped operation does not become better by
-being put in global Context. The service boundary is useful when multiple independently constructed
-consumers need the same state and lifetime.
+## Avoid copying live values between stores
 
-## Choose the operation that states the transition
+A common workaround is to observe a parent, copy a field into a child ref, and observe the child to
+copy changes back. That creates two writable truths and an ordering problem. Use `map` for a
+read-only projection, `transform` for a truly reversible writable representation, or a named parent
+transition for edits. See [transactions and bidirectional views](/explore/state-transactions-and-bidirectional-views)
+for their different contracts.
 
-- `set` replaces the committed value.
-- `reset` returns to the initializer's current value.
-- `update` and `updateEffect` compute the next value atomically.
-- `modify` and `modifyEffect` commit state and return a separate result.
-- `runUpdates` runs a callback inside one serialized transaction.
+When the source is already an Effect, Stream, or Fx, `RefSubject.make` adapts it once in the owning
+Scope. `fromEffect`, `fromFx`, and `fromStream` are the explicit source forms; `fromOption` and
+`fromNullable` store Option values rather than creating a Filtered view. Captured source services
+belong to construction, while later projection services remain requirements of those projections.
+The [source guide](/explore/refsubject-sources-equality-and-lifetime) explains initialization timing.
 
-All writes are serialized. If a domain already has a named operation—`toggle`, `append`, `setSome`,
-`addEdge`—prefer the specialized module's operation because it communicates the invariant directly.
+## Expose the composition at the correct boundary
 
+Pass a borrowed Computed directly when a parent builds the consumer. Use
+[Context services](/explore/shared-state-contracts) when independent routes, commands, or libraries
+need to request the same model. A service declaration is a dependency key; the providing Layer
+chooses whether two consumers receive the same instance and how long it lives.
+
+Keep the model's commands named after the domain: `changeWorkspace`, `select`, and `clearSelection`.
+Their implementation can choose `set` for replacement, `update` for a next value, `modify` for a
+separate command result, or `runUpdates` for several steps inside one serialized ref. `reset` clears
+the current slot and returns its previous value as an Option; it does not promise to restart a
+completed live source. A resource refresh deserves an explicit request command.
+
+Test the invariant at the public command boundary: change workspace with a nonempty selection,
+read the combined model, and observe the published model. Then verify consumers cannot accidentally
+write read-only projections in type tests. More state objects are not automatically more modular;
+smaller capabilities over a coherent owner often give the better separation.

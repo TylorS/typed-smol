@@ -17,38 +17,17 @@ describe("Template spread and data guide", () => {
 
     expect(guide).toMatchObject({
       slug: "template-spreads-data",
-      section: "Templates",
+      section: "Template bindings",
       kind: "guide",
-      order: 3.25,
     });
-    expect(guide.headings).toEqual(
-      expect.arrayContaining([
-        "Start with the surface you mean",
-        "`.data` owns a dataset slice",
-        "Spread a record when the shape is dynamic",
-        "Ownership is local, including removal",
-        "Server rendering has a smaller surface",
-      ]),
-    );
-    for (const term of [
-      "value=${...}",
-      ".value=${...}",
-      "?disabled=${false}",
-      ".data",
-      "className",
-      "@click",
-      "onclick",
-      "ref",
-      ".properties",
-      "constructor",
-      "__proto__",
-      "Fx",
-    ]) {
+    for (const term of [".checked", ".indeterminate", ".selected", ".selectedIndex", ".data", "className", "@click", "onclick", "ref", ".properties", "constructor", "__proto__"]) {
       expect(source).toContain(term);
     }
+    expect(guide.body).toContain("/explore/template-element-bindings");
+    expect(guide.body).toContain("/explore/template-references-and-element-access");
 
     const examples = extractTypeScriptFences(source);
-    expect(examples).toHaveLength(3);
+    expect(examples).not.toHaveLength(0);
     expect(validateAuthoredExampleQuality([guide])).toEqual([]);
 
     const staging = fs.mkdtempSync(path.join(websiteRoot, ".template-spreads-data-check-"));

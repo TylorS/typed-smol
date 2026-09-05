@@ -37,7 +37,7 @@ import { extendScope } from "../internal/scope.js";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Operator options
  */
 export type ThrottleOptions = {
   readonly duration: Duration.Input;
@@ -147,7 +147,7 @@ const throttleWindow = <A, E, R>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export const throttle: {
   (duration: Duration.Input): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;

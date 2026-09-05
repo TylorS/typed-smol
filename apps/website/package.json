@@ -8,7 +8,7 @@
   "scripts": {
     "build": "pnpm docs:generate && pnpm build:static",
     "clean:dist": "tsx scripts/clean-dist.ts",
-    "build:static": "astro sync --force && astro build",
+    "build:static": "pnpm build:storybook && astro sync --force && astro build",
     "start": "astro preview",
     "docs:dependencies": "node node_modules/typescript-compiler/bin/tsc6 -b ../../tsconfig.build.json",
     "docs:generate": "pnpm docs:dependencies && tsx scripts/generate-docs.ts",
@@ -16,10 +16,11 @@
     "test:docs": "pnpm docs:dependencies && vitest run --config vitest.config.ts src/docs/__tests__ src/site/__tests__",
     "test:production": "pnpm build && pnpm test:static",
     "typecheck": "astro check",
-    "dev": "pnpm docs:generate && astro sync --force && astro dev",
+    "dev": "pnpm docs:generate && pnpm build:storybook && astro sync --force && astro dev",
     "preview": "astro preview",
-    "test:static": "node --test test/production-smoke.test.mjs test/static-links.test.mjs",
-    "format:astro": "prettier --plugin prettier-plugin-astro --write \"src/site/**/*.astro\""
+    "test:static": "node --test test/production-smoke.test.mjs test/static-links.test.mjs test/reference-layout.test.mjs test/marble-playback.test.mjs test/storybook-embed.test.mjs test/search-experience.test.mjs test/page-layouts.test.mjs",
+    "format:astro": "prettier --plugin prettier-plugin-astro --write \"src/site/**/*.astro\"",
+    "build:storybook": "pnpm --filter @typed/ui exec storybook build --output-dir ../../apps/website/public/storybook --disable-telemetry"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",

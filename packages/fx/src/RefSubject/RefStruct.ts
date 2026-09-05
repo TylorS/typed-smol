@@ -27,7 +27,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefStruct<
   in out S extends object,
@@ -62,7 +62,7 @@ export interface RefStruct<
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<S extends object, E = never, R = never>(
   initial: S | Effect.Effect<S, E, R> | Fx.Fx<S, E, R>,
@@ -85,7 +85,7 @@ export function make<S extends object, E = never, R = never>(
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const set: {
   <S extends object, K extends keyof S>(
@@ -123,7 +123,7 @@ export const set: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const update: {
   <S extends object, K extends keyof S>(
@@ -158,7 +158,7 @@ export const update: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const merge: {
   <O extends object>(
@@ -195,7 +195,7 @@ export const merge: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const pick: {
   <S extends object, const Keys extends ReadonlyArray<keyof S>>(
@@ -228,7 +228,7 @@ export const pick: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const omit: {
   <S extends object, const Keys extends ReadonlyArray<keyof S>>(
@@ -273,7 +273,7 @@ export const omit: {
  * ```
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const get: {
   <S extends object, const K extends keyof S>(
@@ -306,7 +306,7 @@ export const get: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const keys = <S extends object, E, R>(
   ref: RefStruct<S, E, R>,
@@ -326,7 +326,7 @@ export const keys = <S extends object, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const values = <S extends object, E, R>(
   ref: RefStruct<S, E, R>,
@@ -347,7 +347,7 @@ export const values = <S extends object, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const entries = <S extends object, E, R>(
   ref: RefStruct<S, E, R>,
@@ -368,7 +368,7 @@ export const entries = <S extends object, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const has: {
   <S extends object, const K extends keyof S>(
@@ -401,7 +401,7 @@ export const has: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <S extends object, E, R>(
   ref: RefStruct<S, E, R>,

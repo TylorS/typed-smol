@@ -13,6 +13,10 @@ import { replaceDirectoriesTransactionally } from "../src/docs/AtomicDirectories
 import { extractPublicModules } from "../src/docs/Extract.js";
 import { validateFxMarbleCoverage } from "../src/docs/FxMarbleCoverage.js";
 import {
+  fxNonTemporalExports,
+  renderFxOperatorAtlasMarkdown,
+} from "../src/docs/FxOperatorAtlas.js";
+import {
   loadGlossaryContent,
   loadRecipeContent,
   parseGuideDocumentation,
@@ -58,10 +62,8 @@ const legacyPublicReference = path.join(root, "public/reference");
 // links absolute and canonical while leaving executable examples untouched.
 const canonicalSite = new URL(canonicalSiteOrigin);
 const artifactUrl = (pathname: string): string =>
-  new URL(
-    siteHref(canonicalReferencePath(pathname), canonicalSite.pathname),
-    canonicalSite.origin,
-  ).href;
+  new URL(siteHref(canonicalReferencePath(pathname), canonicalSite.pathname), canonicalSite.origin)
+    .href;
 const artifactMarkdown = (markdown: string): string => resolveMarkdownLinks(markdown, artifactUrl);
 
 const moduleName = (specifier: string, packageName: string): string =>
@@ -117,17 +119,22 @@ const moduleMarkdown = (inventory: ReferenceInventory, consumerSpecifier: string
 const fullReferenceMarkdown = (
   inventory: ReferenceInventory,
   symbols: ReadonlyArray<SymbolDocumentation>,
-): string => artifactMarkdown([
-  "# Typed complete API reference",
-  "Every public exposure is included with its own identity, signatures, documentation, and examples. Re-exported aliases remain included so each supported import path can be inspected independently.",
-  "# Packages",
-  ...inventory.packages.map((pkg) => packageMarkdown(inventory, pkg.packageName)),
-  "# Modules",
-  ...inventory.modules.map((module) => moduleMarkdown(inventory, module.consumerSpecifier)),
-  "# Public API",
-  ...symbols.map((symbol) =>
-    `[Public API: ${symbol.id}](${referencePath(symbol.id)})\n\n${renderSymbolMarkdown(symbol)}`),
-].join("\n\n---\n\n"));
+): string =>
+  artifactMarkdown(
+    [
+      "# Typed complete API reference",
+      "Every public exposure is included with its own identity, signatures, documentation, and examples. Re-exported aliases remain included so each supported import path can be inspected independently.",
+      "# Packages",
+      ...inventory.packages.map((pkg) => packageMarkdown(inventory, pkg.packageName)),
+      "# Modules",
+      ...inventory.modules.map((module) => moduleMarkdown(inventory, module.consumerSpecifier)),
+      "# Public API",
+      ...symbols.map(
+        (symbol) =>
+          `[Public API: ${symbol.id}](${referencePath(symbol.id)})\n\n${renderSymbolMarkdown(symbol)}`,
+      ),
+    ].join("\n\n---\n\n"),
+  );
 
 const deploymentPathKey = (value: string): string => value.normalize("NFD").toLowerCase();
 
@@ -178,10 +185,13 @@ const validateAuthoredExampleCompilation = (
   const files: Array<string> = [];
   try {
     for (const document of documents) {
-      for (const [index, { code, extension }] of extractTypeScriptFenceDocuments(
+      for (const [index, { code, extension, fileName }] of extractTypeScriptFenceDocuments(
         document.body,
       ).entries()) {
-        const file = path.join(staging, `${document.slug}-${index}.${extension}`);
+        const file = path.join(staging, document.slug, fileName ?? `${index}.${extension}`);
+        if (files.includes(file))
+          throw new Error(`Duplicate example file: ${document.slug}/${fileName}`);
+        nodeFs.mkdirSync(path.dirname(file), { recursive: true });
         nodeFs.writeFileSync(file, code);
         files.push(file);
       }
@@ -214,6 +224,21 @@ const validateAuthoredExampleCompilation = (
 
 const program = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
+  yield* fs.writeFileString(
+    path.join(contentGuides, "fx-operator-atlas.md"),
+    [
+      "---",
+      "title: The Fx marble atlas",
+      "summary: Trace values, errors, completion and cancellation through every public Fx operation.",
+      "section: Fx",
+      "kind: deep-dive",
+      "order: 1.99",
+      "---",
+      "",
+      renderFxOperatorAtlasMarkdown(),
+      "",
+    ].join("\n"),
+  );
   const guideFiles = (yield* fs.readDirectory(contentGuides))
     .filter((fileName) => fileName.endsWith(".md"))
     .sort();
@@ -250,15 +275,17 @@ const program = Effect.gen(function* () {
   }
   const inventory = buildReferenceInventory(publishedPackages, targets, extraction);
   Schema.decodeUnknownSync(ReferenceInventorySchema)(inventory);
-  const fxCombinatorIds = inventory.modules
-    .find(({ consumerSpecifier }) => consumerSpecifier === "@typed/fx/Fx")
-    ?.categories.find(({ name }) => name === "combinators")?.exposureIds;
-  if (fxCombinatorIds === undefined) {
-    throw new Error("The public @typed/fx/Fx combinator category is missing.");
-  }
+  const fxModule = inventory.modules.find(
+    ({ consumerSpecifier }) => consumerSpecifier === "@typed/fx/Fx",
+  );
+  if (!fxModule) throw new Error("The public @typed/fx/Fx module is missing.");
+  const nonTemporal = new Set(fxNonTemporalExports.map(({ name }) => name));
+  const fxRuntimeNames = fxModule.exposureIds
+    .map((id) => id.slice(id.indexOf("#") + 1))
+    .filter((name) => !name.includes(".") && !nonTemporal.has(name));
   const fxMarbleCoverage = validateFxMarbleCoverage(
-    fxCombinatorIds.map((id) => id.slice(id.indexOf("#") + 1)),
-    guides,
+    fxRuntimeNames,
+    guides.filter(({ slug }) => slug === "fx-operator-atlas"),
   );
   if (
     fxMarbleCoverage.missing.length > 0 ||
@@ -267,14 +294,13 @@ const program = Effect.gen(function* () {
   ) {
     throw new Error(
       [
-        "Fx marble coverage does not match the public @typed/fx/Fx combinators.",
+        "The Fx atlas must depict every public constructor, combinator, interop adapter and runner.",
         `Missing: ${fxMarbleCoverage.missing.join(", ") || "none"}`,
         `Unexpected: ${fxMarbleCoverage.unexpected.join(", ") || "none"}`,
         `Duplicated: ${fxMarbleCoverage.duplicates.join(", ") || "none"}`,
       ].join("\n"),
     );
   }
-  const fxCombinatorCount = fxCombinatorIds.length;
   const symbols = projectSymbols(inventory);
   const packages = legacyPackages(inventory, symbols);
   const documentationModel: DocumentationModel = {
@@ -349,7 +375,7 @@ const program = Effect.gen(function* () {
     );
     nodeFs.writeFileSync(
       path.join(generatedStage, "catalog.ts"),
-      `export const fxCombinatorCount = ${fxCombinatorCount} as const;\n\nexport const packageCatalog = ${JSON.stringify(
+      `export const packageCatalog = ${JSON.stringify(
         inventory.packages.map((pkg) => ({
           packageName: pkg.packageName,
           packageVersion: pkg.packageVersion,
@@ -365,7 +391,10 @@ const program = Effect.gen(function* () {
       })} as const;\n`,
     );
     for (const guide of guides) {
-      nodeFs.writeFileSync(path.join(docsStage, "guides", `${guide.slug}.md`), artifactMarkdown(`${guide.body}\n`));
+      nodeFs.writeFileSync(
+        path.join(docsStage, "guides", `${guide.slug}.md`),
+        artifactMarkdown(`${guide.body}\n`),
+      );
     }
     for (const pkg of inventory.packages) {
       const name = referenceSlug(`package:${pkg.packageName}`);
@@ -440,7 +469,9 @@ const program = Effect.gen(function* () {
     const completeReference = fullReferenceMarkdown(inventory, symbols);
     const completeReferenceFenceErrors = validateMarkdownFences(completeReference);
     if (completeReferenceFenceErrors.length > 0) {
-      throw new Error(`Invalid full-reference Markdown: ${completeReferenceFenceErrors.join("; ")}`);
+      throw new Error(
+        `Invalid full-reference Markdown: ${completeReferenceFenceErrors.join("; ")}`,
+      );
     }
     nodeFs.writeFileSync(path.join(referenceStage, "llms-full.txt"), `${completeReference}\n`);
     nodeFs.writeFileSync(

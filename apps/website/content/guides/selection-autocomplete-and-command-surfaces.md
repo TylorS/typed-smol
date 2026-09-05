@@ -1,257 +1,203 @@
 ---
 title: "Selection, autocomplete, and command surfaces"
-summary: "Choose Select, Listbox, Combobox, or Menu from the interaction people perform, then compose its public state and collection parts."
+summary: "Build a project switcher from a compact known-value choice to searchable input, then attach commands to the project actually selected."
 section: "UI"
 kind: "guide"
 order: 4.5
 ---
 
-A list of words is not necessarily a list of choices. Start with the action the person takes:
-commit one known value, browse a visible set, edit a query while navigating matches, or invoke a
-command. That decision determines both the right native/ARIA contract and what keyboard behavior
-people expect.
+Imagine a project dashboard with a switcher in its header. At first there are three projects, so a
+compact choice works well. Later there are hundreds, and people need to type a name. Beside the
+switcher is an Actions button that duplicates the current project.
 
-| Person's task | Use | State and focus model |
-| --- | --- | --- |
-| Choose one known value from a compact control | a native `<select>`, or `Select` when a custom popup is required | `value`, `activeId`, and popup `open` are separate; the button opens a listbox |
-| Browse and commit from a list that stays visible | `Listbox` | Moving real focus also commits the selected `value` |
-| Type text and navigate matching suggestions | `Combobox` | The native input retains focus; `activeId` is exposed with `aria-activedescendant` |
-| Run Save, Duplicate, or Export | `Menu` | Items are actions, not a form value; a trigger opens a menu and focus returns on Escape |
+All three surfaces can look like lists, but they do different jobs. The switcher commits a project;
+search temporarily holds text that might not name any project; Actions runs a command against the
+project already committed. If one generic selected-item variable represents all three, merely
+browsing suggestions can accidentally change the command's target. We will keep those facts
+separate while building the interface.
 
-Prefer the browser's `<select>` for ordinary form data. Use the compound `Select` only when a
-button, a [native popover](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API), and
-custom-rendered options are genuine requirements. A `Menu` is never a substitute for a country
-or timezone field: its items execute commands.
+## Begin with a known set of projects
 
-## A workspace picker: Select or Listbox
-
-Suppose a project has three known environments. A compact header control is a `Select`; its button
-opens a `role=listbox` native popover. Stable `id`s identify options, while `value`s are the data
-the application keeps. The `collection` is the mounted-item registry that gives keyboard movement,
-typeahead, disabled-item handling, focus, and DOM order something concrete to operate on.
+For an ordinary form field, a native `<select>` gives you value submission and browser interaction
+with little application code. A custom popup is justified when the surrounding design needs a
+button and custom option presentation. This version uses `@typed/ui/Select` to make that boundary
+explicit: a trigger opens the listbox, and an option commits a value.
 
 ```ts
 import { RefSubject } from "@typed/fx";
-import { component } from "@typed/ui";
+import { html } from "@typed/template";
+import { component } from "@typed/ui/Component";
 import * as Select from "@typed/ui/Select";
 
-export const EnvironmentPicker = component(function* () {
-  const state = yield* Select.makeState({ id: "environment", value: "production" });
+export const CompactProjectSwitcher = component(function* () {
+  const state = yield* Select.makeState({ id: "project-picker", value: "atlas" });
   const collection = yield* Select.makeCollection();
-
-  return [
-    Select.Trigger({
-      state,
-      content: state.pipe(RefSubject.map(({ value }) => `Environment: ${value}`)),
-    }),
-    Select.Content({
-      state,
-      collection,
-      content: [
-        Select.Option({
-          state,
-          collection,
-          id: "development",
-          value: "development",
-          content: "Development",
-        }),
-        Select.Option({
-          state,
-          collection,
-          id: "staging",
-          value: "staging",
-          content: "Staging",
-        }),
-        Select.Option({
-          state,
-          collection,
-          id: "production",
-          value: "production",
-          content: "Production",
-        }),
-      ],
-    }),
+  const projects = [
+    { id: "atlas", name: "Atlas" },
+    { id: "beacon", name: "Beacon" },
+    { id: "cedar", name: "Cedar" },
   ];
+  const selectedName = RefSubject.map(state, ({ value }) =>
+    projects.find((project) => project.id === value)?.name ?? "Choose a project",
+  );
+
+  return html`<section>
+    ${Select.Trigger({ state, content: html`Project: ${selectedName}` })}
+    ${Select.Content({ state, collection, content: projects.map((project) =>
+      Select.Option({ state, collection, id: `project-option-${project.id}`,
+        value: project.id, textValue: project.name, content: project.name }),
+    ) })}
+    <p>Current project: ${selectedName}</p>
+  </section>`;
 });
 ```
 
-`Select.Trigger` renders a native button with `aria-haspopup="listbox"`, `aria-expanded`, and a
-native popover target. `Select.Content` renders the manual popover listbox and `Select.Option`
-renders `role=option` with `aria-selected`. Arrow/Home/End move the active option; Enter or Space
-commits it; printable keys type ahead; Escape closes the popup and restores the trigger. Moving
-only changes `activeId`; `Select.select(state, id, value)` changes the value and closes it.
+The project ID is application data, while `project-option-atlas` is a DOM identity. Keeping them
+different lets multiple interfaces reference the same project without duplicating element IDs.
+`textValue` gives typeahead a human-facing name even when the saved value is a slug. Each option
+registers its actual element in the shared collection when rendered.
 
-On a settings page where all environments are already visible, use `Listbox` instead. Its
-`Root`, `Option`, `makeState`, and `makeCollection` have the same stable-id and collection shape,
-but roving focus immediately selects the focused option. Give the root an accessible `label`.
+Open the switcher and arrow to Beacon. Select moves active identity without replacing the saved
+value. Enter or Space commits Beacon and closes the popup; Escape closes without committing the
+active alternative and restores trigger focus. This is useful when people want to inspect choices
+before changing the dashboard. See [Select](/reference/modules/%40typed%2Fui%2FSelect) for its public
+parts and transitions.
 
-```ts
-import { component } from "@typed/ui";
-import * as Listbox from "@typed/ui/Listbox";
+A persistent sidebar that previews projects as you browse is a different design. There,
+[Listbox](/explore/ui-listbox) can be appropriate: its normal focus movement also selects the value.
+That would make a poor drop-in replacement if this dashboard must wait for an explicit commit.
+The [APG listbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/) discusses that selection
+behavior. The role name alone does not tell your application when it is safe to start loading a
+new project.
 
-export const EnvironmentList = component(function* () {
-  const state = yield* Listbox.makeState({ value: "staging", activeId: "staging" });
-  const collection = yield* Listbox.makeCollection();
+## Add search without turning every keystroke into a project change
 
-  return Listbox.Root({
-    state,
-    collection,
-    label: "Environment",
-    content: [
-      Listbox.Option({ state, collection, id: "development", value: "development", content: "Development" }),
-      Listbox.Option({ state, collection, id: "staging", value: "staging", content: "Staging" }),
-      Listbox.Option({ state, collection, id: "production", value: "production", content: "Production" }),
-    ],
-  });
-});
-```
+When the project list grows, editable search becomes useful. A Combobox has current text, an active
+suggestion, and popup visibility. It does not have a separate domain record proving that the text
+was accepted. A person can type “Beacon” exactly, or type “Beac” and stop. Both are valid input states;
+only the first can identify a known project in this example.
 
-`Listbox.Root` supplies `role=listbox`, `aria-label`, and the active-descendant relationship;
-each `Listbox.Option` supplies `role=option`, `aria-selected`, and `aria-disabled`. Focus the
-root to initialize the first enabled choice, then use arrows or typeahead to move through mounted
-options in DOM order. Call `Listbox.select` or `Listbox.move` when testing the state transition
-without a browser.
-
-## Search a city; keep commands separate
-
-For a city field, typed text is the primary interaction, so use `Combobox`. Filtering is
-application policy: derive each item's `hidden` property from the query. The component detects
-hidden mounted options and skips them during keyboard navigation; it does not guess a remote
-query, loading state, or whether arbitrary text is valid.
-
-```ts
-import { RefSubject } from "@typed/fx";
-import { component } from "@typed/ui";
-import { html } from "@typed/template";
-import * as Combobox from "@typed/ui/Combobox";
-
-const cities = ["Amsterdam", "Boston", "Chicago"] as const;
-
-export const CitySearch = component(function* () {
-  const state = yield* Combobox.makeState({ id: "city" });
-  const collection = yield* Combobox.makeCollection();
-  const hiddenUnlessMatching = (city: string) =>
-    RefSubject.map(
-      state,
-      ({ value }) => value.length > 0 && !city.toLocaleLowerCase().includes(value.toLocaleLowerCase()),
-    );
-
-  return html`<div>
-    <label for="city-input">City</label>
-    ${Combobox.Input({ state, collection, placeholder: "Search cities" })}
-    ${Combobox.Popover({
-      state,
-      collection,
-      content: cities.map((city) =>
-        Combobox.Item({
-          state,
-          collection,
-          id: city.toLocaleLowerCase(),
-          value: city,
-          content: city,
-          props: { "?hidden": hiddenUnlessMatching(city) },
-        }),
-      ),
-    })}
-  </div>`;
-});
-```
-
-`Combobox.Input` is a native input with `role=combobox`, `aria-controls`, `aria-expanded`, and
-`aria-activedescendant`; the input id for `id: "city"` is `city-input`, so the native label above
-is correctly associated. `Combobox.Popover` is the controlled `role=listbox` native popover and
-each `Combobox.Item` is a `role=option`. Input focus opens the suggestions. Arrow keys change the
-active id but keep DOM focus in the input, Enter selects the active item and closes it, and Escape
-closes it. `Combobox.setValue(state, query)` is the public state transition to exercise when
-testing filtering behavior.
-
-Use a separate `Menu` for adjacent workspace actions. Its caller-owned click handler performs the
-command; `Menu` supplies the popup, keyboard traversal, item activation, and focus restoration.
+Our searchable version makes the commit boundary visible with an Open project button. Selecting a
+suggestion fills the input. Pressing Open validates the text and updates the actual dashboard
+project. The Actions menu always reads that committed project, never the search text or active
+suggestion.
 
 ```ts
 import * as Effect from "effect/Effect";
-import { component } from "@typed/ui";
+import { RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
+import { component } from "@typed/ui/Component";
+import * as Combobox from "@typed/ui/Combobox";
 import * as Menu from "@typed/ui/Menu";
 
-export const WorkspaceActions = component(function* () {
-  const state = yield* Menu.makeState({ id: "workspace-actions" });
-  const collection = yield* Menu.makeCollection();
-
-  return [
-    Menu.Trigger({ state, content: "Workspace actions" }),
-    Menu.Content({
-      state,
-      collection,
-      label: "Workspace actions",
-      content: [
-        Menu.Item({
-          state,
-          collection,
-          id: "export",
-          content: "Export report",
-          props: { onclick: Effect.log("export report") },
-        }),
-        Menu.Item({
-          state,
-          collection,
-          id: "duplicate",
-          content: "Duplicate workspace",
-          props: { onclick: Effect.log("duplicate workspace") },
-        }),
-      ],
-    }),
+export const SearchableProjectDashboard = component(function* () {
+  const projects = [
+    { id: "atlas", name: "Atlas" },
+    { id: "beacon", name: "Beacon" },
+    { id: "cedar", name: "Cedar" },
   ];
+  const currentProject = yield* RefSubject.make("atlas");
+  const notice = yield* RefSubject.make("Atlas is open.");
+  const drafts = yield* RefSubject.make<ReadonlyArray<string>>([]);
+  const search = yield* Combobox.makeState({ id: "dashboard-project-search", value: "Atlas" });
+  const suggestions = yield* Combobox.makeCollection();
+  const actions = yield* Menu.makeState({ id: "dashboard-project-actions" });
+  const commands = yield* Menu.makeCollection();
+
+  const openProject = Effect.flatMap(search, ({ value }) => {
+    const match = projects.find((project) => project.name.toLowerCase() === value.trim().toLowerCase());
+    return match === undefined
+      ? RefSubject.set(notice, "Choose a known project before opening it.")
+      : Effect.andThen(
+          RefSubject.set(currentProject, match.id),
+          RefSubject.set(notice, `${match.name} is open.`),
+        );
+  });
+  const duplicateProject = Effect.flatMap(currentProject, (id) =>
+    RefSubject.update(drafts, (current) => [...current, `${id} copy ${current.length + 1}`]),
+  );
+  const currentName = RefSubject.map(currentProject, (id) =>
+    projects.find((project) => project.id === id)?.name ?? "Unknown project",
+  );
+
+  return html`<section>
+    <label for="dashboard-project-search-input">Find a project</label>
+    ${Combobox.Input({ state: search, collection: suggestions, placeholder: "Type a project name" })}
+    ${Combobox.Popover({ state: search, collection: suggestions, content: projects.map((project) =>
+      Combobox.Item({ state: search, collection: suggestions, id: `dashboard-match-${project.id}`,
+        value: project.name, content: project.name,
+        props: { "?hidden": RefSubject.map(search, ({ value }) =>
+          !project.name.toLowerCase().includes(value.toLowerCase())) },
+      }),
+    ) })}
+    <button type="button" onclick=${openProject}>Open project</button>
+    <p role="status">${notice}</p>
+    <h2>${currentName}</h2>
+    ${Menu.Trigger({ state: actions, content: html`Actions for ${currentName}` })}
+    ${Menu.Content({ state: actions, collection: commands, label: "Project actions", content:
+      Menu.Item({ state: actions, collection: commands, id: "dashboard-duplicate",
+        textValue: "Duplicate project", content: "Duplicate project",
+        props: { onclick: duplicateProject },
+      }),
+    })}
+    <p>Local draft copies: ${RefSubject.map(drafts, (items) => items.join(", ") || "None")}</p>
+  </section>`;
 });
 ```
 
-`Menu.Trigger` is a button with `aria-haspopup="menu"`; `Menu.Content` is a manual native
-popover with `role=menu`; and `Menu.Item` is a `role=menuitem`. Arrow keys and typeahead rove
-focus through the registered items, Enter/Space activates the focused command, and Escape returns
-focus to the trigger. `Menu.setOpen(state, open)` is useful for an application-driven open/close
-transition. For toggles and mutually exclusive commands, use `Menu.CheckboxItem` and
-`Menu.RadioItem` with caller-owned `checked` state rather than turning menu items into values.
+This is a local interaction example: duplication appends a draft record to a RefSubject so the
+command's target is visible. Replacing it with a server request does not change where the target
+comes from. Read the committed project at activation time and pass that identity to the request;
+do not close over the search text from a previous render or use whichever suggestion is highlighted.
 
-## Keep the contracts intact, then test them
+## Follow one search interaction all the way through
 
-Typed provides the state constructors, collection registration, native popover wiring, roles, ARIA
-relationships, keyboard/focus behavior, typeahead, and browser-level tests for these contracts.
-Authors must provide stable IDs and text values, visible labels, selected-value ownership, the
-filter/query/loading/error policy for comboboxes, and the actual effects behind commands. If a
-custom host is necessary, retain the props, event handlers, and composed refs received at the DOM
-boundary; replacing them with role attributes alone breaks the contract.
+Start with Atlas open, clear the input, then type “Be”. `Combobox.setValue` is the transition used by
+the input handler: it writes the text, clears active identity, and opens suggestions. Our `hidden`
+bindings leave Beacon available and hide nonmatches. The family checks hidden ancestors when
+choosing visible registered options; changing only opacity would not provide the same filtering.
 
-Test one layer at a time. Unit-test `Select.select`, `Listbox.select`/`Listbox.move`,
-`Combobox.setValue`, and `Menu.setOpen` by reading the resulting state. Then use browser tests for
-the behavior state alone cannot prove: the emitted button/input/listbox/menu relationships,
-Arrow/Enter/Escape and typeahead, hidden-option filtering, DOM focus versus
-`aria-activedescendant`, disabled items, and focus restoration. The [WAI-ARIA Authoring Practices
-patterns](https://www.w3.org/WAI/ARIA/apg/patterns/) define the interaction vocabulary; the native
-HTML and ARIA output is the implementation contract to assert.
+ArrowDown activates Beacon while native focus stays in the input. The input's
+`aria-activedescendant` names the option, so text editing and suggestion navigation can coexist.
+Enter accepts the active suggestion and closes the popup. That updates search text to “Beacon” but
+leaves Atlas open. Open project then validates Beacon and changes `currentProject`. Only now does
+the heading and Actions button name Beacon.
 
-Shared collection and focus mechanics are covered in [UI collections, focus, and keyboard behavior](/explore/ui-collections-and-focus).
+If the user types “Beac” and presses Open, the message explains that no known project was committed;
+Atlas remains the command target. If the user changes their mind and presses Escape while browsing,
+the popup closes. This example does not promise that Escape restores an earlier text snapshot;
+Combobox owns popup dismissal, not an application undo history. The
+[APG combobox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) describes several autocomplete
+variants; this family is an editable input with list suggestions, not every variant on that page.
 
-## Make query, selection, and persistence explicit
+For remote projects, keep query work driven by text rather than active suggestion movement.
+Otherwise arrowing through matches would issue more requests. Reject stale responses from an older
+query, represent loading and failed searches separately, and clear active identity when replacing
+results so it never names a removed option. The collection is a registry of mounted suggestions,
+not a remote data cache. The [Combobox guide](/explore/ui-combobox) develops these boundaries further.
 
-A filtered combobox has several distinct values: the current input text, the active keyboard
-candidate, the selected domain record, and possibly a persisted form value. Decide which change
-commits the domain value. Typing a city name is not proof that the person selected a city ID.
-Keep a selected ID in application state when the server requires one, and clear or revalidate it
-when the input changes. A popup choice also does not automatically become a native named form
-control; integrate its value with [Form](/explore/forms-as-a-browser-contract) deliberately.
+## Attach commands without inventing a form value
 
-For remote suggestions, derive the query from state, suppress repeated queries, and use
-[Fx switching](/explore/fx-higher-order-and-concurrency) when a new query should interrupt an older
-request. Render loading, no matches, and request failure as distinct states. Keep non-option status
-text outside the option collection so keyboard movement cannot select “Loading…”. Do not hide a
-selected option and leave `activeId` pointing at an unrelated or missing element; reconcile active
-identity when the result set changes.
+The menu uses its own state and collection. Opening it establishes command focus; arrows and
+typeahead navigate commands, including disabled commands that remain discoverable. Enter or Space
+activates the focused item. An ordinary Menu.Item closes on activation, Escape requests focus
+restoration to the invoker, and Tab closes while allowing ordinary tab navigation. These are command
+interactions, so there is no selected project value inside Menu state.
 
-When results reorder, render them with [keyed collections](/explore/keyed-template-collections).
-Use a domain ID for the key and a document-unique DOM ID for the option. Two city pickers on the
-same screen need different root and option IDs even if their result data is identical.
+Both custom selection popups and menus use the
+[native Popover API](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API). Preserve their
+refs and toggle handlers in custom hosts so `open` agrees with native visibility. A manual popover
+is not automatically a modal dialog or a generic light-dismiss surface. The
+[APG menu pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/) supplies the broader interaction
+vocabulary; [Menu](/explore/ui-menu) covers checked items and explicit submenu ownership.
 
-See [Select](/reference/modules/%40typed%2Fui%2FSelect),
-[Listbox](/reference/modules/%40typed%2Fui%2FListbox),
-[Combobox](/reference/modules/%40typed%2Fui%2FCombobox), and
-[Menu](/reference/modules/%40typed%2Fui%2FMenu) for public state and part signatures.
-Their lazy work composes with [Effect v4](https://effect.website/docs/v4).
+Typed provides the component state transitions, roles, native popup wiring, and collection-backed
+keyboard behavior used here. Authors must provide the domain commit rule and command effects.
+That division is visible in the code: `openProject` decides whether text names a project, and
+`duplicateProject` decides what duplication means. A role attribute cannot make those decisions.
+
+To verify the assembled flow, keep Atlas open while typing and highlighting Beacon, then activate
+Duplicate before pressing Open: the draft must name Atlas. Repeat after Open: it must name Beacon.
+During suggestion navigation, assert the input remains `document.activeElement`; during menu
+navigation, assert a menu item actually receives focus. This one scenario exercises both business
+correctness and the two different browser focus models, which a selected-ID unit test would miss.

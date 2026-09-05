@@ -1,22 +1,32 @@
 ---
 import { getCollection } from "astro:content";
 import { siteHref } from "../../SiteHref.js";
+import { groupGuides } from "../Guides.js";
+import { groupRecipes } from "../Recipes.js";
 
 interface Props {
   current?: string;
 }
 const { current } = Astro.props;
-const guides = (await getCollection("guides")).sort(
-  (a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id),
-);
-const groups = Map.groupBy(guides, (entry) => entry.data.section);
+const integrations = groupRecipes(await getCollection("recipes"));
 const starters = [
+  ["cooperative-by-design", "Cooperative by design"],
   ["quick-start", "Quick Start"],
   ["tutorial", "Build TodoMVC"],
+  ["ui", "Learn every UI primitive"],
+  ["storybook", "UI Storybook"],
+  ["fx-operator-atlas", "Fx marble atlas"],
 ];
+const featured = new Set(starters.map(([slug]) => slug));
+const groups = groupGuides(await getCollection("guides"))
+  .map(
+    ([section, entries]) =>
+      [section, entries.filter(({ id }) => !featured.has(id))] as const,
+  )
+  .filter(([, entries]) => entries.length > 0);
 ---
 
-<nav aria-label="Documentation">
+<nav aria-label="Documentation" data-docs-navigation>
   <div class="sidebar-group">
     <h2>Start building</h2>
     {
@@ -32,8 +42,16 @@ const starters = [
   </div>
   {
     [...groups].map(([section, entries]) => (
-      <div class="sidebar-group">
-        <h2>{section}</h2>
+      <details
+        class="sidebar-group"
+        open={
+          section === "Learning paths" ||
+          entries.some(({ id }) => id === current)
+        }
+      >
+        <summary>
+          {section} <span>{entries.length}</span>
+        </summary>
         {entries.map((entry) => (
           <a
             href={siteHref(`/explore/${entry.id}`)}
@@ -42,13 +60,36 @@ const starters = [
             {entry.data.title}
           </a>
         ))}
-      </div>
+      </details>
     ))
+  }
+  {
+    current?.startsWith("integrate/") &&
+      integrations.map(({ title, entries }) => (
+        <details
+          class="sidebar-group"
+          open={entries.some(
+            ({ data }) => current === `integrate/${data.slug}`,
+          )}
+        >
+          <summary>{title}</summary>
+          {entries.map(({ data }) => (
+            <a
+              href={siteHref(`/integrate/${data.slug}`)}
+              aria-current={
+                current === `integrate/${data.slug}` ? "page" : undefined
+              }
+            >
+              {data.title}
+            </a>
+          ))}
+        </details>
+      ))
   }
   <div class="sidebar-group">
     <h2>Keep close</h2>
     <a href={siteHref("/reference")}>All packages and APIs</a>
-    <a href={siteHref("/integrate/astro")}>Astro integration</a>
+    <a href={siteHref("/integrate")}>Integrations and browser APIs</a>
     <a href="https://effect.website/docs/v4/">Effect v4 ↗</a>
   </div>
 </nav>

@@ -1,109 +1,121 @@
 ---
 title: "Mounting DOM output"
 summary: "Render a live RenderEvent Fx into one real browser root with an explicit lifetime."
-section: "DOM and platform"
+section: "Template rendering"
 kind: "guide"
-order: 6.1
+order: 1
 ---
 
-A page becomes interactive when something runs it. Calling `html` only describes a view;
-`render(page, host)` describes where its output belongs. The browser entry point supplies
-`DomRenderTemplate` and runs that program for as long as the host is alive.
+An existing page can host a Typed search panel beside a static header and another library's chart.
+The important integration decision is where the panel may write and how long its work should run.
+Choose a dedicated host and let the outer application own the render's fiber.
 
-## Give the application a dedicated slot
+[Render your first template](/explore/render-your-first-template) introduces the entry point.
+This page turns that entry into a lifecycle boundary suitable for a router, custom element, or
+another application embedding Typed output.
 
-Suppose an existing page has a static header and a Typed account panel. Put an `#account-panel`
-element beside the header and give that element to `render`. The host is a replacement boundary:
-when new nonempty root output arrives, Typed calls `replaceChildren` on the host. Children owned by
-another system must live outside that slot.
+## Make the writable boundary visible in the document
 
-```ts
-import { Effect, Fiber } from "effect";
-import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
+Give the panel an element such as `<div id="article-search"></div>`. The static header and chart
+should be siblings outside it. Fresh nonempty root output is placed with `replaceChildren`, so
+unrelated children inside that same host are not protected from root replacement.
 
-const host = document.querySelector<HTMLElement>("#account-panel");
-if (host === null) throw new Error("Missing #account-panel mount slot");
+A template's *internal* scalar updates are narrower: typing in a captured input part does not emit
+a new root or replace the host. The host boundary matters when root output is first placed or
+actually replaced, not on every state change.
 
-const application = Effect.scoped(
-  Effect.gen(function* () {
-    const expanded = yield* RefSubject.make(false);
-    const toggle = RefSubject.update(expanded, (value) => !value);
-    const page = html`<section>
-      <button type="button" aria-expanded=${expanded} onclick=${toggle}>
-        Account details
-      </button>
-      <p ?hidden=${expanded.pipe(RefSubject.map((value) => !value))}>
-        Signed in as Ada
-      </p>
-    </section>`;
+## Return a mount Effect to the owner
 
-    yield* page.pipe(
-      render(host),
-      Fx.drain,
-      Effect.provide(DomRenderTemplate.using(host.ownerDocument)),
-    );
-  }),
-);
-
-// Browser entry point: retain the fiber in the code that owns the panel.
-const fiber = Effect.runFork(application);
-export const stopAccountPanel = () => Effect.runPromise(Fiber.interrupt(fiber));
-```
-
-The state and the view share one Scope. The handler is an Effect directly because it does not need
-the click event. Changing `expanded` updates the captured attribute and boolean part; it does not
-emit a new root section or recreate the button.
-
-`Fx.drain` runs the source without collecting its output. A DOM template stays live after its first
-output so its listeners and reactive parts remain installed. Interrupting the fiber closes that
-work and runs the acquired finalizers. A foreign node carried by `DomRenderEvent` has no automatic
-disposer: its producer must supply resource cleanup. If your host requires an empty slot on shutdown,
-clear its dedicated children after interruption; do not infer a universal unmount policy from Scope
-closure alone.
-
-## Let a larger Effect program own the lifetime
-
-A library should usually return the mount Effect to its caller. Calling `Effect.runFork` inside a
-view or adapter would hide its lifetime and error reporting from the application.
+A reusable mounting function should describe the work, not secretly start it:
 
 ```ts
 import { Effect } from "effect";
+import { Fx, RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
+import { DomRenderTemplate, html, render } from "@typed/template";
+import * as EventHandler from "@typed/template/EventHandler";
+
+const SearchPanel = component(function* () {
+  const query = yield* RefSubject.make("");
+  const readQuery = EventHandler.make((event: Event) =>
+    RefSubject.set(query, (event.currentTarget as HTMLInputElement).value),
+  );
+  return html`<section>
+    <label>Search articles <input type="search" .value=${query} oninput=${readQuery} /></label>
+    <output>${query}</output>
+  </section>`;
+});
+
+export const mountSearch = (host: HTMLElement) => SearchPanel.pipe(
+  render(host),
+  Fx.drain,
+  Effect.provide(DomRenderTemplate.using(host.ownerDocument)),
+  Effect.scoped,
+);
+```
+
+The component owns setup for one running panel. Its scope includes the subject and template
+subscriptions. `render(host)` handles placement. `Fx.drain` exposes the live render as Effect work
+that its caller can supervise. The renderer's document is taken from the actual host, which matters
+for tests and iframes.
+
+This does not redirect every browser global used by your callbacks. If an integration needs the
+host document's window or constructors, derive those explicitly in that integration too.
+
+## Start and stop at the platform boundary
+
+Here is the same ownership pattern with a static view so the entry is independently runnable:
+
+```ts
+import { Effect, Fiber } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
 
-export const mountHelp = (host: HTMLElement) =>
-  html`<aside aria-label="Help">Contact support for account assistance.</aside>`.pipe(
-    render(host),
-    Fx.drain,
-    Effect.provide(DomRenderTemplate.using(host.ownerDocument)),
-    Effect.scoped,
-  );
+const host = document.getElementById("article-search");
+if (host === null) throw new Error("Missing article-search host");
+
+const application = html`<aside>Search your saved articles here.</aside>`.pipe(
+  render(host),
+  Fx.drain,
+  Effect.provide(DomRenderTemplate.using(host.ownerDocument)),
+  Effect.scoped,
+);
+const fiber = Effect.runFork(application);
+export const stop = () => Effect.runPromise(Fiber.interrupt(fiber));
 ```
 
-The caller can run this in its own scoped fiber, await its failure, and interrupt it during route or
-panel teardown. Supplying `host.ownerDocument` also makes the document dependency explicit for an
-iframe or test document. It does not make browser globals used by your own callbacks automatically
-refer to that document's window.
+The owner keeps `fiber`, observes failures according to its application policy, and calls `stop`
+during route or panel teardown. Do not start `runFork` inside the view or ref: that hides work from
+the owner that is supposed to stop it.
 
-`Fx.drainLayer` is useful when rendering is intentionally background work in a Layer graph. It
-forks the source and does not propagate that child fiber's eventual failure through Layer
-acquisition. Handle or report failures in the source before using it. Prefer the direct `Fx.drain`
-Effect when the owner needs to supervise the render's exit.
+[Scope closure](https://github.com/Effect-TS/effect/blob/main/packages/effect/src/Scope.ts) releases
+subscriptions, listeners, queued callbacks, and acquired finalizers. It is
+not a universal promise to empty every host or dispose arbitrary borrowed nodes. If teardown needs
+an empty slot, the host can clear its dedicated children after interruption. A foreign editor must
+supply its own scoped teardown in its producer; `DomRenderEvent` is not a disposer.
 
-## Mounting and adopting share one entry point
+## Choose supervision rather than accidental background work
 
-`render` checks the host for compatible Typed hydration markers. With matching server output it can
-adopt existing nodes; without a match it builds fresh DOM. Do not mount the entire server document
-into a panel host: render the same inner view the server placed there.
+`Fx.drainLayer` is useful when a Layer graph deliberately owns background rendering. It forks the
+source; a later child-fiber failure does not retroactively fail Layer acquisition. Handle/report
+errors in the source if that is the intended pattern. Use the direct `Fx.drain` Effect when the
+caller needs to supervise the render's exit.
 
-Test the slot boundary with a sibling owned by other code, then test a real state change and a
-native click. The sibling should remain the same node; the button should remain the same node
-across scalar updates; interrupting the render should make later clicks inert. For compatible SSR,
-add the stronger assertion that the first client button is the original server button.
+Starting a second render for a reused host before closing the first can leave two programs competing
+for children and events. Make stopping the old owner part of replacement, rather than inferring
+cleanup because its old nodes disappeared from the document.
 
-Continue with [Hydrating Typed HTML](/explore/hydrating-typed-html) for adoption and
-[Using DomRenderEvent](/explore/dom-render-event) for output produced by a foreign renderer.
-The [Render module](/reference/modules/%40typed%2Ftemplate%2FRender) contains the mounting contracts;
-Effect's [Scope guide](https://effect.website/docs/v4/resource-management/scope/) explains their
-resource lifetime.
+## Adoption uses the same host contract
+
+If the host already contains compatible Typed server output, `render` creates the hydration context
+and can adopt its existing nodes. Render the same inner view the server put inside that host, not
+the full response document. Clearing the host before starting removes the evidence adoption needs.
+
+Test three boundaries independently: a foreign sibling remains untouched, scalar edits retain the
+panel's input object, and events stop running after interruption. For SSR add the stronger assertion
+that the first client input is the original server input. Retain an old detached button and dispatch
+after teardown to detect leaked work that a screenshot would miss.
+
+Continue with [Hydrating Typed HTML](/explore/hydrating-typed-html) for compatibility diagnosis and
+[Using DomRenderEvent](/explore/dom-render-event) for scoped foreign output. The
+[Render reference](/reference/modules/%40typed%2Ftemplate%2FRender) is the public mounting boundary.

@@ -27,7 +27,7 @@ import { filter } from "./filter.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export const since: {
   <B, E2, R2>(signal: Fx<B, E2, R2>): <A, E, R>(events: Fx<A, E, R>) => Fx<A, E | E2, R | R2>;

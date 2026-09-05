@@ -7,6 +7,10 @@ related: [accessibility, refsubject, template]
 links: []
 ---
 
-UI components consume state and render through [Template](#template); they do not introduce a
-separate component state runtime. Their job is to express [accessibility](#accessibility), native
-events, and platform behavior around the state the application owns.
+Typed UI supplies reusable interaction and native-host behavior around application state. It renders
+through Template without introducing another state runtime. Styles choose the appearance; the host
+and behavior must still carry the appropriate events, focus, and accessibility state.
+
+Return `html` directly when that is sufficient. Use `component` when a view needs generator-based
+Effect setup, and `Fx.fn` for noncomponent generator functions. Start at [the UI hub](/explore/ui) and
+[component construction](/explore/ui-component).

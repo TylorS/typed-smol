@@ -27,7 +27,7 @@ import type { Fx } from "../Fx.js";
  * @param predicate - The predicate function.
  * @returns An `Fx` that completes when the predicate matches.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const takeUntil: {
   <A>(predicate: (a: A) => boolean): <E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;
@@ -70,7 +70,7 @@ export const takeUntil: {
  * @param predicate - Effectful predicate function.
  * @returns An `Fx` that completes when the predicate matches.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const takeUntilEffect: {
   <A, E2, R2>(
@@ -122,7 +122,7 @@ export const takeUntilEffect: {
  * @param predicate - The predicate function.
  * @returns An `Fx` that stops emitting when the predicate matches.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const dropAfter: {
   <A>(predicate: (a: A) => boolean): <E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;

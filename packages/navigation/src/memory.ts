@@ -28,7 +28,7 @@ import { Navigation } from "./Navigation.js";
  * arrays in the provider RefSubject. A custom `commit` function is retained for the service lifetime.
  *
  * @since 1.0.0
- * @category options
+ * @category Memory history configuration
  */
 export interface MemoryOptions {
   /**
@@ -43,7 +43,7 @@ export interface MemoryOptions {
    * Layer acquisition; later provider updates replace the array rather than taking ownership of caller mutation.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly entries: ReadonlyArray<Destination>;
   /**
@@ -57,7 +57,7 @@ export interface MemoryOptions {
    * The string is read when the Layer is acquired and retained on the Navigation service.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly origin?: string | undefined;
   /**
@@ -71,7 +71,7 @@ export interface MemoryOptions {
    * The string is read when the Layer is acquired and retained on the Navigation service.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly base?: string | undefined;
   /**
@@ -89,7 +89,7 @@ export interface MemoryOptions {
    * negative index and leaves `currentEntry` undefined. No runtime validation is currently performed.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly currentIndex?: number | undefined;
   /**
@@ -106,7 +106,7 @@ export interface MemoryOptions {
    * entries because JavaScript evaluates `slice(-0)` as `slice(0)`; it is not a zero-capacity mode.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly maxEntries?: number | undefined;
 
@@ -122,7 +122,7 @@ export interface MemoryOptions {
    * per commit. Resources acquired by that Effect follow the active navigation fiber and its Scope.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly commit?: (
     before: BeforeNavigationEvent,
@@ -143,7 +143,7 @@ export interface MemoryOptions {
  * lifetime of the provided Navigation service.
  *
  * @since 1.0.0
- * @category options
+ * @category Memory history configuration
  */
 export interface InitialMemoryOptions {
   /**
@@ -157,7 +157,7 @@ export interface InitialMemoryOptions {
    * Layer acquisition resolves this value and stores the resulting URL object on the initial Destination.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly url: string | URL;
   /**
@@ -171,7 +171,7 @@ export interface InitialMemoryOptions {
    * The string is read during acquisition and retained on the Navigation service.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly origin?: string | undefined;
   /**
@@ -185,7 +185,7 @@ export interface InitialMemoryOptions {
    * The string is read during acquisition and retained on the Navigation service.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly base?: string | undefined;
   /**
@@ -202,7 +202,7 @@ export interface InitialMemoryOptions {
    * not disable history retention.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly maxEntries?: number | undefined;
   /**
@@ -217,7 +217,7 @@ export interface InitialMemoryOptions {
    * placed here and should replace rather than mutate it when deterministic history snapshots matter.
    *
    * @since 1.0.0
-   * @category layers
+   * @category Memory history configuration
    */
   readonly state?: unknown;
 }
@@ -266,7 +266,7 @@ const limitEntries =
  * const NavigationLive = memory({ entries: [entry], currentIndex: 0, maxEntries: 50 })
  * ```
  * @since 1.0.0
- * @category layers
+ * @category Memory history providers
  */
 export const memory = (options: MemoryOptions) =>
   Layer.effect(Navigation)(
@@ -316,7 +316,7 @@ export const memory = (options: MemoryOptions) =>
  * const NavigationLive = initialMemory({ url: "/products?page=2", maxEntries: 50 })
  * ```
  * @since 1.0.0
- * @category layers
+ * @category Memory history providers
  */
 export const initialMemory = (options: InitialMemoryOptions) =>
   Layer.unwrap(

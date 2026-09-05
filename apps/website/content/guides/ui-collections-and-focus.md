@@ -1,224 +1,203 @@
 ---
 title: "UI collections, focus, and keyboard behavior"
-summary: "Understand the Collection and Composite contracts shared by menus, tabs, comboboxes, trees, grids, and toolbars."
+summary: "Build a changing editor toolbar and trace the relationship between command identity, DOM registration, browser focus, and application state."
 section: "UI"
 kind: "deep-dive"
 order: 4.2
 ---
 
-A composite is a widget whose items share one keyboard and focus contract. Build it from a family
-rather than assembling roles and key handlers yourself. This guide builds a formatting toolbar: a
-registered collection of commands with real roving focus. The same division—state for the active
-identity and a collection for mounted items—also underpins Listbox, Tabs, Menu, Grid, and Tree.
+An editor has three tools: Move, Draw, and Erase. The user tabs into its toolbar, presses Right to
+inspect Draw, then presses Enter to use it. Later, the document becomes read-only and Erase disappears.
+A good implementation must answer two questions that a row of styled buttons does not answer: did
+moving focus also change the editor tool, and where does focus go when its current control vanishes?
 
-## Build one toolbar from public parts
+We will build that interaction in two stages. First, give the toolbar a keyboard location without
+confusing it with the selected editor tool. Then make the command list change while preserving the
+relationship between logical identity and actual DOM elements. The same reasoning explains why a
+combobox can keep focus in an input, why a grid can keep focus on its root, and why those families
+cannot all use one generic “selected item” abstraction.
 
-The caller owns the live command list. The toolbar creates its own short-lived interaction state and
-registry when it is rendered. Each `Toolbar.Item` supplies a stable item ID; its rendered ref
-registers that ID and its actual element in `collection`.
+## Start with two different facts
+
+The editor's current tool is application state: it changes what a pointer drag does on the canvas.
+The toolbar's active item is interaction state: it tells the next arrow key where to start. A user
+must be able to navigate the toolbar without changing the canvas tool on every arrow press.
 
 ```ts
 import { RefSubject } from "@typed/fx";
-import { many } from "@typed/template";
-import { component } from "@typed/ui";
+import { html } from "@typed/template";
+import { component } from "@typed/ui/Component";
 import * as Toolbar from "@typed/ui/Toolbar";
 
-interface Command {
-  readonly id: string;
-  readonly label: string;
-}
-
-interface FormattingToolbarProps {
-  readonly commands: RefSubject.RefSubject<ReadonlyArray<Command>>;
-}
-
-export const FormattingToolbar = component(function* (props: FormattingToolbarProps) {
-  const state = yield* Toolbar.makeState({ activeId: "bold" });
+export const DrawingTools = component(function* () {
+  const tool = yield* RefSubject.make("move");
+  const state = yield* Toolbar.makeState({ activeId: "drawing-move" });
   const collection = yield* Toolbar.makeCollection();
 
-  const items = many(
-    props.commands,
-    (command) => command.id,
-    (command, id) =>
-      Toolbar.Item({
-        state,
-        collection,
-        id,
-        content: RefSubject.map(command, (current) => current.label),
+  return html`<section>
+    ${Toolbar.Root({ state, collection, label: "Drawing tools", content: [
+      Toolbar.Item({ state, collection, id: "drawing-move", content: "Move",
+        props: {
+          "aria-pressed": RefSubject.map(tool, (value) => value === "move"),
+          onclick: RefSubject.set(tool, "move"),
+        },
       }),
-  );
-
-  return Toolbar.Root({
-    state,
-    collection,
-    label: "Formatting",
-    content: items,
-  });
+      Toolbar.Item({ state, collection, id: "drawing-draw", content: "Draw",
+        props: {
+          "aria-pressed": RefSubject.map(tool, (value) => value === "draw"),
+          onclick: RefSubject.set(tool, "draw"),
+        },
+      }),
+    ] })}
+    <p>Canvas tool: ${tool}</p>
+  </section>`;
 });
 ```
 
-`activeId` is the keyboard identity, not an element or array position. `collection` is the mounted
-registry: an item contains that identity, its live DOM element, disabled state, and optional search
-text. Movement uses enabled registered items in DOM order, not the order in which registration
-Effects happened to run.
+Render `DrawingTools` inside the application's normal render scope. The zero-argument component
+is an Fx; creating the value does not eagerly mount elements or install keyboard listeners. Its
+generator acquires state when rendered. The canvas-tool subject, toolbar state, and collection then
+share that component's lifetime. See [building components](/explore/building-ui-components) if this
+acquisition boundary is new.
 
-Each keyed item owns its collection registration. When an item leaves the live list, that
-registration is removed. If another render replaces the same ID, the older cleanup cannot remove
-the newer registration.
+Tab into Move and press Right. `state.activeId` becomes `drawing-draw`, the actual Draw element
+receives focus, and `tool` stays `move`. Press Enter: the root activates the registered item, which
+runs its click effect and sets `tool` to `draw`. The pressed attributes and the visible text now agree.
+This separation is why the example does not subscribe to active-ID changes to select tools.
 
-## Use IDs as the contract for dynamic items
+## Understand what the collection contributes
 
-`many` preserves one rendered range for each command ID. Adding, removing, or reordering commands
-therefore preserves retained controls and lets the collection read their new DOM order. IDs must be
-unique and stable for the command's logical lifetime—never use an array index for a list that can
-move.
+There is no array of elements in our application code. Each rendered `Toolbar.Item` supplies a ref
+that registers its stable ID and actual DOM element in `collection`. The root uses that registry
+to find the next item and focus it. Mounting an item acquires a registration; removing its rendered
+scope releases that registration. Replacement cleanup is identity-safe: an older registration's
+finalizer cannot remove a newer registration with the same ID.
+
+The active ID is a string because it names a logical command. An array index would instead name a
+position, and a DOM element would tie application state to one render instance. The registry bridges
+those layers. It reads current DOM order for movement rather than assuming the order in which
+asynchronous registrations happened is visual order.
+
+In the default horizontal toolbar, Left/Right move through enabled registered items, Home/End move
+to the bounds, and Enter/Space activate. Only the active item has tabindex zero; other items have
+minus one. If no active item exists, the root can take the initial tab stop and establish one.
+Normal operation then uses real focus on the item. The root does not implement Menu's printable-key
+typeahead merely because both families use Collection.
+
+## Make the commands change without losing their identity
+
+Now allow Erase to be removed from the toolbar. A keyed `many` gives each command ID one retained
+rendered range. The collection gives each mounted item its DOM registration. These solve related
+but different problems: keyed rendering preserves nodes through updates; registration lets keyboard
+behavior find the nodes that currently exist.
+
+This version repairs active identity before removing Erase, and moves browser focus only if Erase
+still owns it. That distinction matters: clicking the external Remove button normally focuses that
+button, and the toolbar should not steal focus back. The editor also switches away from Erase when
+necessary, because removing a control and removing the underlying capability are one application
+operation.
 
 ```ts
+import * as Effect from "effect/Effect";
 import { RefSubject } from "@typed/fx";
+import { html, many } from "@typed/template";
+import { component } from "@typed/ui/Component";
+import * as Composite from "@typed/ui/Composite";
+import * as Toolbar from "@typed/ui/Toolbar";
 
-interface Command {
+interface DrawingCommand {
   readonly id: string;
   readonly label: string;
 }
 
-const addUnderline = (commands: RefSubject.RefSubject<ReadonlyArray<Command>>) =>
-  RefSubject.update(commands, (current) => [...current, { id: "underline", label: "Underline" }]);
-```
+export const ChangingDrawingTools = component(function* () {
+  const commands = yield* RefSubject.make<ReadonlyArray<DrawingCommand>>([
+    { id: "drawing-move", label: "Move" },
+    { id: "drawing-draw", label: "Draw" },
+    { id: "drawing-erase", label: "Erase" },
+  ]);
+  const tool = yield* RefSubject.make("drawing-move");
+  const state = yield* Toolbar.makeState({ activeId: "drawing-move" });
+  const collection = yield* Toolbar.makeCollection();
 
-The family registers and unregisters rendered items; application code updates the domain list. If an
-update removes the active command, the component that owns the toolbar state must choose a successor
-and update `activeId` as part of that interaction. A collection reports what is mounted; it does not
-invent a domain policy for a disappearing command.
+  const removeErase = Effect.andThen(
+    Effect.flatMap(state, ({ activeId }) => activeId === "drawing-erase"
+      ? Effect.flatMap(collection, (items) => {
+          const erased = items.find((item) => item.id === "drawing-erase")?.element;
+          const heldFocus = erased !== undefined && erased.ownerDocument.activeElement === erased;
+          return Effect.andThen(
+            RefSubject.update(state, (current) => ({ ...current, activeId: "drawing-move" })),
+            heldFocus ? Composite.focusActive({ state, collection }) : Effect.void,
+          );
+        })
+      : Effect.void),
+    Effect.andThen(
+      RefSubject.update(tool, (current) => current === "drawing-erase" ? "drawing-move" : current),
+      RefSubject.update(commands, (current) => current.filter((command) => command.id !== "drawing-erase")),
+    ),
+  );
 
-## Know where focus actually lives
-
-`Toolbar` implements roving DOM focus. Its root receives focus only to establish an initial active
-item; it then focuses that item. The active item receives `tabindex="0"`; other items receive `-1`.
-Arrow keys move according to the configured orientation (horizontal by default), `Home` and `End`
-move to the bounds, looping and RTL are honored, and disabled items are skipped. `Enter` and `Space`
-activate the current role-button item.
-
-That is deliberately different from a combobox. `Combobox.Input` keeps browser focus in the native
-input and renders the active option through `aria-activedescendant`; its option elements are not the
-focused element. Do not add `aria-activedescendant` to this toolbar: `Toolbar.Root` moves real focus.
-Choose the component family whose focus model matches the interaction, rather than toggling a shared
-low-level setting after the fact.
-
-## Separate active focus from selected content
-
-Tabs show why active identity and committed selection are separate. Automatic activation selects
-when focus moves; manual activation lets someone inspect tab names with the arrow keys and commit
-with Enter or Space. Choose that behavior explicitly, especially if opening a panel starts work.
-
-```ts
-import { component } from "@typed/ui/Component";
-import * as Tabs from "@typed/ui/Tabs";
-
-const ProjectTabs = component(function* () {
-  const state = yield* Tabs.makeState({
-    selectedId: "project-overview",
-    activationMode: "manual",
-  });
-  const collection = yield* Tabs.makeCollection();
-
-  return [
-    Tabs.List({
-      state,
-      collection,
-      label: "Project details",
-      content: [
-        Tabs.Tab({ state, collection, id: "project-overview", panelId: "project-overview-panel", content: "Overview" }),
-        Tabs.Tab({ state, collection, id: "project-activity", panelId: "project-activity-panel", content: "Activity" }),
-      ],
-    }),
-    Tabs.Panel({ state, id: "project-overview-panel", tabId: "project-overview", content: "Project summary" }),
-    Tabs.Panel({ state, id: "project-activity-panel", tabId: "project-activity", content: "Recent activity" }),
-  ];
-});
-```
-
-Keep tab and panel relationships stable across SSR and hydration. A panel's content may be live;
-that does not require rebuilding the tablist. Use routing when a choice should navigate to a new
-location, and Tabs when it switches a related panel within the same interaction.
-
-## Know when a collection is not enough
-
-`Collection` records mounted elements and their metadata. It is not a data loader or a virtualized
-list model. An unmounted row is unavailable for DOM focus and typeahead even if it exists in your
-application array. A virtualized collection must coordinate scrolling, mounting, and active identity
-before moving focus; rendering fewer nodes alone does not supply that policy.
-
-Hierarchical and spatial widgets need their family's richer contract. `Tree` carries parent and
-expansion relationships; `Grid` carries row/column positions; `TreeGrid` combines those concerns.
-Do not implement them by assigning tree or grid roles to Toolbar items. Likewise, keep disabled
-items' semantics separate from missing/hidden items, and verify navigation after either changes.
-
-For a library wrapper, preserve all of the family's item props and ref on the element that actually
-receives focus. Registering a wrapper while moving focus to its child gives the collection a
-misleading element identity.
-
-## Test state and browser behavior at their boundaries
-
-The collection unit tests prove registration ownership, replacement safety, disabled filtering, and
-DOM ordering. Browser tests prove the browser-owned boundary: native key delivery and the actual
-focused node. This is the focused toolbar pattern used by the package tests.
-
-```ts
-import { Effect } from "effect";
-import { Fx } from "@typed/fx";
-import { DomRenderTemplate, render } from "@typed/template";
-import { assert, it, vi } from "vitest";
-import * as Toolbar from "@typed/ui/Toolbar";
-
-it("moves focus through enabled commands", async () => {
-  document.body.replaceChildren();
-
-  await Effect.gen(function* () {
-    const state = yield* Toolbar.makeState({ activeId: "bold" });
-    const collection = yield* Toolbar.makeCollection();
-
-    yield* render(
-      Toolbar.Root({
-        state,
-        collection,
-        label: "Formatting",
-        content: [
-          Toolbar.Item({ state, collection, id: "bold", content: "Bold" }),
-          Toolbar.Item({
-            state,
-            collection,
-            id: "separator",
-            disabled: true,
-            content: "Separator",
-          }),
-          Toolbar.Item({ state, collection, id: "italic", content: "Italic" }),
-        ],
+  return html`<section>
+    ${Toolbar.Root({ state, collection, label: "Drawing tools", content: many(
+      commands,
+      (command) => command.id,
+      (command, id) => Toolbar.Item({ state, collection, id,
+        content: RefSubject.map(command, (current) => current.label),
+        props: {
+          "aria-pressed": RefSubject.map(tool, (current) => current === id),
+          onclick: RefSubject.set(tool, id),
+        },
       }),
-      document.body,
-    ).pipe(Fx.take(1), Fx.drain);
-
-    const bold = document.querySelector("#bold") as HTMLDivElement;
-    const italic = document.querySelector("#italic") as HTMLDivElement;
-    bold.focus();
-    bold.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    yield* Effect.promise(() => vi.waitFor(() => {
-      assert.strictEqual(document.activeElement, italic);
-    }));
-
-    const currentState = yield* state;
-    assert.strictEqual(currentState.activeId, "italic");
-    assert.strictEqual(document.activeElement, italic);
-  }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+    ) })}
+    <button type="button" onclick=${removeErase}>Remove Erase tool</button>
+    <p>Canvas tool: ${tool}</p>
+  </section>`;
 });
 ```
 
-For a dynamic-list test, update `commands`, wait for the rendered change, then assert the registered
-IDs or DOM order and—when a retained item had focus—that the same DOM node is still focused. For
-`Combobox`, assert the inverse focus relationship: the input remains
-`document.activeElement` while its `aria-activedescendant` changes.
+This example has a known Move command that always survives, so it is an adequate successor
+policy. A tab strip that can close any tab needs a different policy, often the preceding or following
+neighbor. An empty list needs an explicit external focus destination. Those are domain decisions;
+a registry cannot infer them from an unmount notification.
 
-Use [Collection](/reference/modules/%40typed%2Fui%2FCollection) and
-[Composite](/reference/modules/%40typed%2Fui%2FComposite) when implementing a new family;
-use [Tabs](/reference/modules/%40typed%2Fui%2FTabs), [Tree](/reference/modules/%40typed%2Fui%2FTree),
-and [Grid](/reference/modules/%40typed%2Fui%2FGrid) for their existing interactions.
-The collection lifetime follows the surrounding [Effect v4](https://effect.website/docs/v4) Scope.
+Notice that the removal action is idempotent. Repeating it does not add duplicate items or move focus
+away from a retained active tool. If a permission update can arrive from outside this component,
+route it through the same reconciliation operation rather than filtering the rendered array in one
+place and repairing interaction state somewhere else.
+
+## Check the boundary that state cannot prove
+
+A state-only check can confirm the active ID. It cannot prove the ref was registered on the correct
+node, the browser accepted focus, or a custom host retained the keyboard handlers. After pressing
+Right in a browser, inspect both `state.activeId` and `document.activeElement.id`. In this toolbar
+they should identify the same command. After an external update removes a focused Erase, Move
+should receive focus and no registration should point at the detached Erase node. When removal
+comes from the external button, that button should retain focus instead.
+
+When wrapping an item, keep its supplied ref, role, tabindex, and event props on the element that
+actually receives focus. A decorative outer div can make the page look correct while registering
+the wrong node. If arrow state changes but the visual focus indicator stays behind, inspect that
+boundary before changing the movement algorithm. Disabled commands are skipped by toolbar movement;
+a custom application click effect still needs to respect the same disabled condition.
+
+## Transfer the reasoning, not the exact focus implementation
+
+A [Listbox](/explore/ui-listbox) intentionally selects as real focus moves. A
+[Combobox](/explore/ui-combobox) keeps browser focus in the native input and reports its active option
+through `aria-activedescendant`; moving to a suggestion does not commit the text. A
+[Grid](/explore/ui-grid) likewise keeps focus on its root while active cell identity changes.
+For those widgets, asserting that `document.activeElement.id` equals the option or cell ID would
+be the wrong test. [MDN's active-descendant reference](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-activedescendant)
+explains the alternative relationship.
+
+Hierarchy introduces another boundary. [Tree](/explore/ui-tree) descendants share one registry and
+use parent metadata to calculate visible navigation. A [Menu](/explore/ui-menu) submenu gets its
+own registry; its trigger links parent and child interaction scopes. Arbitrary nested editors do
+not acquire such coordination automatically. A text input placed inside Grid can still bubble
+arrow events to the root, so an editing mode needs a deliberate entry, exit, and event policy.
+
+The [APG keyboard interface guidance](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/)
+provides the broader focus-versus-selection vocabulary. Continue to [Toolbar](/explore/ui-toolbar)
+for its full public behavior, [Tabs](/explore/ui-tabs) for manual panel activation, or
+[Collection](/reference/modules/%40typed%2Fui%2FCollection) and
+[Composite](/reference/modules/%40typed%2Fui%2FComposite) when implementing a new interaction family.

@@ -25,7 +25,7 @@ import type { NavigationError } from "@typed/navigation/model";
  * ```
  *
  * @since 1.0.0
- * @category layers
+ * @category Test history
  */
 export const TestRouter = (
   options: (MemoryOptions | InitialMemoryOptions) & {},

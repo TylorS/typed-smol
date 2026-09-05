@@ -21,7 +21,7 @@ import type * as Fx from "./Fx.js";
  * only when the resulting Stream is run.
  *
  * @since 1.0.0
- * @category models
+ * @category Operator options
  */
 export type ToStreamOptions = Parameters<typeof Stream.callback<unknown, unknown, unknown>>[1];
 
@@ -52,7 +52,7 @@ export type ToStreamOptions = Parameters<typeof Stream.callback<unknown, unknown
  * ```
  *
  * @since 1.0.0
- * @category interop
+ * @category Stream interop
  */
 export const toStream = <A, E, R>(
   fx: Fx.Fx<A, E, R>,
@@ -87,7 +87,7 @@ export const toStream = <A, E, R>(
  * adapted `Fx` is run.
  *
  * @since 1.0.0
- * @category models
+ * @category Operator options
  */
 export type FromStreamOptions = Parameters<
   typeof Stream.mapEffect<unknown, unknown, unknown, unknown>
@@ -120,7 +120,7 @@ export type FromStreamOptions = Parameters<
  * ```
  *
  * @since 1.0.0
- * @category interop
+ * @category Stream interop
  */
 export const fromStream = <A, E, R>(
   stream: Stream.Stream<A, E, R>,

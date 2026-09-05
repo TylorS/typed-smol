@@ -22,11 +22,12 @@ attribute host and gives the DOM renderer the exact element from which it restor
 ref remains ordinary writable state after hydration.
 
 ```ts
-import { Effect, Schema } from "effect"
+import { Schema } from "effect"
+import { component } from "@typed/ui/Component"
 import { RefSubject } from "@typed/fx"
 import { html } from "@typed/template"
 
-const counter = Effect.fn("counter")(function* () {
+const counter = component(function* () {
   const count = yield* RefSubject.hydrate(Schema.Finite, 0)
 
   return html`<button ref=${count} onclick=${RefSubject.increment(count)}>
@@ -48,11 +49,12 @@ Unnamed members share one envelope. Named members use their own readable `data-*
 stay synchronized with later successful state updates.
 
 ```ts
-import { Effect, Schema } from "effect"
+import { Schema } from "effect"
+import { component } from "@typed/ui/Component"
 import { RefSubject } from "@typed/fx"
 import { html } from "@typed/template"
 
-const preferences = Effect.fn("preferences")(function* () {
+const preferences = component(function* () {
   const page = yield* RefSubject.hydrate(Schema.FiniteFromString, 1, { name: "page" })
   const density = yield* RefSubject.hydrate(Schema.String, "comfortable")
   const state = RefSubject.hydrateAll(page, density)
@@ -70,3 +72,34 @@ RefSubjects one shared state model.
 
 For the full DOM adoption contract, read [Hydrating Typed HTML](/explore/hydrating-typed-html). For
 element references that acquire browser resources, read [Template references and element access](/explore/template-references-and-element-access).
+
+## Keep the server snapshot and browser initializer in agreement
+
+Hydration transfers the state that produced the HTML. A request-scoped server model may initialize
+from a database; the browser may initialize from a client service. The encoded snapshot is the
+handoff between them. Avoid running a second independent client fetch before restoration and then
+expecting hydration to reconcile two unrelated results. If data should refresh immediately after
+adoption, make that an explicit operation over the restored state.
+
+A hydrated ref still has its normal source policy. In particular, a live Fx/Stream is a producer,
+not merely a default value. Choose when that producer starts relative to restoration, and test the
+case where it emits before the DOM is adopted. Do not assume adding a codec imposes network ordering.
+
+Only serialize data intended for the browser. A schema validates its encoded shape; it does not
+make hidden service credentials or internal records appropriate to embed in HTML. Project the
+server model to the client contract before hydration. Keep stable entity IDs in that snapshot so
+[keyed children](/explore/keyed-template-collections) adopt the same identities.
+
+## Diagnose hydration failures at the handoff
+
+Check the server's emitted attribute, the exact DOM element used by `ref`, the codec's encoded and
+decoded types, and whether another process changed the markup. A string codec and a number codec
+are different contracts even when both can display the same text. Named attributes remain readable
+and synchronized; the unnamed envelope is consumed after successful decoding, so its removal is
+expected and is not evidence that state was lost.
+
+A useful integration test renders a non-default server value, hydrates it with a deliberately
+different client initializer, and asserts both the adopted DOM and subsequent ref update. Also
+exercise an invalid encoded payload and confirm the typed schema failure. Testing only the codec
+round trip cannot prove the element-host protocol, while testing only the initial text cannot prove
+that the browser adopted reactive state.

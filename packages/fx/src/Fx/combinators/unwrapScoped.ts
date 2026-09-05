@@ -44,7 +44,7 @@ import type { Fx } from "../Fx.js";
  * @param effect - An `Effect` that produces an `Fx`.
  * @returns An `Fx` that runs the effect and then the produced Fx.
  * @since 1.0.0
- * @category combinators
+ * @category Generator composition
  */
 export const unwrapScoped = <A, E, R, E2, R2>(
   effect: Effect.Effect<Fx<A, E, R>, E2, R2 | Scope.Scope>,

@@ -36,7 +36,7 @@ type MergedEvents<User, Internal> = {
  * The resulting event/ref work is owned by the host's rendering Scope.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Prop composition
  */
 export type MergedHostProps<User, Internal> = Omit<
   ObjectValue<User>,
@@ -58,7 +58,7 @@ export type MergedHostProps<User, Internal> = Omit<
  * Type-only; the rendered host owns listener/ref lifetime.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Prop forwarding
  */
 export type ForwardedHostKeys<Options> = Extract<
   keyof ObjectValue<Options>,
@@ -75,7 +75,7 @@ export type ForwardedHostKeys<Options> = Extract<
  * Type-only; the rendered host owns listener/ref lifetime.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Prop forwarding
  */
 export type ForwardedHostProps<Options> = Pick<ObjectValue<Options>, ForwardedHostKeys<Options>>;
 
@@ -90,7 +90,7 @@ export type ForwardedHostProps<Options> = Pick<ObjectValue<Options>, ForwardedHo
  * Type-only; runtime ownership begins when the host renders.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Prop composition
  */
 export type HostOptionProps<Options> = MergedHostProps<
   Property<Options, "props">,
@@ -109,7 +109,7 @@ export type HostOptionProps<Options> = MergedHostProps<
  * The rendering Scope owns composed listeners and refs.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Prop composition
  */
 export type RenderHostProps<Options, Internal> = MergedHostProps<
   HostOptionProps<Options>,
@@ -147,7 +147,7 @@ export type RenderHostProps<Options, Internal> = MergedHostProps<
  * ```
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Prop composition
  */
 export function mergeProps<const User extends object | undefined, const Internal extends object>(
   user: User,
@@ -189,7 +189,7 @@ export function mergeProps<const User extends object | undefined, const Internal
  * Pure read; no value is retained.
  *
  * @since 1.0.0
- * @category utilities
+ * @category Property inspection
  */
 export function getProperty<const Value, const Key extends PropertyKey>(
   value: Value,
@@ -211,7 +211,7 @@ export function getProperty<const Value, const Key extends PropertyKey>(
  * The helper closes over `options` only during synchronous prop construction.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Internal prop defaults
  */
 export function makeInternalPropsHelpers<const Options>(
   options: Options,
@@ -237,7 +237,7 @@ export function makeInternalPropsHelpers<const Options>(
  * Returns a shallow object. The rendering Scope owns any contained listener/ref work.
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Prop forwarding
  */
 export function forwardHostProps<const Options extends object>(
   options: Options,

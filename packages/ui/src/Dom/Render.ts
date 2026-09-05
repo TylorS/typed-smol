@@ -49,7 +49,7 @@ import type {
  * ```
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Host rendering
  */
 export function renderHost<Element extends globalThis.Element>() {
   return function <
@@ -95,7 +95,7 @@ export function renderHost<Element extends globalThis.Element>() {
  * ```
  *
  * @since 1.0.0
- * @category dom-hosts
+ * @category Host rendering
  */
 export function renderDivHost<
   const Props extends HostProps<HTMLDivElement>,

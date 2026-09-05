@@ -1,152 +1,154 @@
 ---
 title: "State transactions and bidirectional views"
-summary: "Make one serialized change, return a useful result, or expose a writable lens without copying state."
+summary: "Keep a reservation decision coherent, separate remote work from local commits, and choose when a writable representation is safe."
 section: "State"
 kind: "guide"
 order: 2.25
 ---
 
-`RefSubject.update` is enough for most named transitions. Use the APIs here when a transition must
-return a result, several reads and writes must share one transaction, a consumer needs a writable
-representation in another type, or an observer needs a bounded view of pushed versions.
+A review assignment queue has a limited number of available slots. Two commands may try to reserve
+the last slot at once. Reading the count and later writing `count - 1` lets both commands decide
+from the same stale value. A serialized transition must make the decision and commit together.
 
-The transition operations return Effects; `transform` and `slice` return RefSubject views. The
-[Effect type guide](https://www.effect.website/docs/v4/getting-started/the-effect-type/) explains
-an Effect's value, expected-error, and service channels. The examples run in a Scope so temporary
-state is finalized when each program completes.
+`RefSubject.update` handles a next value. `modify` additionally returns a result to the caller.
+`runUpdates` gives several steps one serialized boundary over one ref. These are local state
+operations; they do not create a distributed transaction with a server or another unrelated ref.
+Start with [state composition](/explore/composing-refsubject-state) if the model's fields and
+ownership are not yet clear.
 
-## Commit a change and return a separate result
-
-`modify` takes one pure function that returns `[result, nextState]`. The result is for the caller;
-the second element is the only value committed. `modifyEffect` is the version for a transition that
-can fail or needs a service. Both run in the RefSubject's serialized update boundary, so callers do
-not need to coordinate a read and a later write themselves.
+## Return the decision and commit from the same snapshot
 
 ```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
+import { Effect } from "effect"
+import { RefSubject } from "@typed/fx"
 
 type Reservation =
   | { readonly accepted: false }
-  | { readonly accepted: true; readonly seat: number };
+  | { readonly accepted: true; readonly slot: number }
 
-const program = Effect.scoped(
-  Effect.gen(function* () {
-    const remainingSeats = yield* RefSubject.make(2);
-    const reservation = yield* RefSubject.modify(remainingSeats, (current): readonly [Reservation, number] =>
-      current === 0
-        ? ([{ accepted: false }, current] as const)
-        : ([{ accepted: true, seat: current }, current - 1] as const),
-    );
+const reserve = <E, R>(slots: RefSubject.RefSubject<number, E, R>) =>
+  RefSubject.modify(slots, (available): readonly [Reservation, number] =>
+    available === 0
+      ? [{ accepted: false }, available]
+      : [{ accepted: true, slot: available }, available - 1],
+  )
 
-    return { reservation, remaining: yield* remainingSeats };
-  }),
-);
-
-await Effect.runPromise(program);
+const example = Effect.scoped(Effect.gen(function* () {
+  const slots = yield* RefSubject.make(1)
+  const first = yield* reserve(slots)
+  const second = yield* reserve(slots)
+  return { first, second, remaining: yield* slots }
+}))
 ```
 
-The returned reservation and committed remaining-seat count come from one serialized transition;
-the decision cannot become stale between the read and the write.
+The tuple is `[result, nextState]`. An accepted reservation and the decremented count come from the
+same serialized transition. A rejected reservation returns a useful result without inventing an
+exception for an ordinary full queue. Competing writes use the same update boundary, so callers
+cannot both reserve the last slot by independently checking it.
 
-## Use an explicit transaction when a transition has multiple steps
+`modifyEffect` lets the transition require services or fail; `updateEffect` is its next-value-only
+counterpart. Their added `E` and `R` stay in the command's Effect. Do not turn an ordinary domain
+rejection into a defect just because the callback can fail.
 
-`runUpdates` gives a callback a `GetSetDelete<A, E, R>` for one serialized transaction. Read with
-`get`, make zero or more buffered writes with `set`, and return the domain result. `onInterrupt` is
-available when an interrupted transaction needs an explicit compensation or record; choose whether
-that callback receives the initial or current transaction value.
+## Use transaction-local operations for several steps
+
+A reservation may read the model, buffer an update, and return a receipt. `runUpdates` exposes
+`GetSetDelete` for that one transaction. Use the callback's operations instead of re-entering the
+same ref's top-level write methods.
 
 ```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
+import { Effect } from "effect"
+import { RefSubject } from "@typed/fx"
 
-const reserve = <E, R>(remainingSeats: RefSubject.RefSubject<number, E, R>) =>
-  RefSubject.runUpdates(
-    remainingSeats,
-    Effect.fn("reserve")(function* (seats) {
-      const current = yield* seats.get;
-      if (current === 0) return { accepted: false };
-
-      yield* seats.set(current - 1);
-      return { accepted: true, seat: current };
-    }),
-    {
-      value: "initial",
-      onInterrupt: (initial) => Effect.log(`reservation interrupted with ${initial} seats`),
-    },
-  );
-
-const program = Effect.scoped(
-  Effect.gen(function* () {
-    const remainingSeats = yield* RefSubject.make(1);
-    return yield* reserve(remainingSeats);
-  }),
-);
-
-await Effect.runPromise(program);
+const reserve = <E, R>(slots: RefSubject.RefSubject<number, E, R>) =>
+  RefSubject.runUpdates(slots, Effect.fn("reserveSlots")(function* (transaction) {
+    const available = yield* transaction.get
+    if (available === 0) return { accepted: false } as const
+    yield* transaction.set(available - 1)
+    return { accepted: true, slot: available } as const
+  }), {
+    value: "initial",
+    onInterrupt: (initial) => Effect.log(`reservation interrupted from ${initial} available slots`),
+  })
 ```
 
-Keep the transaction callback behind a named operation such as `reserve`. That preserves the domain
-language for tests, event handlers, routes, and other consumers.
+The `onInterrupt` option can receive the initial or current transaction value. Use it for a
+specific interruption policy or diagnostic record. It is not evidence that a remote operation was
+undone. Calling a top-level update on this same ref inside the callback attempts to enter the
+serialized boundary again; it is not the nested-transaction API.
 
-## Expose another writable representation without another store
+Prefer the simpler `modify` when one function expresses the whole change. More transaction steps
+do not make the invariant stronger. Keep the domain command named `reserve` so a toolbar, route,
+and test all use the same decision.
 
-`transform` creates a bidirectional view. The first function maps source values out; the second maps
-writes back to the source. It is useful for a boundary that truly has two representations, such as a
-number in the model and a string at an input boundary. It is not validation by itself: decide what
-to do with invalid strings before exposing a lossy reverse mapping.
+## Keep remote latency outside the lock
+
+Awaiting a server request inside `updateEffect` makes other writes wait behind that request. If the
+network stalls, a local editor can become unresponsive even though the only shared resource is a
+small object. The server write also does not roll back automatically if the local callback fails.
+
+For a remote assignment, reserve local intent in one short transition, run the request outside the
+lock, then reconcile its response in another short transition. Record an operation ID or revision
+with the intent. A completion should update state only if it still applies; otherwise a late response
+can erase a newer edit. [Optimistic AsyncData](/explore/async-data-optimistic-edits) develops the
+pending-value and rollback policy.
+
+If several fields must change together, put them in one parent ref. Serializing writes to two
+separate refs individually does not make their combined state atomic. A reservation system with
+multiple authoritative services needs its own coordination protocol beyond local RefSubject state.
+
+## Expose another writable representation only when conversion is valid
+
+A slot limit can be numeric in the model and textual at an input boundary. `transform` forwards
+reads through one mapping and writes through its inverse while delegating to the original owner.
+It returns a writable ref; `map` instead returns a read-only Computed.
 
 ```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
+import { Effect } from "effect"
+import { RefSubject } from "@typed/fx"
 
-const program = Effect.scoped(
-  Effect.gen(function* () {
-    const quantity = yield* RefSubject.make(2);
-    const quantityText = RefSubject.transform(
-      quantity,
-      (value) => value.toString(),
-      (text) => Number(text),
-    );
-
-    yield* RefSubject.set(quantityText, "7");
-    return yield* quantity;
-  }),
-);
-
-await Effect.runPromise(program); // 7
+const example = Effect.scoped(Effect.gen(function* () {
+  const slots = yield* RefSubject.make(2)
+  const text = RefSubject.transform(slots, String, Number)
+  yield* RefSubject.set(text, "7")
+  return { numeric: yield* slots, displayed: yield* text }
+}))
 ```
 
-The transformed ref delegates its lifetime, errors, subscriptions, and serialized update boundary
-to the original. Unlike `map`, it remains writable; `map` returns a read-only `Computed`.
+This conversion works for `"7"`, but it deliberately normalizes `"007"`, turns empty text into `0`,
+and can turn invalid text into `NaN`. Those are JavaScript conversion rules, not validation. A real
+quantity editor usually needs a string draft that can temporarily contain `"-"`, validation feedback,
+and an explicit successful commit to the numeric model. Use a transform when normalization on every
+write is the intended interaction, not to avoid representing invalid intermediate input.
 
-## Bound an observation, not the state
+For lossless transforms, test both round trips: model to view to model, and accepted view to model
+to view. For lossy transforms, document normalization and test its boundaries. The view delegates
+serialized writes, errors, subscriptions, and lifetime to the source; it does not create a second
+store that must be synchronized.
 
-`slice(ref, skip, take)` returns another writable RefSubject facade, but it changes only its Fx
-observation channel. Current reads and writes still delegate to the original state. This is useful
-for a test or a one-shot observer that needs exactly a bounded number of pushed versions; it is not
-a way to truncate a state history or limit future writes.
+## Bound an observer without changing current state
+
+`slice(ref, skip, take)` is a writable facade whose Fx channel observes a bounded section of pushed
+versions. Its current reads and writes still delegate directly to the original ref. It can help a
+test wait for a particular number of updates, but it does not truncate history or limit future writes.
 
 ```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
+import { Effect } from "effect"
+import { RefSubject } from "@typed/fx"
 
-const program = Effect.scoped(
-  Effect.gen(function* () {
-    const count = yield* RefSubject.make(0);
-    const firstUpdate = RefSubject.slice(count, 1, 1);
-
-    yield* RefSubject.set(count, 1);
-    yield* RefSubject.set(count, 2);
-
-    return yield* firstUpdate;
-  }),
-);
-
-await Effect.runPromise(program);
+const example = Effect.scoped(Effect.gen(function* () {
+  const slots = yield* RefSubject.make(2)
+  const oneLaterPublication = RefSubject.slice(slots, 1, 1)
+  yield* RefSubject.set(slots, 1)
+  return yield* oneLaterPublication
+}))
 ```
 
-`slice` preserves ordinary current reads. To test the bounded pushed sequence, observe it in a
-Scope as shown in [Testing Typed systems](/explore/testing-typed-systems). For state combinations
-that become read-only when any input is read-only, see
-[Composing RefSubject state](/explore/composing-refsubject-state).
+That final expression is a current read and returns `1`; it does not wait for the sliced Fx sequence.
+To test publications, run an Fx consumer first, synchronize subscription startup, and then write.
+[Test guidance](/explore/testing-typed-systems) shows this distinction.
+
+Test reservation receipts, committed state, and observer behavior separately. An equivalent state
+write can legitimately suppress a publication while still returning a command result. Add competing
+reservations and interruption when those are part of the command's contract; a fast sequential happy
+path alone cannot establish the serialized behavior the feature depends on.

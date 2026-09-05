@@ -1,8 +1,9 @@
+// oxlint-disable require-yield
 import { describe, expect, it, vi } from "vitest";
 import * as Effect from "effect/Effect";
 import { html } from "@typed/template";
 import * as RefSubject from "@typed/fx/RefSubject";
-import * as Component from "../Component.js";
+import { component, type Slots } from "../Component.js";
 import server from "../server.js";
 
 describe("Typed Astro server renderer", () => {
@@ -12,14 +13,20 @@ describe("Typed Astro server renderer", () => {
     });
     expect(await server.check(foreign)).toBe(false);
     expect(foreign).not.toHaveBeenCalled();
-    expect(await server.check(Component.make(() => html`<p>Hello</p>`))).toBe(true);
+    expect(
+      await server.check(
+        component(function* () {
+          return html`<p>Hello</p>`;
+        }),
+      ),
+    ).toBe(true);
     expect(await server.check({})).toBe(false);
   });
 
   it("escapes props and preserves Typed hydration markers", async () => {
-    const View = Component.make(
-      (props: { value: string }) => html`<p title=${props.value}>${props.value}</p>`,
-    );
+    const View = component(function* (props: { value: string }) {
+      return html`<p title=${props.value}>${props.value}</p>`;
+    });
     const result = await server.renderToStaticMarkup(View, { value: '<script>"&' });
     expect(result.html).not.toContain("<script>");
     expect(result.html).toContain("&lt;script&gt;");
@@ -28,17 +35,15 @@ describe("Typed Astro server renderer", () => {
 
   it("owns acquisition and cleanup separately for every SSR render", async () => {
     let finalized = 0;
-    const View = Component.make(() =>
-      Effect.gen(function* () {
-        const count = yield* RefSubject.make(1);
-        yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            finalized++;
-          }),
-        );
-        return html`<p>${count}</p>`;
-      }),
-    );
+    const View = component(function* () {
+      const count = yield* RefSubject.make(1);
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          finalized++;
+        }),
+      );
+      return html`<p>${count}</p>`;
+    });
     const first = await server.renderToStaticMarkup(View, {});
     const second = await server.renderToStaticMarkup(View, {});
     expect(first.html).toEqual(second.html);
@@ -46,10 +51,9 @@ describe("Typed Astro server renderer", () => {
   });
 
   it("transports trusted default/named slots and escapes names", async () => {
-    const View = Component.make(
-      (_props: {}, slots) =>
-        html`<main>${slots.default}${slots['a"b']}${slots["apostrophe's"]}</main>`,
-    );
+    const View = component(function* (_props: {}, slots: Slots) {
+      return html`<main>${slots.default}${slots['a"b']}${slots["apostrophe's"]}</main>`;
+    });
     const { html: output } = await server.renderToStaticMarkup(
       View,
       {},
@@ -60,16 +64,18 @@ describe("Typed Astro server renderer", () => {
       },
     );
     expect(output).toContain("<astro-static-slot><strong>Default</strong></astro-static-slot>");
-    expect(output).toContain('<astro-static-slot name="apostrophe&#39;s"><i>Quoted</i></astro-static-slot>');
+    expect(output).toContain(
+      '<astro-static-slot name="apostrophe&#39;s"><i>Quoted</i></astro-static-slot>',
+    );
     expect(output).toContain(
       '<astro-static-slot name="a&quot;b"><em>Named</em></astro-static-slot>',
     );
   });
 
   it("uses live slot markers only for hydrated components and leaves the default unnamed", async () => {
-    const View = Component.make(
-      (_props: {}, slots) => html`<main>${slots.default}${slots.heading}</main>`,
-    );
+    const View = component(function* (_props: {}, slots: Slots) {
+      return html`<main>${slots.default}${slots.heading}</main>`;
+    });
     const { html: output } = await server.renderToStaticMarkup(
       View,
       {},
@@ -87,17 +93,27 @@ describe("Typed Astro server renderer", () => {
 
   it("propagates typed failures and finalizes resources", async () => {
     let finalized = false;
-    const View = Component.make(() =>
-      Effect.gen(function* () {
-        yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            finalized = true;
-          }),
-        );
-        return yield* Effect.fail("render failed");
-      }),
-    );
+    const View = component(function* () {
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          finalized = true;
+        }),
+      );
+      return yield* Effect.fail("render failed");
+    });
     await expect(server.renderToStaticMarkup(View, {})).rejects.toBeDefined();
     expect(finalized).toBe(true);
   });
+});
+
+it("escapes primitive generator output and renders arrays without comma separators", async () => {
+  const Primitive = component(function* () {
+    return '<script>"&';
+  });
+  expect((await server.renderToStaticMarkup(Primitive, {})).html).toContain("&lt;script&gt;");
+  const ArrayView = component(function* () {
+    return ["Hello ", 42, "!"];
+  });
+  const output = (await server.renderToStaticMarkup(ArrayView, {})).html;
+  expect(output.replace(/<!--.*?-->/g, "")).toBe("Hello 42!");
 });

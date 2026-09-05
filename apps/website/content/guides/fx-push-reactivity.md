@@ -6,38 +6,23 @@ kind: "concept"
 order: 1
 ---
 
-`Fx` represents work that can produce zero, one, or many values over time. Use it when the source
-of work decides when the next value exists: a finite batch, an Effect result, a timer, a browser
-event, or a subscription. The same Fx can be transformed, composed, observed, and tested without
-changing the process that produces its values.
+A search screen receives keystrokes, waits for a usable query, starts a request, and displays a
+result. The difficult questions are about work: what starts it, what happens to an old request,
+and what stops the input listener when the screen closes? `Fx` makes those decisions composable.
 
-An `Fx<A, E, R>` says what values can arrive (`A`), which expected errors can happen (`E`), and
-which services are required to run it (`R`). Creating one is lazy. A runner such as `Fx.observe` or
-`Fx.collectAll` starts the work.
+An `Fx<A, E, R>` describes a producer that can emit zero, one, or many `A` values, report expected
+failures of type `E`, and require services `R`. It is lazy: constructing an Fx starts no subscription.
+A runner such as [`Fx.observe`](/reference/symbols/QHR5cGVkL2Z4L0Z4I29ic2VydmU) returns the Effect
+that executes it. The owner of that execution also owns interruption and cleanup.
 
-## Find the behavior your feature needs
+## Separate events, state, and work
 
-| If you need to… | Start here |
-| --- | --- |
-| Turn a DOM event, WebSocket, worker, Effect, or Stream into an Fx | [Building Fx values](/explore/building-fx) |
-| Trim a search query, discard blanks, and ignore repeated values | [`map`, `filter`, and stateful transforms](/explore/transforming-fx) |
-| Cancel the previous autocomplete request when the query changes | [`switchMap`](/explore/fx-higher-order-and-concurrency) |
-| Send every autosave in order without cancelling an older write | [`concatMap`](/explore/fx-higher-order-and-concurrency) |
-| Ignore double-submits while checkout is already running | [`exhaustMap`](/explore/fx-higher-order-and-concurrency) |
-| Recompute when the route, signed-in user, or cached record changes | [Composing Fx](/explore/composing-fx) |
-| Stop after the first match, ten results, or a logout event | [Selection and cardinality](/explore/fx-selection-and-cardinality) |
-| Debounce search, throttle pointer movement, or test a timeout without waiting | [Time and rate](/explore/fx-time-and-rate) |
-| Retry a dropped connection or recover one typed failure with cached data | [Errors and recovery](/explore/fx-errors-and-recovery) |
-| Share one WebSocket and close it after the last subscriber leaves | [Services and lifetime](/explore/fx-services-and-lifetime) |
-| Await one answer, collect a finite run, or handle every update | [Consuming Fx](/explore/consuming-fx) |
+A keystroke is an event. The current query is state. A network request is work. Its result is an
+event that can update state. An Fx describes the events and work; it does not automatically remember
+a current value for somebody who subscribes later. Use a RefSubject when current readable state is
+the capability you need, and a Subject when independently owned code publishes events.
 
-The [API reference](/reference/modules/%40typed%2Ffx) lists the complete public surface.
-
-## Start with a source and a small transformation
-
-A finite source is a useful first Fx: it has a clear end, so `collectAll` can turn its produced
-values back into one Effect result. The source still owns when values are offered to the pipeline;
-the consumer does not read an array one item at a time.
+Start with a finite command source so both output and completion are easy to inspect:
 
 ```ts
 import { Effect } from "effect"
@@ -55,15 +40,20 @@ const values = await Effect.runPromise(program)
 // [{ type: "shortcut", command: "open-search" }, { type: "shortcut", command: "open-settings" }]
 ```
 
-This small pipeline has the shape of an Fx program: choose a source, transform what it produces,
-then decide how to consume the result. [Transforming Fx](/explore/transforming-fx) develops that
-transformation vocabulary. When each value starts another Fx, [Composing Fx](/explore/composing-fx)
-explains the available concurrency and cancellation policies.
+Running `program` obtains the iterator, offers `open-search`, drops the blank command, then offers
+`open-settings`. The collector retains both outputs until the iterable completes. Before the
+runner starts, there are no collected values; the pipeline is a description, not an eagerly mapped
+array. With an open keyboard listener, the same collector would keep waiting for completion.
 
-## Lift an Effect without losing its boundary
+A transform wraps delivery: `map` changes each value before forwarding it to the downstream Sink.
+It need not allocate an intermediate collection. A higher-order operator such as `switchMap` also
+owns child subscriptions. That is where replacing a request becomes part of the program rather than
+an ad hoc callback check.
 
-`Fx.fromEffect` turns one Effect result into one Fx emission. Its expected errors and service
-requirements remain visible when you observe it.
+## Let a request keep its typed contract
+
+`Fx.fromEffect` turns one Effect success into one emission. It retains expected errors and required
+services, so the screen cannot accidentally hide its dependency on a search implementation:
 
 ```ts
 import { Context, Data, Effect, Layer } from "effect"
@@ -96,19 +86,16 @@ const WorkspaceSearchLive = Layer.succeed(WorkspaceSearch, {
 const program = reported.pipe(Effect.provide(WorkspaceSearchLive))
 ```
 
-Before `WorkspaceSearchLive` is provided, `reported` needs `WorkspaceSearch`; it can fail with
-`SearchUnavailable`. The Layer supplies the service, but it does not hide the expected error. At the
-application boundary, choose whether to recover, report the error, or return it to the caller.
+`reported` still requires `WorkspaceSearch` and can fail with `SearchUnavailable`. Providing the
+Layer chooses an implementation; it does not erase the failure. At the request boundary, decide
+whether unavailability becomes a displayed value, a cached fallback, or a failure returned to the
+owner. [Errors and recovery](/explore/fx-errors-and-recovery) shows why placing that recovery inside
+one request can keep the input listener alive.
 
-`fromEffect` is for one eventual result. Use `RefSubject` for current writable state and a live Fx
-source when future values can continue to arrive. [Building Fx values](/explore/building-fx) explains
-the available source constructors; [Fx errors and recovery](/explore/fx-errors-and-recovery) goes
-deeper on expected failures.
+## Make one subscription own one listener
 
-## Adapt callbacks at the edge
-
-Use `Fx.callback` only when a foreign API calls your code. Return cleanup for the foreign resource;
-the subscription's Scope runs it when the source completes or is interrupted.
+For a foreign callback API, registration and removal are one lifetime. This small executable test
+makes the stop condition observable without relying on a particular browser event:
 
 ```ts
 import { Effect } from "effect"
@@ -133,10 +120,35 @@ it("cleans up a callback subscription", async () => {
 })
 ```
 
-`emit.succeed` starts sink delivery immediately and returns its running Fiber. `Fx.take(1)` owns
-completion here, so the adapter does not race a separate `emit.done()` Fiber against value delivery.
+The observation starts registration. The microtask emits `ready`. `take(1)` ends the useful run and
+the returned cleanup Effect runs once. `emit.succeed` starts delivery immediately and returns its
+Fiber; it is not a Promise that the foreign API awaits. An adapter still needs an ordering policy
+if its callbacks can overlap.
 
-For a shared, long-lived subscription, let an application Layer own its lifetime. A finite program
-may close its own Scope after the consumer finishes; live work needs an owner that stays open for as
-long as the subscription should run. [Fx services and lifetime](/explore/fx-services-and-lifetime)
-and [Consuming Fx](/explore/consuming-fx) cover those ownership choices.
+Observing an ordinary Fx twice runs registration twice. Assigning a source to a constant does not
+share it. [Subject sharing](/explore/subject-event-publications) is the explicit choice when two
+consumers should use one active connection.
+
+## Follow the search feature through the curriculum
+
+| Feature decision | Lesson |
+| --- | --- |
+| Adapt a request, clock, iterable, or browser callback | [Building Fx](/explore/building-fx) |
+| Read configuration before selecting a scoped feed | [Dynamic producers](/explore/fx-dynamic-producers) |
+| Normalize the query and reject unusable input | [Transforming Fx](/explore/transforming-fx) |
+| Detect changes or accumulate progress | [Stateful transforms](/explore/fx-stateful-transforms) |
+| Replace stale requests or serialize writes | [Higher-order work](/explore/fx-higher-order-and-concurrency) |
+| Combine query, filter, and submit signals | [Composing Fx](/explore/composing-fx) |
+| End at a count, sentinel, or logout signal | [Selection and cardinality](/explore/fx-selection-and-cardinality) |
+| Wait for typing to settle and test the clock | [Time and rate](/explore/fx-time-and-rate) |
+| Recover a request while keeping later input alive | [Errors and recovery](/explore/fx-errors-and-recovery) |
+| Close feature resources or share application services | [Services and lifetime](/explore/fx-services-and-lifetime) |
+| React to updates or await one result | [Consuming Fx](/explore/consuming-fx) |
+
+The [API reference](/reference/modules/%40typed%2Ffx) provides complete signatures. The lessons
+explain which contract your feature needs before you choose its overload.
+
+In their timelines, `.` is silence, `^` starts a subscription, `|` completes normally, `!error`
+reports a failure, and `x` interrupts a run. Read vertically to find the input that caused an output
+or cancellation. Columns are logical moments unless the caption gives a duration. Inner lanes
+represent separate runs; their lifetime matters as much as their values.

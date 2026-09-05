@@ -77,7 +77,7 @@ class MapSink<A, E, R, B> implements Sink<B, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming inputs
  */
 export function map<A, E, R, B>(sink: Sink<A, E, R>, f: (b: B) => A): Sink<B, E, R> {
   return MapSink.make(sink, f);
@@ -102,7 +102,7 @@ export function map<A, E, R, B>(sink: Sink<A, E, R>, f: (b: B) => A): Sink<B, E,
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming inputs
  */
 export const mapInput = map;
 
@@ -128,7 +128,7 @@ export const mapInput = map;
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Failure handling
  */
 export function mapError<A, E, E2, R>(sink: Sink<A, E2, R>, f: (e: E) => E2): Sink<A, E, R> {
   return new MapErrorSink(sink, f);
@@ -224,7 +224,7 @@ class FilterMapSink<A, E, R, B> implements Sink<B, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export function filterMap<A, E, R, B>(
   sink: Sink<A, E, R>,
@@ -253,7 +253,7 @@ export function filterMap<A, E, R, B>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export function compact<A, E, R>(sink: Sink<A, E, R>): Sink<Option.Option<A>, E, R> {
   return filterMap(sink, identity);
@@ -291,7 +291,7 @@ export function compact<A, E, R>(sink: Sink<A, E, R>): Sink<Option.Option<A>, E,
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export function filter<A, E, R>(sink: Sink<A, E, R>, f: (a: A) => boolean): Sink<A, E, R> {
   return filterMap(sink, Option.liftPredicate(f));
@@ -319,7 +319,7 @@ export function filter<A, E, R>(sink: Sink<A, E, R>, f: (a: A) => boolean): Sink
  * ```
  *
  * @since 1.0.0
- * @category lifecycle
+ * @category Stopping delivery
  */
 export function withEarlyExit<A, E, R, R2>(
   sink: Sink<A, E, R>,
@@ -389,7 +389,7 @@ export function withEarlyExit<A, E, R, R2>(
  * ```
  *
  * @since 1.0.0
- * @category lifecycle
+ * @category Stateful delivery
  */
 export function withState<A, E, R, B, R2>(
   sink: Sink<A, E, R>,
@@ -428,7 +428,7 @@ export function withState<A, E, R, B, R2>(
  * ```
  *
  * @since 1.0.0
- * @category lifecycle
+ * @category Stateful delivery
  */
 export function withStateSemaphore<A, E, R, B, R2>(
   sink: Sink<A, E, R>,
@@ -479,7 +479,7 @@ export function withStateSemaphore<A, E, R, B, R2>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful delivery
  */
 export const loop: {
   <B, A, C>(
@@ -547,7 +547,7 @@ class LoopSink<A, E, R, B, C> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful failure handling
  */
 export const loopCause: {
   <B, A, C>(
@@ -622,7 +622,7 @@ class LoopCauseSink<A, E, R, B, C> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful delivery
  */
 export const filterMapLoop: {
   <B, A, C>(
@@ -694,7 +694,7 @@ class FilterMapLoopSink<A, E, R, B, C> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful failure handling
  */
 export const filterMapLoopCause: {
   <B, A, C>(
@@ -773,7 +773,7 @@ class FilterMapLoopCauseSink<A, E, R, B, C> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful delivery
  */
 export const loopEffect: {
   <B, A, E2, R2, C>(
@@ -855,7 +855,7 @@ class LoopEffectSink<A, E, R, B, C> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful delivery
  */
 export const filterMapLoopEffect: {
   <B, A, E2, R2, C>(
@@ -939,7 +939,7 @@ class FilterMapLoopEffectSink<A, E, R, B, R2, C> implements Sink<A, E, R | R2> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful failure handling
  */
 export const loopCauseEffect: {
   <A, E, R2, B, C>(
@@ -1024,7 +1024,7 @@ class LoopCauseEffectSink<A, E, R, B, C> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful failure handling
  */
 export function filterMapLoopCauseEffect<A, E, R, B, E2, R2, C>(
   sink: Sink<A, E2 | C, R>,
@@ -1094,7 +1094,7 @@ class FilterMapLoopCauseEffectSink<A, E, R, B, E2, R2, C> implements Sink<A, E, 
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Operator options
  */
 export interface Bounds {
   /**
@@ -1149,7 +1149,7 @@ export interface Bounds {
  * ```
  *
  * @since 1.0.0
- * @category lifecycle
+ * @category Stopping delivery
  */
 export const slice: {
   <A, E, R, R2>(
@@ -1231,7 +1231,7 @@ class SliceSink<A, E, R> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming inputs
  */
 export const mapEffect: {
   <B, A, E2, R2>(
@@ -1290,7 +1290,7 @@ class MapEffectSink<A, E, R, B, E2, R2> implements Sink<B, E | E2, R | R2> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming inputs
  */
 export const mapInputEffect = mapEffect;
 
@@ -1315,7 +1315,7 @@ export const mapInputEffect = mapEffect;
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export const filterMapEffect: {
   <B, A, E2, R2>(
@@ -1386,7 +1386,7 @@ class FilterMapEffectSink<A, E, R, B, E2, R2> implements Sink<B, E | E2, R | R2>
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export const filterEffect: {
   <A, E2, R2>(
@@ -1448,7 +1448,7 @@ class FilterEffectSink<A, E, R> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming inputs
  */
 export const tapEffect: {
   <A, E2, R2>(
@@ -1513,7 +1513,7 @@ class TapEffectSink<A, E, R, E2, R2> implements Sink<A, E, R | R2> {
  * ```
  *
  * @since 1.0.0
- * @category errors
+ * @category Failure handling
  */
 export const flip = <A, E, R>(sink: Sink<A, E, R>): Sink<E, A, R> => new FlipSink(sink);
 
@@ -1555,7 +1555,7 @@ class FlipSink<A, E, R> implements Sink<E, A, R> {
  * ```
  *
  * @since 1.0.0
- * @category errors
+ * @category Failure handling
  */
 export const exit = <A, E, R>(sink: Sink<Exit.Exit<A, E>, never, R>) => new ExitSink(sink);
 
@@ -1598,7 +1598,7 @@ class ExitSink<A, E, R> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category lifecycle
+ * @category Stopping delivery
  */
 export const dropAfter: {
   <A, E, R, R2>(
@@ -1664,7 +1664,7 @@ class DropAfterSink<A, E, R> implements Sink<A, E, R> {
  * ```
  *
  * @since 1.0.0
- * @category errors
+ * @category Failure handling
  */
 export const skipInterrupt = <A, E, R>(sink: Sink<A, E, R>): Sink<A, E, R> => {
   return {
@@ -1704,7 +1704,7 @@ export const skipInterrupt = <A, E, R>(sink: Sink<A, E, R>): Sink<A, E, R> => {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Collecting values
  */
 export function reduce<A, B, E>(ref: Ref.Ref<B>, f: (b: B, a: A) => B): Sink<A, E, never> {
   return {
@@ -1741,7 +1741,7 @@ export function reduce<A, B, E>(ref: Ref.Ref<B>, f: (b: B, a: A) => B): Sink<A, 
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Collecting values
  */
 export function reduceEffect<A, B, E, E2, R2>(
   ref: Ref.Ref<B>,
@@ -1784,7 +1784,7 @@ export function reduceEffect<A, B, E, E2, R2>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Collecting values
  */
 export function collect<A, E>(ref: Ref.Ref<ReadonlyArray<A>>): Sink<A, E, never> {
   return {
@@ -1817,7 +1817,7 @@ export function collect<A, E>(ref: Ref.Ref<ReadonlyArray<A>>): Sink<A, E, never>
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Collecting values
  */
 export function head<A, E>(ref: Ref.Ref<Option.Option<A>>): Sink<A, E, never> {
   return {
@@ -1850,7 +1850,7 @@ export function head<A, E>(ref: Ref.Ref<Option.Option<A>>): Sink<A, E, never> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Collecting values
  */
 export function last<A, E>(ref: Ref.Ref<Option.Option<A>>): Sink<A, E, never> {
   return {

@@ -14,17 +14,14 @@ Export a component from an ordinary TypeScript module:
 
 ```ts
 // Counter.ts
-import * as Component from "@typed/astro/Component";
-import * as Effect from "effect/Effect";
+import { component } from "@typed/astro/Component";
 import * as RefSubject from "@typed/fx/RefSubject";
 import { html } from "@typed/template";
 
-export default Component.make((props: { initial: number }) =>
-  Effect.gen(function* () {
+export default component(function* (props: { initial: number }) {
     const count = yield* RefSubject.make(props.initial);
     return html`<button @click=${RefSubject.update(count, (n) => n + 1)}>Count: ${count}</button>`;
-  }),
-);
+});
 ```
 
 ```astro
@@ -34,24 +31,28 @@ import Counter from "./Counter";
 <Counter initial={1} client:load />
 ```
 
-`Component.make` accepts an `html` template directly or an Effect that acquires state and returns a template. Its explicit brand lets Astro recognize the component without executing it. Props and typed errors remain visible in its TypeScript type. The integration supplies `RenderTemplate` and `Scope`; provide other services inside the callback using normal Effect or Fx provisioning. Create state inside the callback to keep requests and islands isolated.
+`component` uses the same generator and argument-forwarding conventions as `@typed/ui/Component`. A generator with no parameters produces a lazy Fx value; a generator with parameters produces a function. Return any Renderable, including strings, arrays, Effects, and templates. Optional pipeline functions receive the Fx and the original arguments, preserving errors and required services. Astro normalizes the generator return inside a template boundary, so its Fx emits `RenderEvent` values and requires `Scope | RenderTemplate` in addition to the generator and returned value’s services. This installs hydration context before nested templates run. Pipeline callbacks receive this normalized Fx; keep the final result renderable. A zero-argument pipeline that returns a primitive instead of an object throws because it cannot carry an island brand. The explicit Astro brand lets the renderer recognize values and functions without running them.
+
+The integration supplies `RenderTemplate` and `Scope`. Provide additional application services with an Fx pipeline before exporting an island. State acquired inside the generator is recreated separately for each request and browser island, including zero-argument component values.
 
 Without a client directive, Astro emits server-rendered HTML and sends no Typed island JavaScript. `client:load`, `client:idle`, `client:visible`, and `client:media` hydrate Typed's server markers and retain matching DOM nodes. `client:only="@typed/astro"` skips SSR and replaces the fallback when mounting. Pass serializable props as required by Astro; initialize server and browser state consistently. Explicit `RefSubject.hydrate` remains available for adopting live DOM property state such as pre-hydration input edits; the integration does not serialize arbitrary Effect state.
 
-Each SSR call closes its Scope after collecting HTML. Each browser island retains its Scope until Astro dispatches `astro:unmount`. A repeated Astro render with new props closes the previous Scope and runs the component again, resetting callback-local state. Failed initial renders reject Astro's hydration promise. Subsequent rendering failures dispatch `typed:error` on the island with the Effect Cause in `event.detail`.
+Each SSR call closes its Scope after collecting HTML. Each browser island retains its Scope until Astro dispatches `astro:unmount`. A repeated Astro render with new props closes the previous Scope and runs the component again, resetting generator-local state. Failed initial renders reject Astro's hydration promise. Subsequent rendering failures dispatch `typed:error` on the island with the Effect Cause in `event.detail`.
 
 ## Slots
 
 The second argument contains default and named Astro slots as optional Typed renderables:
 
 ```ts
-export default Component.make(
-  (_props: {}, slots) =>
-    html`<article>
+import { component, type Slots } from "@typed/astro/Component";
+import { html } from "@typed/template";
+
+export default component(function* (_props: {}, slots: Slots) {
+  return html`<article>
       ${slots.heading}
       <main>${slots.default}</main>
-    </article>`,
-);
+    </article>`;
+});
 ```
 
 Astro supplies pre-rendered slot HTML. The integration uses `astro-slot` elements for hydrated components and `astro-static-slot` markers for static components, which Astro strips before passing their content to an ancestor. It adopts the existing live slot elements on hydration, preserving child DOM identity and listeners. Ordinary component props still pass through Typed's contextual escaping. Slot renderables are opaque, borrowed content: insert each once; Astro and nested islands retain responsibility for their contents. Do not pass unsanitized external HTML as an Astro raw-HTML slot.

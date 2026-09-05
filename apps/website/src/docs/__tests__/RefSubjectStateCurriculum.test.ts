@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
-import { extractTypeScriptFences } from "../Recipes.js";
+import { extractTypeScriptFences, extractTypeScriptFenceDocuments } from "../RecipeValidation.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -14,7 +14,7 @@ const guides = [
     section: "State",
     kind: "concept",
     order: 2,
-    terms: ["RefSubject<A, E, R>", "RefSubject.make", "RefSubject.update", "Computed", "Filtered"],
+    terms: ["RefSubject.make", "RefSubject.update", "Computed", "Filtered", "RefSubject.map"],
   },
   {
     file: "refsubject-template-hydration.md",
@@ -44,7 +44,7 @@ const guides = [
     section: "State",
     kind: "guide",
     order: 2.15,
-    terms: ["Computed", "Filtered", "makeComputed", "makeFiltered", "scan", "scanEffect"],
+    terms: ["Computed", "Filtered", "makeComputed", "filterMap", "scan", "scanEffect"],
   },
   {
     file: "state-transactions-and-bidirectional-views.md",
@@ -98,11 +98,17 @@ describe("RefSubject state curriculum", () => {
       ),
     );
 
-    expect(guide.body).toContain("both an `Effect<A, E, R>` for a current read and an `Fx<A, E, R>`");
-    expect(extractTypeScriptFences(guide.body).join("\n")).not.toContain("Effect.scoped");
+    const examples = extractTypeScriptFences(guide.body).join("\n");
+    // A read, observation, derived query and scoped command test are actual API usage,
+    // independent of the prose used to explain them.
+    for (const api of ["Effect.map(ids", "Fx.map(ids", "RefSubject.map", "Effect.scoped"]) {
+      expect(examples).toContain(api);
+    }
+    expect(guide.body).toContain("/explore/refsubject-sources-equality-and-lifetime");
+    expect(guide.body).toContain("/explore/derived-conditional-and-accumulated-state");
   });
 
-  it("keeps every state curriculum example independently compilable", () => {
+  it("keeps every state curriculum example compilable with their named companion modules", () => {
     const staging = fs.mkdtempSync(path.join(websiteRoot, ".refsubject-state-curriculum-check-"));
 
     try {
@@ -111,8 +117,9 @@ describe("RefSubject state curriculum", () => {
           file,
           fs.readFileSync(path.join(websiteRoot, "content/guides", file), "utf8"),
         );
-        return extractTypeScriptFences(guide.body).map((code, index) => {
-          const example = path.join(staging, `${file}-${index}.ts`);
+        return extractTypeScriptFenceDocuments(guide.body).map(({ code, fileName, extension }, index) => {
+          const example = path.join(staging, guide.slug, fileName ?? `${index}.${extension}`);
+          fs.mkdirSync(path.dirname(example), { recursive: true });
           fs.writeFileSync(example, code);
           return example;
         });

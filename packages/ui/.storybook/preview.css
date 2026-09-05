@@ -1,8 +1,5 @@
 @import "tailwindcss";
-
-@plugin "daisyui" {
-  themes: light --default, dim --prefersdark;
-}
+@import "../../../styles/matrix.css";
 
 @layer base {
   body {
@@ -12,7 +9,7 @@
 
 @layer components {
   .typed-story {
-    @apply min-h-screen bg-base-200 bg-[radial-gradient(circle_at_top_left,oklch(var(--p)/0.18),transparent_28rem)] p-4 sm:p-8;
+    @apply min-h-screen bg-base-200 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--color-primary)_18%,transparent),transparent_28rem)] p-4 sm:p-8;
   }
 
   .typed-story > * {

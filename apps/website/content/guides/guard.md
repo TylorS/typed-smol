@@ -62,34 +62,37 @@ wants malformed values to count as a non-match, wrap the guard with `Guard.catch
 Effect.succeedNone)`. Keep that policy close to the boundary that needs it. `fromSchemaEncode`
 provides the reverse direction, while `decode` and `encode` compose a codec after an existing guard.
 
-## Keep service dependencies in the guard type
+## Compose an authorization decision without hiding an outage
 
-A matched input can require an Effectful lookup. `mapEffect` runs only for `Some`, and its error
-and service requirements become part of the resulting guard.
+Suppose a workspace route has both an administrator page and a read-only fallback. A predicate can
+reject malformed workspace names before any lookup. A service-backed guard then checks membership.
+“No membership” may mean `None`; an unavailable membership service should stay a typed failure.
+Turning both into `None` makes a backend outage look like an ordinary missing permission.
 
 ```ts
-import { Context, Effect } from "effect"
+import { Context, Data, Effect, Option } from "effect"
 import * as Guard from "@typed/guard"
 
-class Commands extends Context.Service<Commands, {
-  readonly describe: (name: string) => Effect.Effect<string>
-}>()("app/Commands") {}
+class DirectoryUnavailable extends Data.TaggedError("DirectoryUnavailable")<{}> {}
+class Memberships extends Context.Service<Memberships, {
+  readonly canEdit: (workspace: string) => Effect.Effect<boolean, DirectoryUnavailable>
+}>()("docs/Memberships") {}
 
-const command = Guard.mapEffect(
-  Guard.liftPredicate((input: unknown): input is string => typeof input === "string"),
-  (name) => Commands.pipe(Effect.flatMap((commands) => commands.describe(name))),
+const namedWorkspace = Guard.liftPredicate((workspace: string) => workspace.length > 0)
+const editableWorkspace = Guard.pipe(namedWorkspace, (workspace: string) =>
+  Effect.flatMap(Memberships, (memberships) =>
+    Effect.map(memberships.canEdit(workspace), (allowed) =>
+      allowed ? Option.some({ workspace, access: "edit" as const }) : Option.none(),
+    ),
+  ),
 )
-
-const result = command("publish").pipe(
-  Effect.provideService(Commands, { describe: (name) => Effect.succeed(`Run ${name}`) }),
-)
-
-await Effect.runPromise(result)
 ```
 
-A library can export this guard without choosing the Commands implementation. The application
-provides it when running the returned Effect, or binds it using `Guard.provideService`.
-`tap` adds an Effectful observation without changing matched output.
+The output now contains the evidence the handler needs, while `DirectoryUnavailable` and
+`Memberships` remain visible in the guard's error and requirement channels. Avoid performing a
+second identical lookup in the handler; pass the successful enriched value forward. A guard is not
+a replacement for authorization in a mutation endpoint: later commands must enforce the operation's
+own authority against current server state.
 
 ## Try named alternatives in order
 
@@ -136,3 +139,10 @@ Continue with [typed URL inputs](/explore/route-typed-url-inputs) to see this co
 boundary, or use the [Guard reference](/reference/modules/%40typed%2Fguard) for binding, tagging,
 recovery, and service combinators. Effect's [services guide](https://www.effect.website/docs/v4/requirements-management/services/)
 explains how those requirements are supplied.
+
+
+## Test all three outcomes
+
+When a candidate unexpectedly disappears, test three inputs separately: accepted output, ordinary
+`None`, and failed `Exit`. Then test the containing dispatcher's ordering. Logging only a boolean
+“matched” loses the distinction this contract was designed to preserve.

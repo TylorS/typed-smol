@@ -29,6 +29,6 @@ import { fromEffect } from "./fromEffect.js";
  * @param evaluate - The synchronous function evaluated once per run.
  * @returns An Fx that emits the freshly evaluated value.
  * @since 2.0.0
- * @category constructors
+ * @category Value sources
  */
 export const sync = <A>(evaluate: () => A): Fx<A> => fromEffect(Effect.sync(evaluate));

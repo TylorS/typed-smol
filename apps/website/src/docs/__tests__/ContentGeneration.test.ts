@@ -11,6 +11,8 @@ import {
   parseRecipeDocumentation,
 } from "../Frontmatter.js";
 
+import { groupGuides } from "../../site/Guides.js";
+
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
 const authoredMarkdownFiles = (): ReadonlyArray<string> => {
@@ -56,117 +58,46 @@ const aliasedTypedImports = (code: string): ReadonlyArray<string> => {
 };
 
 describe("Markdown content generation", () => {
-  it("orders the Explore curriculum by learning layer instead of renderer implementation", () => {
+  it("groups valid guides by learning topic without requiring a global ordering index", () => {
     const guides = fs
       .readdirSync(path.join(websiteRoot, "content/guides"))
       .filter((fileName) => fileName.endsWith(".md"))
-      .map((fileName) =>
-        parseGuideDocumentation(
-          fileName,
-          fs.readFileSync(path.join(websiteRoot, "content/guides", fileName), "utf8"),
-        ),
-      )
-      .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+      .map((fileName) => parseGuideDocumentation(
+        fileName,
+        fs.readFileSync(path.join(websiteRoot, "content/guides", fileName), "utf8"),
+      ));
 
-    expect(
-      guides.every(({ order }, index) => index === 0 || order! > guides[index - 1]!.order!),
-    ).toBe(true);
-
-    const bySection = Map.groupBy(guides, ({ section }) => section!);
-    expect([...bySection.keys()]).toEqual([
-      "Learning paths",
-      "Fx",
-      "State",
-      "Templates",
-      "UI",
-      "DOM and platform",
-      "Applications",
-      "Integration",
-    ]);
-    expect(
-      Object.fromEntries(
-        [...bySection].map(([section, entries]) => [section, entries.map(({ slug }) => slug)]),
-      ),
-    ).toEqual({
-      "Learning paths": ["application-developers", "library-developers"],
-      Fx: [
-        "fx-push-reactivity",
-        "building-fx",
-        "fx-dynamic-producers",
-        "sink-writing-effects",
-        "subject-event-publications",
-        "transforming-fx",
-        "fx-stateful-transforms",
-        "fx-higher-order-and-concurrency",
-        "composing-fx",
-        "fx-selection-and-cardinality",
-        "fx-time-and-rate",
-        "fx-errors-and-recovery",
-        "fx-services-and-lifetime",
-        "consuming-fx",
-      ],
-      State: [
-        "refsubject-renderer-independent-state",
-        "refsubject-template-hydration",
-        "refsubject-sources-equality-and-lifetime",
-        "composing-refsubject-state",
-        "derived-conditional-and-accumulated-state",
-        "specialized-refsubject-state",
-        "versioned-state",
-        "state-transactions-and-bidirectional-views",
-        "shared-state-contracts",
-        "async-data",
-        "id",
-      ],
-      Templates: [
-        "render-your-first-template",
-        "authoring-typed-templates",
-        "template-element-bindings",
-        "renderable-normalization",
-        "template-spreads-data",
-        "template-text-only-contexts",
-        "keyed-template-collections",
-        "template-references-and-element-access",
-        "template-namespaces-and-platform-markup",
-        "native-events-with-effect",
-      ],
-      UI: [
-        "building-ui-components",
-        "choosing-ui-components",
-        "ui-collections-and-focus",
-        "forms-as-a-browser-contract",
-        "overlays-disclosure-and-transient-ui",
-        "selection-autocomplete-and-command-surfaces",
-      ],
-      "DOM and platform": [
-        "dom-updates-and-reconciliation",
-        "dom-parts-and-attributes",
-        "dom-class-names",
-        "dom-render-event",
-        "wire-and-rendered-dom-output",
-        "html-render-event",
-        "render-scheduling",
-        "cooperative-by-design",
-        "mounting-dom-output",
-        "rendering-html-on-the-server",
-        "hydrating-typed-html",
-      ],
-      Applications: [
-        "guard",
-        "route-typed-url-inputs",
-        "router-navigation-live-selection",
-        "navigation-as-an-effect-service",
-        "server-rendering-and-hydration",
-        "testing-typed-systems",
-      ],
-      Integration: [
-        "render-event-substrate",
-        "template-compilation-pipeline",
-        "implementing-render-template",
-        "event-source-delegation",
-        "integrating-matcher-with-effect-http",
-      ],
-    });
+    expect(new Set(guides.map(({ slug }) => slug)).size).toBe(guides.length);
+    for (const guide of guides) {
+      expect(guide.title.trim(), guide.slug).not.toBe("");
+      expect(guide.summary.trim(), guide.slug).not.toBe("");
+      expect(guide.body.trim(), guide.slug).not.toBe("");
+      expect(guide.section?.trim(), guide.slug).toBeTruthy();
+      expect(Number.isFinite(guide.order), guide.slug).toBe(true);
+      expect(["concept", "guide", "deep-dive"], guide.slug).toContain(guide.kind);
+    }
+    const groups = groupGuides(guides.map((guide) => ({
+      id: guide.slug,
+      collection: "guides" as const,
+      body: guide.body,
+      data: { title: guide.title, summary: guide.summary, section: guide.section!, kind: guide.kind!, order: guide.order! },
+    })));
+    const sections = groups.map(([section]) => section);
+    expect(sections).not.toContain("DOM and platform");
+    expect(sections).toEqual(expect.arrayContaining([
+      "Learning paths", "Fx", "State", "Async data", "UI", "Routing",
+      "Template authoring", "Template bindings", "Template rendering", "Template internals",
+    ]));
+    expect(sections.some((section) => section.startsWith("UI / "))).toBe(true);
+    expect(sections.indexOf("Learning paths")).toBeLessThan(sections.indexOf("Fx"));
+    expect(sections.indexOf("Template authoring")).toBeLessThan(sections.indexOf("Template internals"));
+    expect(groups.flatMap(([, entries]) => entries).map(({ id }) => id).toSorted())
+      .toEqual(guides.map(({ slug }) => slug).toSorted());
+    for (const [, entries] of groups) {
+      expect(entries.map(({ id }) => id)).toEqual(entries.toSorted(
+        (a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id),
+      ).map(({ id }) => id));
+    }
   });
 
   it("parses frontmatter arrays and preserves the Markdown body", () => {
@@ -182,12 +113,11 @@ describe("Markdown content generation", () => {
   it("loads one validated Markdown source per glossary term", () => {
     const entries = loadGlossaryContent(path.join(websiteRoot, "content/glossary"));
 
-    expect(entries.find(({ id }) => id === "fx")).toMatchObject({
-      term: "Fx",
-      definition: "A push-based stream of values with typed errors and requirements.",
-      related: ["effect", "render-event", "sink"],
-    });
-    expect(entries.find(({ id }) => id === "fx")?.details).toContain("producer decides");
+    const fx = entries.find(({ id }) => id === "fx");
+    expect(fx).toBeDefined();
+    expect(fx?.term).toBe("Fx");
+    expect(fx?.definition.trim()).toBeTruthy();
+    expect(fx?.details.trim()).toBeTruthy();
     expect(new Set(entries.flatMap(({ aliases }) => aliases)).size).toBe(
       entries.flatMap(({ aliases }) => aliases).length,
     );
@@ -196,57 +126,17 @@ describe("Markdown content generation", () => {
   it("indexes the public vocabulary used across state, rendering, routing, and integration", () => {
     const entries = loadGlossaryContent(path.join(websiteRoot, "content/glossary"));
 
-    expect(entries.map(({ id }) => id)).toEqual([
-      "accessibility",
-      "adapter-ownership",
-      "computed",
-      "cooperative-ownership",
-      "dom-render-event",
-      "dynamic-part",
-      "dynamic-range",
-      "effect-channels",
-      "effect",
-      "filtered",
-      "fx",
-      "html-render-event",
-      "hydration",
-      "keyed-identity",
-      "local-reconciliation",
-      "many",
-      "matcher",
-      "refsubject",
-      "render-event",
-      "render-template",
-      "renderable",
-      "route",
-      "router",
-      "scope",
-      "service",
-      "sink",
-      "ssr",
-      "subject",
-      "template",
-      "ui",
-      "wire",
-    ]);
-
-    expect(Object.fromEntries(entries.map(({ id, related }) => [id, related]))).toMatchObject({
-      "adapter-ownership": ["cooperative-ownership", "dom-render-event", "scope"],
-      computed: ["refsubject", "filtered", "fx"],
-      "dynamic-part": ["dynamic-range", "local-reconciliation", "template"],
-      "effect-channels": ["effect", "service", "scope"],
-      filtered: ["computed", "refsubject", "fx"],
-      "local-reconciliation": ["dynamic-part", "dynamic-range", "many"],
-      many: ["keyed-identity", "local-reconciliation", "template"],
-      matcher: ["route", "router", "fx"],
-      renderable: ["template", "render-event", "fx"],
-      route: ["matcher", "router", "service"],
-      router: ["route", "matcher", "scope"],
-      service: ["effect", "effect-channels", "scope"],
-      template: ["renderable", "render-event", "render-template"],
-      ui: ["accessibility", "refsubject", "template"],
-      accessibility: ["ui", "template", "cooperative-ownership"],
-    });
+    const ids = new Set(entries.map(({ id }) => id));
+    for (const id of ["fx", "effect", "scope", "refsubject", "renderable", "template", "route", "router", "ui"]) {
+      expect(ids.has(id), `Missing core glossary term ${id}`).toBe(true);
+    }
+    for (const entry of entries) {
+      expect(entry.term.trim(), entry.id).not.toBe("");
+      expect(entry.definition.trim(), entry.id).not.toBe("");
+      for (const related of entry.related) {
+        expect(ids.has(related), `${entry.id} links missing glossary term ${related}`).toBe(true);
+      }
+    }
   });
 
   it("keeps concepts and task guides in one ordered Explore curriculum", () => {

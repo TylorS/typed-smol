@@ -21,7 +21,7 @@ import { constVoid } from "effect/Function";
  * ```
  *
  * @since 1.0.0
- * @category symbols
+ * @category Scheduling protocol
  */
 export const RenderQueueTypeId = "@typed/template/RenderQueue";
 
@@ -45,7 +45,7 @@ export const RenderQueueTypeId = "@typed/template/RenderQueue";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Scheduling protocol
  */
 export type RenderQueueTypeId = typeof RenderQueueTypeId;
 
@@ -91,7 +91,7 @@ type Entry = { task: () => void; dispose: () => void };
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Scheduled render work
  */
 export abstract class RenderQueue implements Disposable {
   protected readonly buckets: Array<KeyedPriorityBucket<Entry>> = [];
@@ -107,7 +107,7 @@ export abstract class RenderQueue implements Disposable {
    * Immutable metadata owned by the queue.
    *
    * @since 1.0.0
-   * @category symbols
+   * @category Scheduled render work
    */
   readonly [RenderQueueTypeId]: RenderQueueTypeId = RenderQueueTypeId;
 
@@ -131,7 +131,7 @@ export abstract class RenderQueue implements Disposable {
    * Disposable cancellation, or queue disposal.
    *
    * @since 1.0.0
-   * @category methods
+   * @category Scheduled render work
    */
   readonly add: (
     key: unknown,
@@ -155,7 +155,7 @@ export abstract class RenderQueue implements Disposable {
    * Ends this queue's pending-work lifetime; already executed tasks are unaffected.
    *
    * @since 1.0.0
-   * @category resource-management
+   * @category Scheduled work cancellation
    */
   readonly [Symbol.dispose]: () => void = () => {
     if (this.scheduled) {
@@ -242,7 +242,7 @@ const SYNC_DEADLINE: IdleDeadline = { timeRemaining: () => Infinity, didTimeout:
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Immediate scheduling
  */
 export class SyncRenderQueue extends RenderQueue {
   protected schedule(task: (deadline: IdleDeadline) => void): Disposable {
@@ -273,7 +273,7 @@ export class SyncRenderQueue extends RenderQueue {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Timer scheduling
  */
 export class SetTimeoutRenderQueue extends RenderQueue {
   protected schedule(task: (deadline: IdleDeadline) => void): Disposable {
@@ -310,7 +310,7 @@ export class SetTimeoutRenderQueue extends RenderQueue {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Frame scheduling
  */
 export class RequestAnimationFrameRenderQueue extends RenderQueue {
   /** Maximum work budget exposed through the frame's synthetic IdleDeadline.
@@ -323,7 +323,7 @@ export class RequestAnimationFrameRenderQueue extends RenderQueue {
    * Immutable numeric configuration for this queue instance.
    *
    * @since 1.0.0
-   * @category configuration
+   * @category Frame scheduling
    */
   readonly durationAllowed: number;
   /** Creates an animation-frame queue with a per-frame millisecond budget.
@@ -336,7 +336,7 @@ export class RequestAnimationFrameRenderQueue extends RenderQueue {
    * The instance owns animation-frame requests until disposal.
    *
    * @since 1.0.0
-   * @category constructors
+   * @category Frame scheduling
    */
   constructor(durationAllowed: number = DEFAULT_DURATION_ALLOWED) {
     super();
@@ -374,7 +374,7 @@ export class RequestAnimationFrameRenderQueue extends RenderQueue {
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Idle scheduling
  */
 export class RequestIdleCallbackRenderQueue extends RenderQueue {
   protected schedule(task: (deadline: IdleDeadline) => void): Disposable {
@@ -415,7 +415,7 @@ const NONE = disposable(constVoid);
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Mixed scheduling
  */
 export class MixedRenderQueue extends RenderQueue {
   private readonly high: RenderQueue;
@@ -432,7 +432,7 @@ export class MixedRenderQueue extends RenderQueue {
    * The instance owns all three child queues until disposal.
    *
    * @since 1.0.0
-   * @category constructors
+   * @category Mixed scheduling
    */
   constructor(durationAllowed: number = DEFAULT_DURATION_ALLOWED) {
     super();
@@ -457,7 +457,7 @@ export class MixedRenderQueue extends RenderQueue {
    * The selected child queue owns the entry until execution or disposal.
    *
    * @since 1.0.0
-   * @category methods
+   * @category Mixed scheduling
    */
   override readonly add = (
     key: unknown,
@@ -492,7 +492,7 @@ export class MixedRenderQueue extends RenderQueue {
    * Ends the lifetime of all pending sync/frame/timer/idle work.
    *
    * @since 1.0.0
-   * @category resource-management
+   * @category Scheduled work cancellation
    */
   override [Symbol.dispose]: () => void = () => {
     dispose(this.high);
@@ -531,7 +531,7 @@ const RAF_PRIORITY_RANGE = 10;
  * ```
  *
  * @since 1.0.0
- * @category utilities
+ * @category Render priorities
  */
 export const RenderPriority = {
   /**
@@ -545,7 +545,7 @@ export const RenderPriority = {
    * The number owns no task.
    *
    * @since 1.0.0
-   * @category priorities
+   * @category Render priorities
    */
   Sync: -1,
   /**
@@ -560,7 +560,7 @@ export const RenderPriority = {
    * Purely computes a number and schedules nothing.
    *
    * @since 1.0.0
-   * @category priorities
+   * @category Render priorities
    */
   Raf: (priority: number) => Math.max(0, Math.min(priority, RAF_PRIORITY_RANGE)),
   /**
@@ -574,7 +574,7 @@ export const RenderPriority = {
    * Purely computes a number and schedules nothing.
    *
    * @since 1.0.0
-   * @category priorities
+   * @category Render priorities
    */
   Idle: (priority: number) => RAF_PRIORITY_RANGE + priority,
 } as const;

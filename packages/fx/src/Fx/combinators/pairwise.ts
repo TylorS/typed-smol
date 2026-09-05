@@ -25,7 +25,7 @@ import { filterMapLoop } from "./filterMapLoop.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const pairwise = <A, E = never, R = never>(self: Fx<A, E, R>): Fx<readonly [A, A], E, R> =>
   filterMapLoop(self, Option.none<A>(), (prev, a) =>

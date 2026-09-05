@@ -7,7 +7,9 @@ related: [keyed-identity, local-reconciliation, template]
 links: []
 ---
 
-`many(values, key, renderItem)` is for a live collection whose order or membership can change. A
-retained key keeps the item's rendered identity; a removed key closes that item's work. It is a
-collection-level contract for [local reconciliation](#local-reconciliation), not a general array
-helper.
+`many(values, key, renderItem)` renders a changing keyed collection. Retained keys keep their rendered
+range and child Scope; removed keys close their item work. The renderer receives a RefSubject for
+the item, allowing updated data to reach the same retained row.
+
+Derive an invoice amount from that item source. Reading it only once during setup captures a snapshot
+even when the key is correct. See [keyed collection examples](/explore/keyed-template-collections).

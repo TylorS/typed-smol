@@ -1,137 +1,117 @@
 ---
 title: "Change a keyed template collection"
 summary: "Keep one rendered range per stable key so insertions, removals, and moves preserve the browser state that belongs to an item."
-section: "Templates"
+section: "Template authoring"
 kind: "guide"
-order: 3.3
+order: 4
 ---
 
-Use `many` when a live collection can add, remove, reorder, or update logical items. It accepts an
-`Fx<ReadonlyArray<A>, E, R>`, a stable key function, and a renderer for each item. The key is not a
-hint for array indexes: it is the identity of the rendered child range. The result is a `Many`
-renderer descriptor, not another `Fx`; that lets the DOM and HTML renderers consume the collection
-directly instead of flattening child output through a generic collection stream.
+Sorting saved articles should move their rows, not turn each array position into a different article.
+An input being edited, a row observer, and a foreign widget all belong to the logical article. `many`
+expresses that identity so the renderer can keep the same child work while its position changes.
 
-For an initial, fixed list, an array of child templates is simpler. `many` pays for keyed lifetime
-management because it preserves a retained item's DOM nodes when the collection changes. That
-preserves node identity. Browser state such as focus and selection also depends on the platform move
-operation; the fallback insertion path can disconnect and reconnect a retained node.
+This builds on [renderable values](/explore/renderable-normalization). A fixed array of templates
+is sufficient for fixed output; use `many` when records can be added, removed, updated, or reordered.
 
-## Render each item from its RefSubject
+## Give the record an identity independent of its position
 
-The item renderer receives `RefSubject<A>`, not a snapshot. When an item with the same key changes,
-Typed updates that subject and keeps the already-mounted child range alive. Derive the fields a row
-needs from the subject; do not close over the source array or rebuild a separate stream per render.
+Use an ID that stays with the record. A title can change and an array index can refer to a different
+record after sorting, so neither is a reliable key for editable rows.
+
+The example makes that distinction observable: reversing the list changes positions, while each
+row's browser-owned note input should stay with its article.
 
 ```ts
 import { RefSubject } from "@typed/fx";
 import { html, many } from "@typed/template";
 import { component } from "@typed/ui/Component";
 
-interface Task {
+interface Article {
   readonly id: string;
   readonly title: string;
-  readonly done: boolean;
 }
 
-export const taskList = component(function* () {
-  const tasks = yield* RefSubject.make<ReadonlyArray<Task>>([
-    { id: "docs", title: "Write the guide", done: false },
-    { id: "review", title: "Review native events", done: false },
+const ArticleRow = (article: RefSubject.RefSubject<Article>, id: string) => {
+  return html`<li data-article-id=${id}>
+    <span>${article.pipe(RefSubject.map((value) => value.title))}</span>
+    <label>Private note <input type="text" /></label>
+  </li>`;
+};
+
+export const SavedArticles = component(function* () {
+  const articles = yield* RefSubject.make<ReadonlyArray<Article>>([
+    { id: "scope", title: "Understanding resource scopes" },
+    { id: "events", title: "Native browser events" },
   ]);
+  const reverse = RefSubject.update(articles, (current) => [...current].reverse());
+  const rows = many(articles, (article) => article.id, ArticleRow);
 
-  const taskRows = many(
-    tasks,
-    (task) => task.id,
-    (task, id) =>
-      html`<li data-task-id=${id}>
-        <input type="checkbox" .checked=${task.pipe(RefSubject.map((value) => value.done))} />
-        <span>${task.pipe(RefSubject.map((value) => value.title))}</span>
-      </li>`,
-  );
-
-  return html`<ul aria-label="Tasks">${taskRows}</ul>`;
+  return html`<section>
+    <button type="button" onclick=${reverse}>Reverse order</button>
+    <ul aria-label="Saved articles">${rows}</ul>
+  </section>`;
 });
 ```
 
-This page's `tasks` source is scoped because it creates mutable state. A Scope is Effect's resource
-lifetime: when the rendered output is interrupted, the collection subscription and all retained
-child ranges are finalized together. The child subject is deliberately scoped more narrowly: removing
-one key closes only that child's work.
+[`many`](/reference/modules/%40typed%2Ftemplate%2Fmany) returns a renderer descriptor, not an
+independently flattened Fx. It supplies the collection,
+key function, and child renderer to the target. The DOM target can therefore own the keyed entry map
+directly, while the HTML target can render one finite initial collection.
 
-To change this particular collection from an application program, keep the subject itself in the
-same scope that owns the page, then apply one update. `RefSubject.update` is state logic and can be
-tested without a document.
+## Read each retained item through its subject
 
-```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
+`ArticleRow` receives a `RefSubject<Article>`, not a snapshot of the record. Its title projection
+stays subscribed. Changing the title under the same ID updates that subject and its text part;
+it does not reconstruct the row template.
 
-interface Task {
-  readonly id: string;
-  readonly title: string;
-  readonly done: boolean;
-}
+In a generator-backed row, reading `yield* article` during setup and then interpolating only the resulting title would capture
+the initial snapshot. That is appropriate for a setup decision but wrong for a displayed field
+that should remain live. Derive live fields from the supplied subject.
 
-const markReviewed = (tasks: RefSubject.RefSubject<ReadonlyArray<Task>>) =>
-  RefSubject.update(tasks, (current) =>
-    current.map((task) => (task.id === "review" ? { ...task, done: true } : task)),
-  );
+Update domain records immutably. Mutating the same object in place can leave equality seeing the
+same retained value and skip the expected publication. Preserve unchanged object references when
+possible; recreating every plain object can cause unnecessary item publications. The renderer uses
+Effect equality when deciding whether to set a retained subject.
 
-export const verifyTransition = Effect.scoped(
-  Effect.gen(function* () {
-    const state = yield* RefSubject.make<ReadonlyArray<Task>>([
-      { id: "review", title: "Review native events", done: false },
-    ]);
-    yield* markReviewed(state);
-    return (yield* state)[0].done;
-  }),
-);
-```
+## Follow three different list changes
 
-## What the DOM reconciler does
+Starting with `scope, events`, reversing the array retains both keys. Both child scopes, both
+subjects, and their existing DOM remain. Unchanged item values are not republished, although the
+renderer still visits the list and reconciles its concrete node order.
 
-On the DOM target, the renderer keeps a map from key to item value, `RefSubject`, child Scope, and
-concrete nodes. A new key starts one child Scope and one item renderer. A retained key whose value is
-not equal receives the next value through its existing `RefSubject`; an unchanged retained value is
-not published again. A removed key closes only that child Scope. Reordering retained keys reuses
-their concrete nodes; where available, the local range diff uses `moveBefore` for an
-already-connected node and falls back to `insertBefore` otherwise.
+Changing `events.title` keeps the same key and publishes the new record to that row's subject.
+Only the subscribed title part needs to change. Removing `scope` closes that child's scope and
+removes its represented output. An observer acquired by that row is finalized even while the
+remaining list continues to run.
 
-The work is local, but a list emission is not O(1). Typed validates the next keys, checks the previous
-order for removals, and visits the next values: O(`a + b`) for previous and next item counts, plus
-key/equality work and the concrete-node range diff. Retained-key lookup is O(1) on average. The
-important fast path is behavioral: a pure reorder does not rerun unchanged item state, and adding or
-removing one key starts or closes only that key's child work.
+A list emission is consequently not constant-time work. It validates and visits old and new keys,
+checks equality, and reconciles the local concrete range. The behavioral benefit is narrower:
+retained children keep their identity and lifetime. See
+[Direct updates, local reconciliation](/explore/dom-updates-and-reconciliation) for the cost model.
 
-Keys must be unique among the current entries and stable for the item's logical lifetime. Duplicate
-keys fail with `Cause.IllegalArgumentError` in both DOM and HTML rendering. Do not use array indexes
-when items can move—the same index would then identify a different task and retain the wrong browser
-state.
+## Make identity testable
 
-## DOM and SSR have different lifetimes
+Mount the example, type a note into the `events` row, capture that input object, and reverse the list.
+Assert the same input is now in the moved row and its text remains with the correct article.
+Then test a title update and a removal separately. Count a row resource's acquisitions and finalizers
+if its lifetime matters; final text order alone cannot reveal unnecessary recreation.
 
-The HTML renderer does not keep a response open to reconcile future list emissions. It reads the
-initial array, validates its keys, renders it in source order, and writes keyed hydration markers. It
-does not retain live child identity after that response pass. Local `symbol` keys also fail for
-hydratable output because their identity cannot cross serialization; use a string, number, or
-`Symbol.for()` key at the server boundary.
+Node identity and browser-managed state are related but distinct. The diff prefers `moveBefore`
+for already-parented nodes and falls back to `insertBefore`. Both retain the object; the successful
+platform move preserves additional states subject to its connection/document constraints. Consult
+the [platform move contract](https://developer.mozilla.org/en-US/docs/Web/API/Element/moveBefore)
+and test the fallback on supported browsers rather than promising every native state survives.
 
-That distinction is intentional:
+## Carry the same identity through a server response
 
-| Target | Collection behavior | Lifetime |
-| --- | --- | --- |
-| DOM | direct keyed entry map; changed children update, retained ranges move, removed scopes close | live until its parent Scope closes |
-| HTML / SSR | validated initial entries render once in source order with hydration markers | finite response work |
+Keys must be unique within the current array. Duplicate keys fail with `Cause.IllegalArgumentError`
+in both DOM and HTML rendering; they are not an instruction to merge records. For hydratable output,
+use a string, number, or `Symbol.for()` key. A local `Symbol()` has no serializable identity and fails
+that boundary.
 
-Choose `HtmlRenderTemplate` for a hydratable server response and `StaticHtmlRenderTemplate` only when
-no browser adoption is needed. Read [Rendering HTML on the server](/explore/rendering-html-on-the-server)
-and [Hydrating Typed HTML](/explore/hydrating-typed-html) for the response/adoption boundary.
-
-## Verify the behavior that keys promise
-
-Test state transitions with `RefSubject` first. Then mount `taskList` into a real test document with
-`DomRenderTemplate.using(document)`, focus an input in the `review` row, reorder the source with the
-same `id`, and assert that the focused input is the same node after the update. That test checks the
-reason to use keys: retained identity, not merely the final text order. The [testing guide](/explore/testing-typed-systems)
-shows the public mounting pattern.
+The server reads the initial collection, validates it, and serializes items in order with keyed
+markers when using the hydratable renderer. It does not keep live child scopes around after the
+response to process future sorting. The browser later uses compatible initial keys to adopt those
+ranges. Share IDs and initial state across that handoff; array position alone cannot restore them.
+Continue with [Server rendering and hydration](/explore/server-rendering-and-hydration) when this
+list should arrive as interactive server HTML.

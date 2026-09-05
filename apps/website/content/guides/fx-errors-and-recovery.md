@@ -6,18 +6,20 @@ kind: "guide"
 order: 1.8
 ---
 
-An Fx sends values through `A` and failures through a complete `Cause<E>`. Ordinary failing
-producers end after that Cause is delivered; the low-level Sink protocol can also represent a
-producer that reports a Cause and continues. Model expected business failures in `E`, while defects
-and cancellation remain in the richer Cause. That distinction keeps a fallback for an unavailable
-guide separate from a broken decoder or an owner ending the subscription.
+A search request can be unavailable while the search field remains usable. The page may show cached
+data, offer a retry, and still accept the next query. A catch around the wrong boundary can instead
+replace the entire query subscription and leave future input disconnected.
 
-## A guide request can be unavailable
+Read [higher-order work](/explore/fx-higher-order-and-concurrency) first. This lesson follows one
+request failure through retry, fallback, and presentation, then examines the lower-level Cause
+operations used by a host or supervisor.
 
-Start by naming failures that a caller can reasonably act on. `Data.TaggedError` gives the failure a
-stable tag and useful context. Here, a named Effect operation performs the one remote request, then
-`Fx.fromEffect` puts that result into a push pipeline. [Building Fx values](/explore/building-fx)
-covers the other ways to establish that source boundary.
+## Name the failure a caller can act on
+
+`E` describes expected failures; the complete `Cause<E>` can also contain defects and interruption.
+A missing remote guide is a domain decision. A broken decoder is a programming problem. Navigation
+interrupting an old request is the owner finishing with that work. They should not all produce the
+same offline banner.
 
 ```ts
 import { Data, Effect, Schedule } from "effect";
@@ -52,10 +54,10 @@ const guideWithCache = (slug: string) =>
   );
 ```
 
-`catchTag` handles only the selected expected failure, and its handler receives the narrowed error.
-Other tags remain visible to the caller. Use `mapError` when the owner merely needs to translate a
-domain error, rather than choose an alternative producer; it is the error-channel counterpart to
-the value changes in [Transforming Fx](/explore/transforming-fx).
+`GuideUnavailable` carries the affected slug. The Effect performs one request; `fromEffect` turns its
+success into one event. The retry wrapper owns attempts, and
+[`catchTag`](/reference/symbols/QHR5cGVkL2Z4L0Z4I2NhdGNoVGFn) chooses a cached guide only for the
+matching expected failure. Other tags remain in the type channel.
 
 ```fx-marble
 title: catch aliases switch to a fallback after the source fails
@@ -66,9 +68,9 @@ inner fallback: . . . . ^ cached |
 output: . guide . . . cached |
 ```
 
-`catch`, `catchAll`, and `catch_` are the same typed-failure recovery operation. The source keeps
-values already delivered; after `!offline`, one fallback subscription starts and its values continue
-the output. A fallback is not run until the source reports its failure.
+`catch`, `catchAll`, and `catch_` are aliases. The source's earlier `guide` value stays visible, and
+the fallback begins only after `!offline`. Recovery changes future output; it does not retract
+already-delivered values.
 
 ```fx-marble
 title: selective typed catches switch only for a matching failure
@@ -79,23 +81,32 @@ inner fallback: . . . . ^ cached |
 output: . guide . . . cached |
 ```
 
-`catchTag` selects one tag, `catchIf` selects a typed failure with a predicate, and `catchTags` uses a
-handler table for several tags. They share the same timing when the selection matches: one lazy
-fallback starts after the failure. A rejected predicate, an unlisted tag, or an untagged error keeps
-the original failure.
+`catchTag` selects one tag, `catchTags` selects from a handler table, and `catchIf` uses a predicate.
+The illustrated matching failure starts a fallback; an unlisted tag or rejected predicate passes
+the original failure through. Normal completion without values never enters a typed catch.
 
-`retry` is deliberately outside `fetchGuide`: it retries the entire Fx subscription, including
-acquisition and finalizers. `Schedule.recurs(2)` permits two retries after the first attempt. A
-value resets the retry schedule, so it is a fit for a retryable producer—not for replaying an
-arbitrary per-value callback. Give the schedule a bounded retry and backoff policy appropriate to
-the operation. The retried source is still ordinary producer composition; see
-[Composing Fx](/explore/composing-fx) when another producer also enters the decision.
+## Retry the request boundary, not arbitrary downstream work
 
-## Recover one request without ending the input source
+```fx-marble
+title: retry preserves prior values and starts a fresh attempt after failure
+covers: retry
+input attempt 1: ^ partial !offline
+input attempt 2: . . . ^ ready |
+operator: retry(Schedule.recurs(1))
+output: . partial . . ready |
+```
 
-On a search screen, a failed request should usually leave the query listener alive. Put recovery
-inside the function that creates that request. Catching outside the flattened pipeline replaces
-the whole failed subscription, including its connection to future input.
+The first attempt already emitted `partial`. Retry preserves it, then resubscribes after failure and
+forwards the next attempt's `ready`. A real source may repeat a cached snapshot on every attempt,
+so retry is not deduplication. `Schedule.recurs(2)` permits two retries after the initial attempt;
+this operator resets its retry schedule when a value is emitted.
+
+Each retry starts the entire Fx subscription, including acquisition and finalizers. Use a bounded
+schedule and an appropriate delay policy for the actual operation. Retrying an accepted write after
+losing its response may repeat the command; server-side idempotency and revision checks are separate
+from a client retry schedule.
+
+## Recover inside the job so the input stays connected
 
 ```ts
 import { Effect } from "effect"
@@ -119,21 +130,53 @@ const values = await Effect.runPromise(Effect.scoped(Fx.collectAll(results)))
 // Results, Unavailable, Results: one failure did not stop later input.
 ```
 
-This finite example uses `concatMap` to make every result observable. A live search usually uses
-`switchMap(request)` so newer input also cancels obsolete requests. Recovery placement and
-concurrency policy are separate decisions. For loading and refreshing alongside the result, use
-[AsyncData](/explore/async-data) as the value model.
+Trace all three jobs: `typed` yields Results; `offline` is converted to an Unavailable value inside
+its request; `effect` can still start and yield Results. The outer input did not fail. The finite
+example uses `concatMap` to expose every outcome; live search commonly uses `switchMap(request)`
+so newer input also interrupts obsolete work.
 
-## Let the owner decide what a complete cause means
+Catching outside the flattened workflow instead replaces that whole failed subscription. The
+fallback may complete without reconnecting to future queries. Recovery placement and concurrency
+policy are separate choices: first decide what must stay alive, then what competing work may run.
+Use [AsyncData](/explore/async-data) when loading and refreshing belong in the displayed value model.
 
-A typed recovery is not a general way to erase every ending. `Fx.catchTag` searches a terminal
-Cause for its first expected failure. If its handler runs, the fallback replaces that entire source
-termination; a Cause with no expected failure passes through unchanged. This matters when a failure
-is accompanied by a defect or interruption.
+## Translate a failure without claiming recovery
 
-Use `Fx.catchCause` only at a boundary that intentionally turns every kind of termination into a
-new producer. For example, a host integration may choose to turn any failed subscription into one
-status value after recording the full Cause.
+When the caller owns the fallback decision, change only the expected error representation:
+
+```fx-marble
+title: mapError changes the typed failure but keeps values and timing
+covers: mapError
+input source: ^ guide . !offline
+operator: mapError(toDomainError)
+output: . guide . !DomainError
+```
+
+`mapError` preserves successful values and failure timing. It does not handle defects or interruption.
+Changing `offline` to `DomainError` makes a boundary easier to consume, but the run still failed.
+
+A less common channel operation is `flip`:
+
+```fx-marble
+title: flip turns typed failures into values and values into failures
+covers: flip
+input failure: ^ . !offline
+input success: ^ . ready |
+operator: flip
+output failure: . . offline |
+output success: . . !ready
+```
+
+The two rows are separate runs. A typed failure becomes a successful value; a source success becomes
+a typed failure. This is useful when a consumer intentionally asks for failures as its data, not for
+ordinary page-level recovery.
+
+## Give a host the complete Cause when it needs one
+
+Typed recovery searches a terminal Cause for an expected failure. If its handler runs, its fallback
+replaces that source termination; a Cause without an expected failure passes through. When a Cause
+combines expected failure with a defect or interruption, replacing it is broader than relabeling
+one error. Use Cause-oriented recovery only where the boundary intentionally makes that decision:
 
 ```ts
 import { Cause, Data, Effect } from "effect";
@@ -169,9 +212,9 @@ inner fallback: . . . ^ unavailable |
 output: . . . . unavailable |
 ```
 
-`catchCause` receives the complete terminal `Cause`, including defects and interruption. It starts
-the fallback after the source ends; the original Cause is no longer the downstream failure if that
-fallback succeeds.
+`catchCause` receives the complete Cause and replaces it with the selected producer. This host records
+the cause before producing one status value. The original defect is no longer a downstream failure
+if the fallback succeeds.
 
 ```fx-marble
 title: catchCauseIf recovers only when its Cause predicate matches
@@ -182,20 +225,11 @@ inner fallback: . . . ^ reported |
 output: . . . . reported |
 ```
 
-`catchCauseIf` has the same boundary timing, but forwards the unchanged Cause when its predicate
-rejects it. Use it when the decision depends on Cause structure rather than only the typed error.
+`catchCauseIf` uses the same timing but forwards the unchanged Cause when its predicate rejects it.
+Neither operator should be a default way to make cancellation look like an ordinary request error.
+Cleanup belongs in finalization or `onInterrupt`, not a pretend successful replacement request.
 
-That broad conversion is a boundary policy, not a default. A defect is evidence that a programming
-assumption failed; interruption says the subscription's owner stopped it. Keep both visible unless
-the receiving system truly needs one normalized outcome. Use `Fx.onInterrupt` for cancellation-only
-cleanup, rather than treating cancellation as a recoverable domain error.
-
-## Observe failures without changing their meaning
-
-Monitoring normally needs the complete Cause, but logging should not manufacture a fallback.
-`Fx.onError` observes a terminal failure and preserves it for the downstream runner. Its callback
-must not fail in the typed channel, which makes telemetry a side effect rather than a second
-recovery policy.
+## Observe failures and understand the hook's delivery order
 
 ```ts
 import { Cause, Data, Effect } from "effect";
@@ -216,6 +250,11 @@ const checkedGuide = Fx.fail(new GuideMalformed({ slug: "effect-basics" })).pipe
 const terminalCauses = Fx.causes(checkedGuide);
 ```
 
+`onError` forwards the original Cause first, then runs its callback if downstream failure delivery
+succeeds. A Sink that interrupts during that delivery can prevent the hook from running. The
+callback cannot fail in the typed channel, but its defect can still affect the run. For guaranteed
+final-outcome reporting, inspect the owning Effect's Exit rather than relying on this delivery hook.
+
 ```fx-marble
 title: causes emits only the terminal Cause as a value
 covers: causes
@@ -224,18 +263,13 @@ operator: causes
 output: . . . Cause(malformed) |
 ```
 
-`causes` drops successful values and turns the terminal Cause into one successful value before normal
-completion. Defects and interruption remain inside that Cause value.
+`causes` omits successes and emits the delivered Cause as data. The resulting ordinary terminal
+example completes successfully after its Cause value. Defects and interruption remain inside that
+value instead of being flattened into an arbitrary string.
 
-`Fx.causes` is useful when a supervisor genuinely consumes failure causes. Otherwise, keep the
-failure in the Fx channel and let `Fx.observe`, `Fx.first`, or `Fx.collectAll` return the typed
-Effect outcome to the owner, as chosen in [Consuming Fx](/explore/consuming-fx).
+## Repeat success and materialize outcomes deliberately
 
-## Repeat a completed subscription, not a failed one
-
-Refreshing a finished cache scan and retrying a failed network request are different policies.
-`Fx.repeat` starts a fresh subscription only after normal completion; a source failure stops it
-immediately. As with retry, every run is sequential and a schedule owns any delay between runs.
+A completed cache scan can run again without having failed:
 
 ```ts
 import { Schedule } from "effect";
@@ -246,29 +280,11 @@ const scanCache = (workspace: string) => Fx.succeed(`scanned:${workspace}`);
 const threeScans = scanCache("typed").pipe(Fx.repeat(Schedule.recurs(2)));
 ```
 
-This emits three completed scans: the original run plus two repeats. Pair retry and repeat only if
-the product actually needs both boundaries; neither one provides a queue, deduplication, or
-idempotency guarantee.
+`repeat(Schedule.recurs(2))` performs the original scan plus two sequential repeats. Failure stops
+repetition; retry is the separate failure policy. Neither operation repeats a particular callback
+in isolation or makes its side effects idempotent.
 
-```fx-marble
-title: retry resubscribes after failure and emits only the successful attempt
-covers: retry
-input attempt 1: ^ . !offline
-input attempt 2: . . . ^ . ready |
-operator: retry(Schedule.recurs(1))
-output: . . . . . ready |
-```
-
-With an immediate `Schedule.recurs(1)`, the failed first subscription produces no downstream event;
-the second subscription starts in the next logical slot after `!offline`, and its `ready` value is
-the only output. A schedule with backoff would move the second `^` and `ready` later; retries are
-sequential rather than concurrent.
-
-## Carry outcomes as values only for a consumer that needs them
-
-Most pipelines should end with their ordinary typed Effect result. Use `Fx.result` when the next
-consumer must receive successes and terminal failures through the same value channel. The failed
-`Result` retains `Cause`, so it does not flatten defects or interruption into a pretend domain error.
+For a consumer that needs successes and failures through one data channel, preserve their wrappers:
 
 ```ts
 import { Cause, Data, Result } from "effect";
@@ -299,34 +315,12 @@ operator: result
 output: . Result.succeed(guide) . Result.fail(Cause(offline)) |
 ```
 
-`exit` and `result` each emit one success wrapper per source value, then one failure wrapper for the
-terminal Cause. The wrapper is data, so the returned Fx completes normally and retains defects or
-interruption instead of flattening them into a typed error.
+`exit` and `result` wrap each successful value, then wrap a delivered failure Cause. The outer Fx's
+`never` typed error channel means the outcome became data, not that nothing failed. A consumer must
+still inspect the wrapper. These diagrams describe ordinary terminating sources; a
+[Subject](/explore/subject-event-publications) can publish multiple Causes without closing itself.
 
-## Translate typed errors without recovery
-
-`mapError` changes only typed failures while preserving values and timing. It does not handle defects
-or interruption; those remain in the Cause unchanged.
-
-```fx-marble
-title: mapError changes the typed failure but keeps values and timing
-covers: mapError
-input source: ^ guide . !offline
-operator: mapError(toDomainError)
-output: . guide . !DomainError
-```
-
-## Flip one channel into the other
-
-`flip` inverts the channels: a typed failure becomes a successful value, while a source value becomes
-the returned typed failure. The two cases below share one operator but show both terminal directions.
-
-```fx-marble
-title: flip turns typed failures into values and values into failures
-covers: flip
-input failure: ^ . !offline
-input success: ^ . ready |
-operator: flip
-output failure: . . offline |
-output success: . . !ready
-```
+Test a matching failure, an unmatched tag, a defect, and owner interruption. Also publish a later
+query after a failed request to verify the input remains connected. Count acquisitions and releases
+across retries, because correct final output alone cannot reveal a leaked failed attempt. Finish at
+[Consuming Fx](/explore/consuming-fx), where the application returns or displays the resulting outcome.

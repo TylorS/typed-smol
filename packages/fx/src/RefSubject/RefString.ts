@@ -28,7 +28,7 @@ const isRefStringDataFirst = (args: IArguments) => RefSubject.isRefSubject(args[
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefString<in out E = never, out R = never> extends RefSubject.RefSubject<
   string,
@@ -63,7 +63,7 @@ export interface RefString<in out E = never, out R = never> extends RefSubject.R
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<E = never, R = never>(
   initial: string | Effect.Effect<string, E, R> | Fx.Fx<string, E, R>,
@@ -90,7 +90,7 @@ export function make<E = never, R = never>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const concat: {
   (that: string): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>;
@@ -113,7 +113,7 @@ export const concat: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const toUpperCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
   RefSubject.map(ref, String_.toUpperCase);
@@ -132,7 +132,7 @@ export const toUpperCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<str
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const toLowerCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
   RefSubject.map(ref, String_.toLowerCase);
@@ -151,7 +151,7 @@ export const toLowerCase = <E, R>(ref: RefString<E, R>): RefSubject.Computed<str
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const trim = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
   RefSubject.map(ref, String_.trim);
@@ -170,7 +170,7 @@ export const trim = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E,
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const trimStart = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
   RefSubject.map(ref, String_.trimStart);
@@ -189,7 +189,7 @@ export const trimStart = <E, R>(ref: RefString<E, R>): RefSubject.Computed<strin
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const trimEnd = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string, E, R> =>
   RefSubject.map(ref, String_.trimEnd);
@@ -208,7 +208,7 @@ export const trimEnd = <E, R>(ref: RefString<E, R>): RefSubject.Computed<string,
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const replace: {
   (
@@ -241,7 +241,7 @@ export const replace: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const replaceAll: {
   (
@@ -274,7 +274,7 @@ export const replaceAll: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, String_.isEmpty);
@@ -293,7 +293,7 @@ export const isEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<boolean
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNonEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, String_.isNonEmpty);
@@ -312,7 +312,7 @@ export const isNonEmpty = <E, R>(ref: RefString<E, R>): RefSubject.Computed<bool
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const length = <E, R>(ref: RefString<E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, String_.length);
@@ -331,7 +331,7 @@ export const length = <E, R>(ref: RefString<E, R>): RefSubject.Computed<number, 
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const startsWith: {
   (
@@ -364,7 +364,7 @@ export const startsWith: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const endsWith: {
   (
@@ -397,7 +397,7 @@ export const endsWith: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const includes: {
   (
@@ -430,7 +430,7 @@ export const includes: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const slice: {
   (start?: number, end?: number): <E, R>(ref: RefString<E, R>) => RefSubject.Computed<string, E, R>;

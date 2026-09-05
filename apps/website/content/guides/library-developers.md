@@ -1,62 +1,139 @@
 ---
 title: Library developers
-summary: Build composable reactive libraries, UI systems, and renderers while preserving values, errors, services, and resource ownership.
+summary: Design a reusable account picker by separating state, interaction, output, and the lifetime each caller controls.
 section: Learning paths
 kind: guide
 order: 0.2
 ---
 
-A useful library should fit into a program without taking over its runtime. Typed gives you a shared vocabulary for values over time, current state, rendered output, and the resources that keep them alive.
+Suppose you are extracting an account picker from an application. The original control searches
+accounts, tracks a selection, moves focus through results, and renders a styled panel. Another team
+wants the same selection behavior inside a different panel. A third caller wants to drive it from a
+command palette. What should your library expose?
 
-This path is for building reusable components, design systems, adapters, and frameworks. Start with the contract your library actually needs.
+Start with the behavior these callers share, then add the rendering boundary they actually need.
+The goal is a contract that callers can supply with state and services, observe for failure, and
+close without knowing your implementation. The [application path](/explore/application-developers)
+introduces these concepts from the consuming side.
 
-## Preserve the three channels
+## Extract the selection before extracting the panel
 
-`Fx<A, E, R>` describes emitted values, typed errors, and required services. The caller needs to see all three. A wrapper that replaces `E` with `unknown` or hides `R` behind a global singleton makes composition harder.
+The selected account is current state. A refresh command is an event. Search results are values that
+arrive over time. Keeping those distinctions in the public API lets a caller ask different questions:
+“What is selected now?”, “What changed?”, and “Please refresh.”
 
-Learn [how Fx producers run](/explore/fx-push-reactivity), [how consumers receive values and failures](/explore/sink-writing-effects), and [where a subscription gets its services and Scope](/explore/fx-services-and-lifetime). Then choose an existing operator before inventing a new runtime abstraction.
+Use a [RefSubject](/explore/refsubject-renderer-independent-state) when a caller needs a current read
+and future changes. Use [Subject](/explore/subject-event-publications) for a publication boundary,
+choosing its replay behavior explicitly. Expose derived labels and counts as read-only views instead
+of creating another writable store that callers could put out of sync.
 
-The full [Fx module](/reference/modules/%40typed%2Ffx%2FFx) includes constructors, transformations, concurrency policies, resource handling, and consumers. [Subject](/explore/subject-event-publications) is for publications; [RefSubject](/explore/refsubject-renderer-independent-state) also models current state. Their contracts are different.
+“No selection” must also be an observable state if the panel needs to clear its label. A Filtered
+view skips absent values in its Fx observations and fails a current read with `NoSuchElementError`.
+It does not publish a “clear” event. An Option-valued source keeps both cases in the value channel.
+[Conditional state](/explore/derived-conditional-and-accumulated-state) explains that choice.
 
-## Make state independent of presentation
+Decide who acquires the state. A caller-supplied selection belongs to the caller; opening or closing
+the picker must not silently replace it. A temporary query can belong to each open picker if it
+should reset on every opening. Document this distinction as behavior, and test it without a DOM.
+[Shared state contracts](/explore/shared-state-contracts) covers the reusable model boundary.
 
-A selection model can serve a menu, a command palette, and a test without importing a DOM renderer. Keep the state and its operations separate from the host markup.
+## Keep asynchronous work visible to the caller
 
-[Shared state contracts](/explore/shared-state-contracts) and [specialized state modules](/explore/specialized-refsubject-state) show the tools. [Bidirectional views and transactions](/explore/state-transactions-and-bidirectional-views) explain when an update should flow back to a source and when several changes should be observed together.
+A search function might emit account results, fail with a repository error, and require a repository
+service. `Fx<A, E, R>` carries those three promises. Annotating its result with `unknown` errors or
+hiding its service behind a singleton loses information the application needs to compose it.
 
-Treat equality, initial values, subscriptions, and cleanup as part of the public behavior. A short type is useful when its semantics stay clear.
+Let inference carry the channels through transformations. A rendering wrapper must preserve failures
+and requirements from both its setup and the output it returns. If your library handles one expected
+failure, describe the resulting behavior: an empty result, a retryable error, or a fallback source
+are different outcomes.
 
-## Compose a UI library around native hosts
+Before writing a custom producer, follow [how Fx runs](/explore/fx-push-reactivity) and
+[how sinks consume it](/explore/sink-writing-effects). The
+[operator atlas](/explore/fx-operator-atlas) helps choose existing composition for the required policy.
+For this picker, newer query results should supersede older ones; that is a replacement policy, not
+a property implied by the word “reactive.” Specify what happens to replaced work and test completion
+in the opposite order from request creation.
 
-Typed UI separates state, behavior, and host rendering. A styled button can apply the same interaction props to a different host without reimplementing its state machine.
+Services also make the model portable. The application can provide an HTTP-backed account repository;
+a test can provide controlled completions. Neither caller should need your library to start a global
+runtime. See [services and lifetime](/explore/fx-services-and-lifetime) for the composition boundary.
 
-Follow [Building UI components](/explore/building-ui-components), then [collections and focus](/explore/ui-collections-and-focus). The latter matters when a control needs keyboard navigation, disabled items, or a controlled selection. Use the browser's existing semantics before adding your own.
+## Add a host without taking over the model
 
-For a design system, decide which layer owns each concern:
+The picker now needs a view. A component can consume caller-owned state and derive its presentation
+without acquiring another copy:
 
-| Concern | Typical owner |
-| --- | --- |
-| Selected value and commands | A state model |
-| Keyboard interaction and accessibility props | A Typed UI primitive |
-| Native element and applied props | The component host |
-| Spacing, color, typography, and variants | Your styles and tokens |
-| Subscription and listener cleanup | The running Effect Scope |
+```ts
+import { RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
+const SelectedAccount = (selectedName: RefSubject.RefSubject<string>) => {
+  const label = RefSubject.map(selectedName, (name) => `Selected account: ${name}`);
+  return html`<output>${label}</output>`;
+};
+```
 
-## Adapt the smallest rendering boundary
+This small view owns its observation, while its caller owns the selected name. It keeps the source
+live instead of reading and capturing the first name during setup. A richer picker can follow the
+same rule while adding keyboard behavior and a list host.
 
-Choose the boundary based on the output you already have:
+Direct `html` is enough here: the view has no Effect setup to yield. When setup does need Effects,
+use `component` from `@typed/ui/Component` and return any supported renderable from its generator. A parameterless body creates an Fx; a parameterized body creates a function. Pipeline
+steps receive the generated Fx and the original arguments. Use `Fx.fn` for generator-backed
+functions whose output is not a component. [Component construction](/explore/ui-component) explains
+the inference and [building UI components](/explore/building-ui-components) applies it to controls.
 
-- Existing nodes: [DomRenderEvent](/explore/dom-render-event).
-- A group of nodes that must move together: [Wire](/explore/wire-and-rendered-dom-output).
-- Trusted server output: [HtmlRenderEvent](/explore/html-render-event).
-- A different interpretation of template literals: [RenderTemplate](/explore/implementing-render-template).
+Next choose native semantics and interaction through [the UI hub](/explore/ui). The reusable behavior
+must reach the actual host: event props, references, accessibility state, and disabled behavior are
+part of the contract a styled wrapper forwards. A wrapper that forwards only appearance can look
+correct while breaking focus or activation. [Collections and focus](/explore/ui-collections-and-focus)
+explains the additional contract for navigating result items.
 
-The [compilation pipeline](/explore/template-compilation-pipeline) explains parsing, parts, and renderer selection. [Cooperative DOM ownership](/explore/cooperative-by-design) explains which nodes and properties an adapter may change. Rendering into a root host is a stronger boundary than updating a nested dynamic range.
+## Preserve a result item while its data changes
 
-The [Astro integration](/integrate/astro) is a complete example of this composition: Astro supplies the host lifecycle and loading policy; Typed supplies rendering and scoped subscriptions. Other [integration recipes](/integrate) show how to compose with existing UI systems.
+A search refresh may return the same account ID with a changed display name. The picker should
+update that row without treating it as a different account. A reorder should move the retained row,
+while removing an account should close only the work belonging to that removed item.
 
-## Make lifetime behavior observable
+[Keyed collections](/explore/keyed-template-collections) connect stable identity to an item’s rendered
+range and child Scope. Derive row fields from the supplied item RefSubject; capturing the initial
+item would freeze the label even though the key is correctly retained. These are separate contracts:
+the key establishes which row survives, and the live item supplies what that row currently displays.
 
-Document when work starts, what it owns, and what stops it. Test cancellation, errors, replacement, and cleanup as behaviors. For DOM integrations, test retained node identity and actual native interaction as well as rendered text.
+Avoid adding caching until those replacement rules are clear. Sharing one acquisition across callers
+changes its lifetime. If you expose shared work, make its owner and release condition explicit instead
+of retaining it in a cache the caller cannot close.
 
-[Testing Typed systems](/explore/testing-typed-systems) is the starting point. Effect's [Scope](https://effect.website/docs/v4/resource-management/scope/) and [Layer](https://effect.website/docs/v4/requirements-management/layers/) provide the runtime vocabulary; your library should preserve it rather than requiring a second lifecycle system.
+## Cross into another renderer only where necessary
+
+One consumer may already own an editor or chart rendered by another library. You do not need a new
+component protocol just to place its output. Use [DomRenderEvent](/explore/dom-render-event) for exact
+existing nodes, or [Wire](/explore/wire-and-rendered-dom-output) for a group that must move together.
+Use [HtmlRenderEvent](/explore/html-render-event) when an existing server renderer owns safe HTML
+serialization. It is a trust boundary, not a sanitizer.
+
+The receiving Typed range owns placement; the foreign library owns its host’s descendants and
+internal resources. Register its destroy operation when acquiring the foreign mount. A node’s removal
+cannot discover or release those resources on its own. [Cooperative ownership](/explore/cooperative-by-design)
+works through the mount and teardown agreement, and [integration recipes](/integrate) show adapters.
+
+Only implement [RenderTemplate](/explore/implementing-render-template) when your library must interpret
+template syntax itself. Read [the compilation pipeline](/explore/template-compilation-pipeline) first:
+a parsed Template is metadata, while a rendered view is an Fx of output events. Confusing those layers
+makes a small output adapter look like a renderer implementation problem.
+
+## Test the promises at the public boundary
+
+For the account picker, a useful library suite proves four scenarios. Caller-owned selection survives
+closing and reopening the view. A newer search cannot be overwritten by an obsolete completion.
+A retained account keeps its row when its data changes. Closing the picker releases its own listeners
+and subscriptions without destroying caller-owned state.
+
+State tests cover selection and transitions; controlled Fx tests cover request ordering; browser tests
+cover native interaction and row identity. Add negative type checks for erased errors or missing
+services, because runtime assertions cannot detect those losses. Custom-host tests must exercise the
+forwarded props and references through the public wrapper, rather than testing the primitive alone.
+
+[Testing Typed systems](/explore/testing-typed-systems) provides these test shapes. Use the
+[API reference](/reference) for exact imports and signatures, and keep the library’s examples centered
+on the promises those signatures expose.

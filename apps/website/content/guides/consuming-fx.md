@@ -6,16 +6,17 @@ kind: "guide"
 order: 1.99
 ---
 
-An `Fx` is a producer. Consuming it is not one operation: sometimes you need to react to every
-value, sometimes you need one answer, and sometimes you only need to know that the work ended.
-Start with that need. Most consumers return an `Effect`, so failures, required services, and
-lifetime stay in the program that owns the subscription.
+An import screen receives progress events and eventually completes. Its live progress display,
+summary report, and “first selection” step need different answers from their producers. Choosing a
+runner is deciding both what the caller retains and when enough work has happened.
 
-## I need to react to every value
+[Building Fx](/explore/building-fx) established the source contract. Every runner below returns an
+Effect until the final host boundary. Constructing that Effect is still lazy; executing it starts
+the subscription and makes its failures and service requirements part of the owner.
 
-Use `Fx.observe` when each value causes work: update a `Ref`, write a record, send a metric, or
-call another Effect. The callback can fail or need services; those requirements become part of the
-returned Effect. The subscription ends when the source ends.
+## Process progress as it arrives
+
+Use `observe` when each event should cause an Effect and no collection is needed:
 
 ```ts
 import { Effect, Ref } from "effect";
@@ -30,14 +31,18 @@ const program = Effect.gen(function* () {
 });
 ```
 
-`observe` is the usual answer for a live producer. It does not add its own queue or concurrency
-policy; the source and the operators before it determine delivery.
+The finite fixture produces `saved`, waits for its observer, then produces `published`. The Ref
+records the example's result; it is not part of `observe` itself. For a live source the handler
+keeps running until the source ends or its owner interrupts it.
 
-## I need one answer
+The handler can fail or require services, and those channels join the returned Effect. A failed
+persistence handler can end observation even when the underlying event API remains capable of
+producing. Recover an individual item inside its handler if later input should remain usable.
+`observe` does not impose a new queue or concurrency policy on the producer.
 
-Use `Fx.first` when the next step needs the first value. It returns `Option<A>`: `None` means the
-source completed without a value, while a source failure remains in the error channel. After the
-first value, it stops upstream.
+## Await the first selection before continuing
+
+Before starting an import, a workflow may require one workspace selection:
 
 ```ts
 import { Effect, Option } from "effect";
@@ -55,13 +60,19 @@ const selectedWorkspace = Fx.first(selections).pipe(
 );
 ```
 
-Treat absence as data when it is expected. Turn it into a domain error only at the point where the
-caller truly requires a value.
+[`Fx.first`](/reference/symbols/QHR5cGVkL2Z4L0Z4I2ZpcnN0) returns `Option<A>`. `None` means the
+source completed successfully without a selection; failure remains in the Effect error channel.
+The example makes absence a domain error because this next step cannot proceed without a workspace.
+A screen where “no selection” is normal can keep the Option instead.
 
-## I need the finite output
+The execution is: subscribe → receive one value → stop upstream → run registered cleanup → return.
+It does not wait for an originally infinite source to finish on its own. But a source that stays
+silent and open cannot produce an answer: add a real stop signal or timeout when the product defines
+one, rather than assuming `first` guarantees eventual completion.
 
-Use `Fx.collectAll` for a producer known to complete, such as an import, a generated report, or a
-test fixture. It makes the cost explicit: every value stays in memory until completion.
+## Retain the report only when the source is finite
+
+Once the import finishes, its rows can form a summary:
 
 ```ts
 import { Effect } from "effect";
@@ -76,15 +87,12 @@ const report = Fx.collectAll(importedRows).pipe(
 const preview = Fx.collectUpTo(importedRows, 2);
 ```
 
-`collectUpTo(fx, n)` is the bounded version: it retains at most `n` values and stops upstream at
-that bound. It is useful for a finite sample of an open event source, provided that many values
-will actually arrive. Use `observe` for continuous processing and `collectAll` only when completion
-is part of the source contract.
+`collectAll` retains every value until normal completion. An open progress feed never produces that
+array and keeps accumulating memory. `collectUpTo(source, 2)` instead stops after at most two values;
+it still waits if only one value arrives and the source remains open. A bound limits retained
+cardinality, not how long silence lasts.
 
-## I only need completion
-
-Use `Fx.drain` when the useful work already happens inside the producer and its operators. It runs
-the subscription without building an array of values.
+For work whose useful effects already happen inside the producer, keep only completion:
 
 ```ts
 import { Effect } from "effect";
@@ -97,14 +105,13 @@ const migrations = Fx.fromIterable(["users", "projects"]).pipe(
 const runMigrations: Effect.Effect<void> = Fx.drain(migrations);
 ```
 
-The result still fails if the source or its per-value work fails. `drain` changes what you keep,
-not what you supervise.
+`drain` discards emitted values, but it still reports failures. It is appropriate for the migration
+fixture because `tap` performs the logging. It would be a bug to replace a required storage handler
+with `drain` and assume that ignored values were persisted somewhere.
 
-## My next consumer already expects a Stream
+## Keep an existing Stream consumer at its boundary
 
-Use `Fx.toStream` at that boundary. It is lazy: running the Stream starts the Fx subscription, and
-the Stream scope owns the adapter's queue and cleanup. Stay with the Effect-returning consumers
-when the next step does not need Stream semantics.
+If downstream code already uses Stream operations, adapt once:
 
 ```ts
 import { Stream } from "effect";
@@ -119,11 +126,14 @@ const average = Stream.runFold(
 );
 ```
 
-## This process should run for the application lifetime
+`toStream` starts the Fx lazily when the Stream runs. The Stream scope owns the adapter queue and
+cleanup. For ordinary per-event work or a finite collection, prefer the direct Effect runners above;
+a second streaming abstraction is useful only when the consumer actually uses its semantics.
 
-Build the observer as part of the application program, then fork it in the Scope that the actual
-application entry point owns. The process stays live while the application does; when the host
-releases that scope, the Fiber is interrupted and the producer cleans up.
+## Give the live observer the feature's real lifetime
+
+A live heartbeat does not fit in a scoped block that immediately returns after forking it. Closing
+that block would interrupt the observer before the feature could use it. Keep the owner open:
 
 ```ts
 import { Effect, Fiber } from "effect";
@@ -143,16 +153,16 @@ const fiber = Effect.runFork(Effect.scoped(application));
 const stop = () => Effect.runPromise(Fiber.interrupt(fiber));
 ```
 
-The Scope remains open for the same lifetime as the application and closes when `stop` interrupts
-its Fiber.
-In a Layer-based application, `Fx.observeLayer` and `Fx.drainLayer` attach the same kind of
-background subscription to the application's Layer scope.
+The host retains the root Fiber and calls `stop` during shutdown. Interrupting it closes the Scope,
+interrupts the heartbeat's wait, and prevents future ticks. In a component, route, or Layer, use that
+existing owner's Scope instead of inventing another root runtime. `observeLayer` and `drainLayer`
+attach infrastructure to an application Layer; successful Layer acquisition does not supervise all
+future background failures for you.
 
-## I am at the application or test boundary
+## Cross into a foreign host once
 
-`Fx.runPromise` and `Fx.runPromiseExit` start a root subscription on Effect's default runtime.
-Use them in a CLI `main`, a test harness, or another foreign host only after providing all services.
-Inside an Effect application, keep composing with `observe`, `drain`, or a collector instead.
+`runPromise` and `runPromiseExit` are root runners for a test harness, CLI, or foreign application
+entry point after required services have been provided:
 
 ```ts
 import { Effect, Exit } from "effect";
@@ -169,5 +179,12 @@ const main = async () => {
 await main();
 ```
 
-For a host that must keep a live producer running, `Fx.runFork` returns the root Fiber; that host
-owns interrupting it when it shuts down.
+The Exit form exposes the complete outcome to a host that must inspect it. Inside an Effect program,
+keep composing Effects; starting an independent root Fiber for each callback loses the owner's
+cancellation path. `Fx.runFork` is the root option when the foreign host explicitly owns a long-lived
+producer and will interrupt its Fiber later.
+
+When a consumer hangs, inspect its finish condition: missing first value, insufficient bounded
+values, or absent normal completion. When it ends too early, inspect both source and handler failure.
+[Selection](/explore/fx-selection-and-cardinality), [time](/explore/fx-time-and-rate), and
+[services and lifetime](/explore/fx-services-and-lifetime) define those different boundaries.

@@ -28,7 +28,7 @@ import { map } from "./map.js";
  * @param fxs - The Fx streams to combine.
  * @returns An `Fx` emitting tuples of values.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export function tuple<FX extends ReadonlyArray<Fx<any, any, any>>>(
   ...fxs: FX
@@ -93,7 +93,7 @@ export function tuple<FX extends ReadonlyArray<Fx<any, any, any>>>(
  * @param fxs - A record of Fx streams.
  * @returns An `Fx` emitting records of values.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export function struct<FXS extends Readonly<Record<string, Fx<any, any, any>>>>(
   fxs: FXS,

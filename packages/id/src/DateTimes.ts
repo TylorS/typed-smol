@@ -18,7 +18,7 @@ import * as Context from "effect/Context";
  * const now = Effect.provide(DateTimes.now, DateTimes.Default)
  * ```
  * See [Effect Clock](https://effect.website/docs/testing/testclock/).
- * @category Services
+ * @category Time services
  * @since 1.0.0
  */
 export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes", {
@@ -34,7 +34,7 @@ export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes
    * A service-backed read avoids hard-wiring `Date.now` into generators and tests.
    * ## Ownership and lifetime
    * This Effect acquires no resources and uses the DateTimes service for one invocation.
-   * @category Services
+   * @category Time services
    * @since 1.0.0
    */
   static readonly now = Effect.flatMap(DateTimes, ({ now }) => now);
@@ -45,7 +45,7 @@ export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes
    * The Date view stays aligned with the same replaceable time source as epoch-millisecond reads.
    * ## Ownership and lifetime
    * This Effect acquires no resources and uses the DateTimes service for one invocation.
-   * @category Services
+   * @category Time services
    * @since 1.0.0
    */
   static readonly date = Effect.flatMap(DateTimes, ({ date }) => date);
@@ -57,7 +57,7 @@ export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes
    * The production default is explicit and replaceable rather than hidden in each generator.
    * ## Ownership and lifetime
    * The surrounding Layer Scope owns the service; reads allocate only their returned Date values.
-   * @category Layers
+   * @category Time services
    * @since 1.0.0
    */
   static readonly Default = Layer.effect(DateTimes, DateTimes.make);
@@ -74,7 +74,7 @@ export class DateTimes extends Context.Service<DateTimes>()("@typed/id/DateTimes
    * import { DateTimes } from "@typed/id/DateTimes"
    * const fixed = DateTimes.Fixed("2026-01-01T00:00:00Z")
    * ```
-   * @category Layers
+   * @category Time services
    * @since 1.0.0
    */
   static readonly Fixed = (baseDate: number | string | Date) =>

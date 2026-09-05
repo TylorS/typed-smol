@@ -1,3 +1,14 @@
+/**
+ * A non-focusable semantic boundary with an orientation attribute.
+ * CSS draws the line; WindowSplitter supplies the separate adjustable-pane interaction.
+ *
+ * Read the [Separator guide](/explore/ui-separator) for a complete example.
+ *
+ * [Platform reference](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/separator_role).
+ * @since 1.0.0
+ * @category Overview
+ * @packageDocumentation
+ */
 import type * as Scope from "effect/Scope";
 import type { Fx } from "@typed/fx/Fx";
 import { html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
@@ -5,25 +16,12 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /**
- * Options for a non-interactive ARIA separator.
- * @remarks
- * ## Why
- * Orientation communicates whether the visual division is horizontal or
- * vertical without implying splitter interaction.
- * ## Ownership and lifetime
- * The model is inert; dynamic orientation follows the rendered Scope.
- * @since 1.0.0
- * @category models
  */
 export interface SeparatorOptions extends Dom.HostOptions<HTMLDivElement> {
-  /** Separator orientation, defaulting to horizontal.
-   * @remarks
-   * ## Why
-   * Assistive technology uses orientation to interpret the division.
-   * ## Ownership and lifetime
-   * The dynamic attribute subscription ends with the component Scope.
+  /**
+   * Separator orientation, defaulting to horizontal.
    * @since 1.0.0
-   * @category accessibility
+   * @category Keyboard navigation
    */
   readonly orientation?: Renderable.Any<"horizontal" | "vertical" | null | undefined>;
 }
@@ -39,22 +37,28 @@ type SeparatorInternalProps<Options extends SeparatorOptions> = ReturnType<
 >;
 
 /**
- * Renders a non-focusable element with `role="separator"`.
+ * Renders a non-interactive semantic division.
+ *
  * @remarks
- * ## Why
- * This component expresses a semantic division. Use `WindowSplitter` when the
- * separator changes pane sizes and therefore requires keyboard interaction.
- * ## Ownership and lifetime
- * Running the Fx owns its reactive attribute until the Effect Scope closes. A
- * custom host must preserve the role and orientation.
+ * orientation defaults to horizontal and changes aria-orientation, not layout or dimensions.
+ * Supply the visible line through CSS. Do not make this host focusable to imitate a resizer;
+ * WindowSplitter owns that separate interaction.
+ *
  * @example
  * ```ts
- * import { Separator } from "@typed/ui/Separator"
+ * import { html } from "@typed/template";
+ * import { Heading } from "@typed/ui/Heading";
+ * import { Separator } from "@typed/ui/Separator";
  *
- * const divider = Separator({ orientation: "vertical" })
+ * export const AccountSummary = html`<section>
+ *     ${Heading({ level: 2, content: "Account summary" })}
+ *     <p>Personal account</p>
+ *     ${Separator({ props: { class: "summary-divider" } })}
+ *     <p>Next renewal: September 30</p>
+ *   </section>`;
  * ```
  * @since 1.0.0
- * @category components
+ * @category Structure and naming
  */
 export function Separator<
   const Options extends SeparatorOptions,

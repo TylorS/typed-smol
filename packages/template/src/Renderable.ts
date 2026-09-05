@@ -67,7 +67,7 @@ import { type RenderEvent } from "./RenderEvent.js";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Renderable inputs
  */
 export type Renderable<A, E = never, R = never> =
   | A
@@ -94,7 +94,7 @@ export declare namespace Renderable {
    * This compile-time union owns no value.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Renderable inputs
    */
   export type Any<A = any> =
     | Renderable<A, any, any>
@@ -116,7 +116,7 @@ export declare namespace Renderable {
    * The alias introduces no ownership; `RenderEvent` keeps producer semantics.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Terminal renderable values
    */
   export type Primitive =
     | string
@@ -142,7 +142,7 @@ export declare namespace Renderable {
    * The Scope running the lifted producer owns acquisition and interruption.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Renderable producers
    */
   export type Effects =
     | Effect.Effect<any, any, any>
@@ -162,7 +162,7 @@ export declare namespace Renderable {
    * This projection acquires no services.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Renderable requirements
    */
   export type Services<T> = RenderableServices<T>;
 
@@ -180,7 +180,7 @@ export declare namespace Renderable {
    * This projection has no runtime lifetime.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Renderable failures
    */
   export type Error<T> = RenderableError<T>;
 
@@ -201,7 +201,7 @@ export declare namespace Renderable {
    * This projection describes values but owns none of them.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Renderable output inference
    */
   export type Success<T> = [T] extends [never]
     ? never
@@ -244,7 +244,7 @@ export declare namespace Renderable {
    * This compile-time traversal acquires no service.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Renderable requirements
    */
   export type ServicesFromObject<T> = [
     {
@@ -271,7 +271,7 @@ export declare namespace Renderable {
    * This compile-time traversal has no runtime lifetime.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Renderable failures
    */
   export type ErrorFromObject<T> = [
     {

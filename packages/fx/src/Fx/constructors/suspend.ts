@@ -28,7 +28,7 @@ import { make } from "./make.js";
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Value sources
  */
 export const suspend = <A, E, R>(fx: () => Fx<A, E, R>): Fx<A, E, R> =>
   make<A, E, R>((sink) => Effect.suspend(() => fx().run(sink)));

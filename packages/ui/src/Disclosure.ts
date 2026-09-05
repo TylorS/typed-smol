@@ -21,7 +21,7 @@ import * as NativeDetails from "./NativeDetails.js";
  * ## Ownership and lifetime
  * Plain state retains no resources; RefSubject lifetime is Scope-owned.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface State {
   /** Whether the details element is open.
@@ -31,7 +31,7 @@ export interface State {
    * ## Ownership and lifetime
    * Plain data acquires no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open: boolean;
 }
@@ -43,7 +43,7 @@ export interface State {
  * ## Ownership and lifetime
  * Configuration is inert.
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export interface InitialState {
   /** Initial open state, defaulting to false.
@@ -53,7 +53,7 @@ export interface InitialState {
    * ## Ownership and lifetime
    * Plain data retains no resources.
    * @since 1.0.0
-   * @category state
+   * @category Open state
    */
   readonly open?: boolean;
 }
@@ -65,7 +65,7 @@ export interface InitialState {
  * ## Ownership and lifetime
  * The immutable schema acquires no resources.
  * @since 1.0.0
- * @category schemas
+ * @category Open state
  */
 export const StateSchema = Schema.Struct({ open: Schema.Boolean });
 
@@ -85,7 +85,7 @@ export const StateSchema = Schema.Struct({ open: Schema.Boolean });
  * })
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Open state
  */
 export function makeState(initial: InitialState = {}) {
   return RefSubject.hydrate(StateSchema, { open: initial.open ?? false });
@@ -108,7 +108,7 @@ export function makeState(initial: InitialState = {}) {
  * })
  * ```
  * @since 1.0.0
- * @category state
+ * @category Open state
  */
 export function setOpen<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -124,7 +124,7 @@ export function setOpen<E, R>(
  * ## Ownership and lifetime
  * Options are inert; dynamic content follows the rendered Scope.
  * @since 1.0.0
- * @category models
+ * @category Summary activation
  */
 export interface ButtonOptions extends Dom.HostOptions<HTMLElement> {
   /** Visible summary content and accessible name.
@@ -134,7 +134,7 @@ export interface ButtonOptions extends Dom.HostOptions<HTMLElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the trigger Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -160,7 +160,7 @@ type ButtonInternalProps = ReturnType<typeof buttonInternalProps>;
  * const summary = Button({ content: "Advanced settings" })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Summary activation
  */
 export function Button<const Options extends ButtonOptions, const Host extends HostResult = never>(
   options: Options,
@@ -197,7 +197,7 @@ export function Button<const Options extends ButtonOptions, const Host extends H
  * ## Ownership and lifetime
  * Options are inert; rendering owns listeners and the NativeDetails observer.
  * @since 1.0.0
- * @category models
+ * @category Native content host
  */
 export interface ContentOptions extends Dom.HostOptions<HTMLDetailsElement> {
   /** Hydrated state synchronized with the details element.
@@ -207,7 +207,7 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDetailsElement> {
    * ## Ownership and lifetime
    * The content borrows state; its originating Scope owns it.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /** Summary and disclosed body content.
@@ -217,7 +217,7 @@ export interface ContentOptions extends Dom.HostOptions<HTMLDetailsElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the details Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -260,7 +260,7 @@ type ContentInternalProps<Options extends ContentOptions> = ReturnType<
  * })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Native content host
  */
 export function Content<
   const Options extends ContentOptions,
@@ -296,6 +296,6 @@ export function Content<
  * ## Ownership and lifetime
  * It has exactly the same Scope and details-element ownership as `Content`.
  * @since 1.0.0
- * @category aliases
+ * @category Native content host
  */
 export const Disclosure = Content;

@@ -1,3 +1,14 @@
+/**
+ * Contextual heading semantics independent of typography.
+ * The default div uses role=heading and aria-level; fixed native headings remain useful.
+ *
+ * Read the [Heading guide](/explore/ui-heading) for a complete example.
+ *
+ * [Platform reference](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/heading_role).
+ * @since 1.0.0
+ * @category Overview
+ * @packageDocumentation
+ */
 import type * as Scope from "effect/Scope";
 import type { Fx } from "@typed/fx/Fx";
 import { html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
@@ -5,35 +16,15 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /**
- * Options for an ARIA heading whose level may be reactive.
- * @remarks
- * ## Why
- * Separating heading semantics from a fixed tag supports reusable components
- * whose outline level is selected by their context.
- * ## Ownership and lifetime
- * The options are inert; rendering owns dynamic values for its Scope.
- * @since 1.0.0
- * @category models
  */
 export interface HeadingOptions extends Dom.HostOptions<HTMLDivElement> {
-  /** Heading content and accessible name.
-   * @remarks
-   * ## Why
-   * Visible content participates directly in the accessibility tree.
-   * ## Ownership and lifetime
-   * Dynamic content follows the rendered Scope.
+  /**
+   * Heading content and accessible name.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
-  /** ARIA heading level, defaulting to one.
-   * @remarks
-   * ## Why
-   * The level communicates document hierarchy even when the host tag is fixed.
-   * ## Ownership and lifetime
-   * The reflected value retains no resources.
-   * @since 1.0.0
-   * @category accessibility
+  /**
    */
   readonly level?: Renderable.Any<number | null | undefined>;
 }
@@ -49,22 +40,36 @@ type HeadingInternalProps<Options extends HeadingOptions> = ReturnType<
 >;
 
 /**
- * Renders a host with `role="heading"` and a reactive `aria-level`.
+ * Renders a div with heading semantics and an explicit level.
+ *
  * @remarks
- * ## Why
- * The primitive lets a design system preserve document-outline semantics when
- * its visual host cannot be selected statically.
- * ## Ownership and lifetime
- * Running the returned Fx owns its dynamic attributes and content in an Effect
- * Scope. A custom host must preserve `role` and `aria-level`.
+ * level defaults to one and may be reactive; it does not choose font size, infer nesting, or
+ * validate the document outline. Use native h1–h6 markup when the level is fixed. A custom host
+ * must keep its native level and aria-level consistent.
+ *
  * @example
  * ```ts
- * import { Heading } from "@typed/ui/Heading"
+ * import { html } from "@typed/template";
+ * import { Heading } from "@typed/ui/Heading";
  *
- * const title = Heading({ level: 3, content: "Details" })
+ * export function AccountSection(level: 2 | 3) {
+ *   return html`<section aria-labelledby="account-section-title">
+ *     ${Heading({
+ *       level,
+ *       content: "Account security",
+ *       props: { id: "account-section-title", class: "section-title" },
+ *     })}
+ *     <p>Review the devices and credentials that can access this account.</p>
+ *   </section>`;
+ * }
+ *
+ * export const AccountPage = html`<main>
+ *     <h1>Account settings</h1>
+ *     ${AccountSection(2)}
+ *   </main>`;
  * ```
  * @since 1.0.0
- * @category components
+ * @category Structure and naming
  */
 export function Heading<
   const Options extends HeadingOptions,
@@ -93,22 +98,18 @@ export function Heading<
 /**
  * Alias for `Heading` retained for level-oriented imports.
  * @remarks
- * ## Why
  * The alias names the role the component plays in a contextual heading system.
- * ## Ownership and lifetime
  * It has exactly the same Scope and host ownership as `Heading`.
  * @since 1.0.0
- * @category aliases
+ * @category Aliases
  */
 export const Level = Heading;
 /**
  * Descriptive alias for `Heading`.
  * @remarks
- * ## Why
  * The name remains available without duplicating an implementation contract.
- * ## Ownership and lifetime
  * It has exactly the same Scope and host ownership as `Heading`.
  * @since 1.0.0
- * @category aliases
+ * @category Aliases
  */
 export const HeadingLevel = Heading;

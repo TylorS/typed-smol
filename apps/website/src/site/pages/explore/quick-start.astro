@@ -2,8 +2,14 @@
 import { getCollection, render } from "astro:content";
 import Article from "../../layouts/Article.astro";
 import Demo from "../../components/CurriculumDemo.js";
+import { siteHref } from "../../../SiteHref.js";
+import {
+  counterLessonPath,
+  isQuickStartSection,
+} from "../../../tutorial/Routes.js";
 const sections = await Promise.all(
   (await getCollection("learn"))
+    .filter((entry) => isQuickStartSection(entry.data.id))
     .sort((a, b) => a.data.order - b.data.order)
     .map(async (entry) => ({ entry, ...(await render(entry)) })),
 );
@@ -15,27 +21,54 @@ const headings = sections.map(({ entry }) => ({
 ---
 
 <Article
-  title="Build your first Typed application"
-  summary="Start with a view, give it state, then render the same template on the server and hydrate it in the browser."
+  title="Build a counter"
+  summary="Two files and a few commands. Click the counter, then make it your own."
   section="QUICK START"
   current="quick-start"
   headings={headings}
-  next={{ href: "/explore/tutorial", title: "Build TodoMVC" }}
+  next={{
+    href: counterLessonPath("component-lifetime"),
+    title: "Derive a value from the count",
+  }}
 >
-  <p>
-    You need a working knowledge of TypeScript and a little <a
-      href="https://effect.website/docs/v4/">Effect</a
-    >. You can stop after the browser example and already have a useful
-    application. Server rendering comes next, when you need it.
-  </p>
+  <Demo id="counter-reactive" client:load />
   {
     sections.map(({ entry, Content }) => (
       <section aria-labelledby={entry.data.id}>
         <h2 id={entry.data.id}>{entry.data.title}</h2>
-        <p>{entry.data.summary}</p>
         <Content />
-        {entry.data.demo && <Demo id={entry.data.demo} client:visible />}
       </section>
     ))
   }
+  <h2>Keep going</h2>
+  <ul>
+    <li id="component-lifetime">
+      <a href={siteHref(counterLessonPath("component-lifetime"))}
+        >Derive a value from the count</a
+      >, then learn about <a href={siteHref("/explore/building-ui-components")}
+        >components</a
+      > and <a href={siteHref("/explore/shared-state-contracts")}
+        >shared state</a
+      >.
+    </li>
+    <li id="server-html">
+      <a href={siteHref(counterLessonPath("server-html"))}
+        >Render this counter on the server</a
+      > and <a
+        id="hydrate-state"
+        href={siteHref(counterLessonPath("hydrate-state"))}
+        >restore its state in the browser</a
+      >.
+    </li>
+    <li>
+      <a href={siteHref("/explore/tutorial")}>Build a Todo app</a> with forms, lists,
+      and persistence.
+    </li>
+  </ul>
+  <p id="client-only">
+    For a closer look at the render pipeline, <a
+      href={siteHref(counterLessonPath("client-only"))}
+      >start with a plain template</a
+    >.
+  </p>
 </Article>

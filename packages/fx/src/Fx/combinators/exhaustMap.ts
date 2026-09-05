@@ -51,7 +51,7 @@ import type { FlatMapLike } from "./flatMap.js";
  * @param f - A function that maps an element `A` to a new `Fx<B>`.
  * @returns An `Fx` that emits values from the active inner stream.
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const exhaustMap: FlatMapLike = dual(
   2,

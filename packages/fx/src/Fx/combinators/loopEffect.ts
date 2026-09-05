@@ -34,7 +34,7 @@ import type { Fx } from "../Fx.js";
  * @param f - The effectful loop function.
  * @returns An `Fx` emitting the transformed values.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const loopEffect: {
   <B, A, E2, R2, C>(

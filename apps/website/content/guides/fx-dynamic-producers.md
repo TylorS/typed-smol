@@ -1,122 +1,168 @@
 ---
 title: "Choose an Fx producer dynamically"
-summary: "Use setup Effects to select or construct an Fx, then choose whether its Scope belongs to the caller or the subscription."
+summary: "Build a workspace feed whose configuration, connection, and cleanup are resolved when it is observed."
 section: "Fx"
 kind: "guide"
 order: 1.15
 ---
 
-Sometimes the producer is not known when you declare the pipeline. Configuration, a capability
-check, or a typed setup Effect can choose which `Fx` should run. `gen`, `unwrap`, and `unwrapScoped`
-make that choice part of the lazy subscription instead of starting setup while the value is built.
+A workspace activity feed can start in two modes. Offline workspaces show a cached snapshot and
+finish. Connected workspaces acquire a connection and keep receiving events. The workspace is an
+argument, but configuration and connection acquisition belong to the subscription: calling a
+function should not open a socket that nobody observes.
 
-## Run setup, then the selected Fx
+[Building Fx values](/explore/building-fx) introduced individual sources. This lesson puts a setup
+phase in front of a source, then gives setup resources the same lifetime as their selected producer.
+The key distinction is between **choosing an Fx** and **emitting a value from that Fx**.
 
-The setup Effect runs once for each observation. Its success value is an `Fx`, not an emitted value;
-that Fx is subscribed immediately afterward. If setup fails, the selected Fx never starts. Values,
-failures, and services from both phases remain visible on the returned `Fx`.
+## First, choose a producer with an Effect
+
+Suppose the configuration decision is already an Effect. Its result can be the producer itself:
 
 ```ts
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 
-type Mode = "cached" | "live";
-
-const producerFor = Effect.fn("producerFor")((mode: Mode) =>
-  Effect.succeed(
-    mode === "cached" ? Fx.succeed("cached") : Fx.fromIterable(["live:connected", "live:ready"]),
-  ),
+const chooseActivity = Effect.succeed(
+  Fx.fromIterable(["workspace:opened", "workspace:updated"]),
 );
 
-const selected = Fx.unwrap(producerFor("live"));
-const values = Fx.collectAll(selected);
+const activity = Fx.unwrap(chooseActivity);
+const result = await Effect.runPromise(Fx.collectAll(activity));
+// ["workspace:opened", "workspace:updated"]
 ```
 
-Use `unwrap` when the setup Effect already exists or is easiest to express with ordinary Effect
-combinators. It preserves the same phase boundary without adding a Scope. Interruption stops setup
-or the selected Fx, whichever is active, and their own finalizers still run when they have a Scope
-requirement.
+`Fx.unwrap` does not emit the Fx object. When `activity` is observed, it runs `chooseActivity`,
+subscribes to the returned Fx, and forwards that producer's events. A failed choice starts no
+producer. Interrupting the observer interrupts whichever phase is active.
 
 ```fx-marble
-title: setup selects a producer before the selected Fx emits
+title: setup chooses a producer before any selected event can arrive
 covers: gen, unwrap
 input setup: ^ choose |
 operator: unwrap(setup) / gen(setup)
-inner selected Fx: . . ^ a b |
-output: . . . a b |
+inner selected Fx: . . ^ opened updated |
+output: . . . opened updated |
 ```
 
-## Use gen for linear setup
+Read down from `choose`: it permits the selected lane's `^`, not an output event. The first output
+is `opened`. The spaces between phases are logical sequencing, not promised clock delays.
 
-`gen` is the generator-shaped form of the same operation. Yield Effects for the setup steps and
-return the `Fx` to run. It is useful when selection depends on several typed values or services;
-the final `return` is the producer boundary, not another output event.
+`Fx.gen` is the generator form of this same two-phase operation. Yield setup Effects and return the
+selected Fx. Use it for one producer value; the workspace feed needs parameters, so it uses `Fx.fn`.
+
+## Make the workspace an argument and configuration a requirement
+
+[`Fx.fn`](/reference/symbols/QHR5cGVkL2Z4L0Z4I2Zu) preserves the body's parameters and combines
+requirements from its yielded Effects and returned Fx. This complete example uses a finite fake
+connection so its output and cleanup can be inspected without a running server. A real adapter can
+supply a live callback-backed `events` Fx through the same contract.
 
 ```ts
-import { Context, Effect } from "effect";
+import { Context, Data, Effect } from "effect";
 import { Fx } from "@typed/fx";
 
-class FeedConfig extends Context.Service<FeedConfig, {
-  readonly mode: "cached" | "live";
-  readonly label: string;
-}>()("app/FeedConfig") {}
+class ConnectionRejected extends Data.TaggedError("ConnectionRejected")<{
+  readonly workspace: string;
+}> {}
 
-const generated = Fx.gen(function* () {
-  const { mode, label } = yield* FeedConfig;
+class ActivitySource extends Context.Service<ActivitySource, {
+  readonly mode: (workspace: string) => Effect.Effect<"cached" | "connected">;
+  readonly open: (workspace: string) => Effect.Effect<{
+    readonly events: Fx.Fx<string>;
+    readonly close: Effect.Effect<void>;
+  }, ConnectionRejected>;
+}>()("example/ActivitySource") {}
 
-  return mode === "cached"
-    ? Fx.succeed(`${label}:cached`)
-    : Fx.fromIterable([`${label}:connected`, `${label}:ready`]);
+const activityFor = Fx.fn(function* (workspace: string) {
+  const source = yield* ActivitySource;
+  const mode = yield* source.mode(workspace);
+
+  if (mode === "cached") return Fx.succeed(`${workspace}:cached`);
+
+  return Fx.genScoped(function* () {
+    const connection = yield* Effect.acquireRelease(
+      source.open(workspace),
+      (connection) => connection.close,
+    );
+    return connection.events;
+  });
 });
 
-const values = Fx.collectAll(generated).pipe(
-  Effect.provideService(FeedConfig, { mode: "live", label: "activity" }),
+const designActivity: Fx.Fx<string, ConnectionRejected, ActivitySource> = activityFor("design");
+
+const program = Fx.collectAll(designActivity).pipe(
+  Effect.provideService(ActivitySource, {
+    mode: () => Effect.succeed("connected" as const),
+    open: (workspace) => Effect.succeed({
+      events: Fx.fromIterable([`${workspace}:opened`, `${workspace}:updated`]),
+      close: Effect.log(`closed ${workspace}`),
+    }),
+  }),
 );
+
+const result = await Effect.runPromise(program);
+// Logs "closed design" and returns ["design:opened", "design:updated"].
 ```
 
-`gen` keeps the setup and producer in one readable block. Conceptually, it is `unwrap` applied to
-the `Effect.gen` program you would otherwise write by hand. Use `Effect.fn` for a reusable setup
-function that takes arguments; use `Fx.gen` when the setup itself is the construction of one lazy
-producer.
+Calling `activityFor("design")` captures the argument, but does not read configuration. Running
+`program` reads the provided service, asks for the mode, acquires the connection, and observes its
+events. Completion closes the connection before the result returns. A second observation repeats
+all those steps; this is a producer factory, not a connection cache.
 
-## Make setup and streaming share a subscription Scope
+The annotation is the public contract: values are strings, acquisition may fail with
+`ConnectionRejected`, and an `ActivitySource` must be provided. `Scope` does not escape because
+`genScoped` owns the connection. Replacing the live service with a fake changes the destination and
+timing, not those type channels.
 
-Use `unwrapScoped` when the setup Effect acquires a resource that must stay alive while the selected
-Fx runs. Each observation opens one Scope, runs setup and the selected Fx inside it, then closes
-that Scope after normal completion, failure, or interruption. `Scope` is removed from the returned
-Fx's requirements; other services remain required.
+## Keep acquisition alive through the selected producer
+
+If `open` were scoped and completed *before* returning `connection.events`, the connection would
+already be closed when its producer started. The scope must enclose both setup and observation.
+`genScoped` does that for the connected branch above. When acquisition already exists as an Effect
+returning Fx, use `unwrapScoped` for the same lifetime rule:
 
 ```ts
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 
-const connection = Fx.unwrapScoped(
-  Effect.gen(function* () {
-    const handle = yield* Effect.acquireRelease(Effect.succeed({ name: "market-feed" }), () =>
-      Effect.log("connection closed"),
-    );
+const acquireActivity = Effect.gen(function* () {
+  const workspace = yield* Effect.acquireRelease(
+    Effect.succeed("design"),
+    () => Effect.log("released design connection"),
+  );
+  return Fx.fromIterable([`${workspace}:opened`, `${workspace}:updated`]);
+});
 
-    return Fx.fromIterable([`${handle.name}:connected`, `${handle.name}:ready`]);
-  }),
-);
-
-const first = Fx.first(connection);
+const activity = Fx.unwrapScoped(acquireActivity);
+const firstEvent = Fx.first(activity);
 ```
 
-The resource is released when this subscription ends, so the producer cannot outlive the handle it
-needs. `unwrapScoped` owns setup for the selected producer's subscription; use plain `unwrap` when
-setup already has an independently managed lifetime.
-
 ```fx-marble
-title: unwrapScoped keeps setup resources alive through streaming
+title: unwrapScoped holds the acquired resource until selected observation ends
 covers: unwrapScoped
 input setup: ^ acquire | . . .
 operator: unwrapScoped(setup)
-inner subscription Scope: ^ open . . . . close |
-inner selected Fx: . . . ^ a b | .
-output: . . . . a b | .
+inner resource: . ^ open . . . release |
+inner selected Fx: . . ^ opened updated | .
+output: . . . opened updated . |
 ```
 
-Choose the combinator from the lifetime rule: `gen` for linear setup that returns an Fx, `unwrap`
-for an existing setup Effect without Scope ownership, and `unwrapScoped` when this subscription must
-own setup resources through the selected producer's lifetime.
+The resource lane extends beyond setup's completion. `firstEvent` can stop earlier than the depicted
+full run: after `opened`, it interrupts the selected producer and releases the same resource. No
+special “first event” cleanup path is needed. Plain `unwrap` and `gen` preserve a setup `Scope`
+requirement for the caller; their scoped counterparts own it internally.
+
+## Decide what a mode change means
+
+This feed reads mode once per subscription. It does not automatically switch when configuration
+changes later. If mode itself is a live producer, use [switchMap](/explore/fx-higher-order-and-concurrency)
+to select a new scoped feed on each mode change. The old branch is interrupted and finalized before
+the replacement starts. If several consumers should use the same connection, apply an explicit
+[sharing policy](/explore/subject-event-publications) after constructing the feed.
+
+For a failed feed, locate the phase that failed: no acquisition means configuration failed or chose
+cache; acquisition without events suggests the selected source is silent; release before events
+means scope placement is wrong. Test both mode branches, rejected acquisition, and interruption of
+a silent connection. Then continue with [Transforming Fx](/explore/transforming-fx) to turn the
+selected events into useful values without repeating setup.

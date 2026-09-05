@@ -37,7 +37,7 @@ import { drain } from "./observe.js";
  * @param options - Configuration for the forked fiber.
  * @returns An `Effect` that produces a `Fiber`.
  * @since 1.0.0
- * @category runners
+ * @category Running effects
  */
 export const fork = <A, E, R>(
   fx: Fx<A, E, R>,
@@ -84,7 +84,7 @@ export const fork = <A, E, R>(
  * @param options - `RunOptions` for the execution.
  * @returns The created `Fiber`.
  * @since 1.0.0
- * @category runners
+ * @category Running effects
  */
 export const runFork = <A, E>(fx: Fx<A, E>, options?: RunOptions): Fiber<void, E> =>
   effectRunFork(drain(fx), options);

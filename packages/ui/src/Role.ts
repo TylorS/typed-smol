@@ -13,7 +13,7 @@ import type { HostResult } from "./Dom/Types.js";
  * ## Ownership and lifetime
  * The model acquires no resources; dynamic values follow the rendered Scope.
  * @since 1.0.0
- * @category models
+ * @category Semantic hosts
  */
 export interface RoleOptions extends Dom.HostOptions<HTMLDivElement> {
   /** Content rendered inside the semantic host.
@@ -23,7 +23,7 @@ export interface RoleOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the component Scope.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /** The explicit ARIA role.
@@ -33,7 +33,7 @@ export interface RoleOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * The reflected value retains no resources.
    * @since 1.0.0
-   * @category accessibility
+   * @category Semantic roles
    */
   readonly role: Renderable.Any<string | null | undefined>;
 }
@@ -63,7 +63,7 @@ type RoleInternalProps<Options extends RoleOptions> = ReturnType<typeof internal
  * const status = Role({ role: "status", content: "Ready" })
  * ```
  * @since 1.0.0
- * @category components
+ * @category Semantic hosts
  */
 export function Role<const Options extends RoleOptions, const Host extends HostResult = never>(
   options: Options,

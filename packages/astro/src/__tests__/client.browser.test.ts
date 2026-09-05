@@ -1,8 +1,10 @@
+/* oxlint-disable require-yield -- Astro components accept stateless generator bodies. */
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as Option from "effect/Option";
 import * as Effect from "effect/Effect";
 import * as RefSubject from "@typed/fx/RefSubject";
 import { html } from "@typed/template";
-import * as Component from "../Component.js";
+import { component, type Slots } from "../Component.js";
 import client from "../client.js";
 import server from "../server.js";
 
@@ -21,13 +23,11 @@ afterEach(() => {
 });
 
 function counter(finalize: () => void = () => {}) {
-  return Component.make((props: { initial: number }) =>
-    Effect.gen(function* () {
-      const count = yield* RefSubject.make(props.initial);
-      yield* Effect.addFinalizer(() => Effect.sync(finalize));
-      return html`<button @click=${RefSubject.update(count, (n) => n + 1)}>${count}</button>`;
-    }),
-  );
+  return component(function* (props: { initial: number }) {
+    const count = yield* RefSubject.make(props.initial);
+    yield* Effect.addFinalizer(() => Effect.sync(finalize));
+    return html`<button @click=${RefSubject.update(count, (n) => n + 1)}>${count}</button>`;
+  });
 }
 
 describe("Typed Astro browser renderer", () => {
@@ -81,19 +81,17 @@ describe("Typed Astro browser renderer", () => {
     const cleanup = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const View = Component.make((props: { value: number }) =>
-      Effect.gen(function* () {
-        if (props.value === 1) {
-          yield* Effect.addFinalizer(() =>
-            Effect.promise(() => {
-              finalizing = true;
-              return cleanup;
-            }),
-          );
-        }
-        return html`<p>${props.value}</p>`;
-      }),
-    );
+    const View = component(function* (props: { value: number }) {
+      if (props.value === 1) {
+        yield* Effect.addFinalizer(() =>
+          Effect.promise(() => {
+            finalizing = true;
+            return cleanup;
+          }),
+        );
+      }
+      return html`<p>${props.value}</p>`;
+    });
     const element = host();
     const hydrate = client(element);
     const errors = vi.fn();
@@ -111,20 +109,18 @@ describe("Typed Astro browser renderer", () => {
 
   it("rejects initial failures and closes the component Scope", async () => {
     const finalized = vi.fn();
-    const View = Component.make(() =>
-      Effect.gen(function* () {
-        yield* Effect.addFinalizer(() => Effect.sync(finalized));
-        return yield* Effect.fail("failed");
-      }),
-    );
+    const View = component(function* () {
+      yield* Effect.addFinalizer(() => Effect.sync(finalized));
+      return yield* Effect.fail("failed");
+    });
     await expect(client(host())(View, {})).rejects.toBeDefined();
     expect(finalized).toHaveBeenCalledOnce();
   });
 
   it("updates changed slot content while retaining unchanged slot DOM", async () => {
-    const View = Component.make(
-      (_props: {}, slots) => html`<main>${slots.default}${slots.heading}</main>`,
-    );
+    const View = component(function* (_props: {}, slots: Slots) {
+      return html`<main>${slots.default}${slots.heading}</main>`;
+    });
     const element = host();
     const hydrate = client(element);
     await hydrate(View, {}, { default: "<p>Before</p>", heading: "<h2>Title</h2>" });
@@ -135,13 +131,12 @@ describe("Typed Astro browser renderer", () => {
   });
 
   it("retains mutable borrowed slot children when Astro reserializes them on a parent update", async () => {
-    const View = Component.make(
-      (props: { title: string }, slots) =>
-        html`<main>
-          <h1>${props.title}</h1>
-          ${slots.default}
-        </main>`,
-    );
+    const View = component(function* (props: { title: string }, slots: Slots) {
+      return html`<main>
+        <h1>${props.title}</h1>
+        ${slots.default}
+      </main>`;
+    });
     const element = host();
     const hydrate = client(element);
     await hydrate(View, { title: "First" }, { default: "<button>Child 0</button>" });
@@ -159,9 +154,9 @@ describe("Typed Astro browser renderer", () => {
   });
 
   it("adopts Astro slot nodes without taking over their contents", async () => {
-    const View = Component.make(
-      (_props: {}, slots) => html`<main>${slots.default}${slots.heading}</main>`,
-    );
+    const View = component(function* (_props: {}, slots: Slots) {
+      return html`<main>${slots.default}${slots.heading}</main>`;
+    });
     const slots = { default: "<button>Child</button>", heading: "<h2>Title</h2>" };
     const element = host();
     element.innerHTML = (
@@ -182,4 +177,33 @@ describe("Typed Astro browser renderer", () => {
     expect(click).toHaveBeenCalledOnce();
     expect(element.querySelector("h2")!.textContent).toBe("Title");
   });
+});
+
+it("hydrates zero-argument arbitrary renderables and updates their source", async () => {
+  const View = component(function* () {
+    const count = yield* RefSubject.make(0);
+    return [
+      html`<button @click=${RefSubject.update(count, (n) => n + 1)}>Add</button>`,
+      Effect.succeed(Option.some(count)),
+    ];
+  });
+  const element = host();
+  element.innerHTML = (await server.renderToStaticMarkup(View, {})).html;
+  const original = element.querySelector("button");
+  await client(element)(View, {});
+  expect(element.querySelector("button")).toBe(original);
+  expect(element.textContent).toBe("Add0");
+  element.querySelector("button")!.click();
+  await vi.waitFor(() => expect(element.textContent).toBe("Add1"));
+});
+
+it("inserts a borrowed DOM node returned by a client-only generator without cloning it", async () => {
+  const node = document.createElement("strong");
+  node.textContent = "Borrowed";
+  const View = component(function* () {
+    return node;
+  });
+  const element = host();
+  await client(element)(View, {}, {}, { client: "only" });
+  expect(element.querySelector("strong")).toBe(node);
 });

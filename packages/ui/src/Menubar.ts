@@ -7,6 +7,8 @@
  * the state and pure operations without mounting UI, or supply custom hosts without replacing native
  * events and browser-owned focus.
  *
+ * Learn the interaction in the [Menubar guide](/explore/ui-menubar).
+ *
  * @since 1.0.0
  * @category modules
  * @packageDocumentation
@@ -29,63 +31,24 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /**
- * Complete renderer-independent state for Menubar.
+ * The active top-level command and horizontal navigation policy.
+ * Child menu visibility belongs to the separate Menu state connected by its submenu trigger.
  *
- * @remarks
- * ## Why
- *
- * Applications can inspect, update, and test Menubar behavior without mounting or coupling the
- * state to a renderer.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { State } from "@typed/ui/Menubar";` Extend the [Menubar.makeState
- * runnable setup](/reference/%40typed%2Fui%2FMenubar%23makeState). Inside the linked program,
- * `const snapshot: State = yield* state` exposes the shared composite focus policy.
  * @since 1.0.0
- * @category models
+ * @category Command focus
  */
 export interface State extends Composite.State {}
 /**
  * Initial Menubar values. Uses Composite defaults unless overridden.
  *
- * @remarks
- * ## Why
- *
- * Making initialization explicit documents hydration-sensitive defaults and lets servers and
- * clients construct matching state.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InitialState } from "@typed/ui/Menubar";` Extend the
- * [Menubar.makeState runnable setup](/reference/%40typed%2Fui%2FMenubar%23makeState). Construct a
- * horizontal menubar with
- * `const initial: InitialState = { orientation: "horizontal" }; const state = yield* Menubar.makeState(initial)`.
  * @since 1.0.0
- * @category models
+ * @category Command focus
  */
 export type InitialState = Composite.InitialState;
 /**
  * Effect Schema used by makeState to encode, decode, and hydrate Menubar state.
  *
  * @remarks
- * ## Why
- *
- * A public schema makes hydration and serialized state use the same runtime validation as direct
- * construction.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
  * @example
  * ```ts
  * import * as Schema from "effect/Schema";
@@ -94,7 +57,7 @@ export type InitialState = Composite.InitialState;
  * const decodeState = Schema.decodeUnknownEffect(Menubar.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Command focus
  */
 export const StateSchema = Composite.StateSchema;
 
@@ -102,12 +65,6 @@ export const StateSchema = Composite.StateSchema;
  * Creates hydrated Menubar state. Uses Composite defaults unless overridden.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect creates the RefSubject when run. That state is renderer-independent;
  * collection registrations belong to the separate Scope that runs register or ref, not to state
  * creation.
@@ -126,7 +83,7 @@ export const StateSchema = Composite.StateSchema;
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Command focus
  */
 export function makeState(initial: InitialState = {}) {
   return Composite.makeState({ ...initial, orientation: initial.orientation ?? "horizontal" });
@@ -136,12 +93,6 @@ export function makeState(initial: InitialState = {}) {
  * Creates a scoped Collection for Menubar items.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
  * owned by the Scope that runs register, independently of this construction Effect.
  *
@@ -158,54 +109,39 @@ export function makeState(initial: InitialState = {}) {
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Command registration
  */
 export const makeCollection = Collection.makeState<string>;
 
 /**
  * Inputs accepted by Menubar.Root in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { RootOptions } from "@typed/ui/Menubar";` Extend the [Menubar.makeState
- * runnable setup](/reference/%40typed%2Fui%2FMenubar%23makeState). Enable top-level menu movement
- * with `const options: RootOptions = { state, collection, label: "Application", content: "Menus" }`.
  * @since 1.0.0
- * @category models
+ * @category Menubar surface
  */
 export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Accessible label rendered through aria-label.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly label?: Renderable.Any<string | null | undefined>;
 }
@@ -288,25 +224,12 @@ type RootProps<Options extends RootOptions> = ReturnType<ReturnType<typeof rootP
  * Renders the persistent menubar root with roving focus, orientation-aware keys, and typeahead.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Root } from "@typed/ui/Menubar";` Extend the [Menubar.makeState runnable
- * setup](/reference/%40typed%2Fui%2FMenubar%23makeState). Replace the linked program's final
- * snapshot read with `Root({ state, label: "Application", content: "Menus" })`; render that Fx
- * before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Menubar surface
  */
 export function Root<const Options extends RootOptions, const Host extends HostResult = never>(
   options: Options,
@@ -335,83 +258,55 @@ export function Root<const Options extends RootOptions, const Host extends HostR
  * Consumer-facing alias of the canonical Menubar component with identical behavior and lifetime.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The alias acquires nothing. Rendering it has exactly the canonical component's Scope and DOM
  * ownership contract.
  *
- * ## Example
- *
- * Import with `import { Menubar } from "@typed/ui/Menubar";` Extend the [Menubar.makeState runnable
- * setup](/reference/%40typed%2Fui%2FMenubar%23makeState). Replace the linked program's final
- * snapshot read with `Menubar({ state, label: "Application", content: "Menus" })`; render that Fx
- * before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Menubar surface
  */
 export const Menubar = Root;
 
 /**
  * Inputs accepted by Menubar.Item in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { ItemOptions } from "@typed/ui/Menubar";` Extend the [Menubar.makeState
- * runnable setup](/reference/%40typed%2Fui%2FMenubar%23makeState). A top-level menu item is
- * `const options: ItemOptions = { state, collection, id: "file", content: "File" }`.
  * @since 1.0.0
- * @category models
+ * @category Top-level commands
  */
 export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Search text used by typeahead independently of rendered markup.
    * @since 1.0.0
-   * @category models
+   * @category Text matching
    */
   readonly textValue?: string;
   /**
    * Flag used by collection movement and widget handlers to skip activation by default.
    * @since 1.0.0
-   * @category models
+   * @category Availability
    */
   readonly disabled?: boolean;
 }
@@ -448,25 +343,12 @@ type ItemProps<Options extends ItemOptions> = ReturnType<ReturnType<typeof itemP
  * Renders a registered menuitem and runs onActivate for native focus or click unless disabled.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Item } from "@typed/ui/Menubar";` Extend the [Menubar.makeState runnable
- * setup](/reference/%40typed%2Fui%2FMenubar%23makeState). Replace the linked program's final
- * snapshot read with `Item({ state, id: "file", content: "File" })`; render that Fx before the same
- * Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Top-level commands
  */
 export function Item<const Options extends ItemOptions, const Host extends HostResult = never>(
   options: Options,

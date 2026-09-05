@@ -1,163 +1,123 @@
 ---
 title: "The template compilation pipeline"
 summary: "Build a renderer or framework target on the public Template, HtmlChunk, and RenderEvent contracts."
-section: "Integration"
+section: "Template internals"
 kind: "deep-dive"
-order: 10.05
+order: 4
 ---
 
-Most applications only need `html`, `DomRenderTemplate`, or `HtmlRenderTemplate`. This page is for
-the people building another renderer, a framework binding, a test target, or a tool that needs to
-understand Typed templates. The public pipeline is deliberately small:
+An alternate renderer cannot implement `html` by simply joining strings and values. A query in
+`.value` is a DOM property, an article title is escaped text, and a nested preview is ordered output
+with its own lifetime. The parser preserves those distinctions so a target can interpret them
+without making application components aware of its machinery.
+
+Start with [RenderEvent output](/explore/render-event-substrate). This guide is for a library that
+must understand template syntax itself; an adapter with existing nodes should stop at RenderEvent.
+
+## Separate authoring, interpretation, and output
 
 ```text
-TemplateStringsArray + values
-        ↓
-RenderTemplate
-        ↓
-parse → Template AST + part paths + hash
-        ↓
-DOM fragment / HtmlChunk sequence
-        ↓
-Fx<RenderEvent, E, R>
+Authored literal + interpolation values
+                    ↓
+             RenderTemplate service
+                    ↓
+        parse strings → Template AST
+                    ↓
+   target compilation + value interpretation
+                    ↓
+          scoped Fx<RenderEvent, E, R>
 ```
 
-The static literal is the program. Values are supplied by the caller; a target decides how those
-values become output while preserving their Effect error and service channels.
+`html` constructs the lazy program and resolves the target service when run. The target decides
+how to cache parsed literals, connect values to their parts, and emit output. The public parser is
+synchronous and resource-free; it does not subscribe to values or mount nodes.
 
-## The public pipeline
+That separation is useful when diagnosing a target: a correct AST with incorrect serialized output
+is a different failure from a parser assigning the wrong part kind.
 
-`html` receives a real `TemplateStringsArray` from a tagged template literal and returns an inert
-`Fx<RenderEvent, E, R>`. It does not parse markup or create a node by itself. The `RenderTemplate`
-service is the renderer boundary that receives the literal and its values:
-
-```ts
-import { html } from "@typed/template";
-import { DomRenderTemplate, render } from "@typed/template/Render";
-import { Fx } from "@typed/fx";
-import { Layer } from "effect";
-
-const view = html`<button type="button">Save</button>`;
-
-const BrowserView = render(view, document.body).pipe(
-  Fx.drainLayer,
-  Layer.provide(DomRenderTemplate),
-);
-```
-
-The target supplies the service that interprets the program. A renderer author can provide a
-different `RenderTemplate` layer without changing the template or its `Fx` type.
-
-## Parse once, retain part paths
-
-[`parse`](/reference/modules/%40typed%2Ftemplate%2FParser) turns the literal strings into a public
-[`Template`](/reference/modules/%40typed%2Ftemplate%2FTemplate) AST. The parser records the authored element
-tree and turns each interpolation into a typed part: text, node, attribute, boolean, property,
-class, data, event, ref, spread, or a sparse text/attribute value.
-
-The path stored beside each part identifies its location in the static tree. A renderer can use that
-path to capture the exact target once, then update that target directly when its value changes. The
-path is not a DOM selector and it does not imply ownership of siblings or ancestors.
+## Inspect the authored structure before inventing target behavior
 
 ```ts
 import { parse } from "@typed/template/Parser";
 
 const template = parse([
-  `<label for="name" class="field">Name <input .value="`, `" /></label>`,
+  '<label>Search <input .value="',
+  '" /></label><output>',
+  '</output>',
 ]);
 
 for (const [part, path] of template.parts) {
   console.log(part._tag, path);
 }
-
 console.log(template.hash);
 ```
 
-`Template.hash` is the stable identity for the literal's authored strings. DOM hydration uses it to
-check that existing marker ranges were produced by the same template shape. Parsing is synchronous,
-fresh, and resource-free; a renderer owns any cache keyed by literal identity.
+The AST records fixed element structure, part kinds, and static-tree paths. Paths locate targets in
+a constructed or adopted instance; they are not selectors that should be reevaluated on every
+update. `Template.hash` identifies the authored strings for compatibility, not the current query
+or the identity of domain records.
 
-## Compile for DOM or HTML
+A property part and a child position intentionally become different AST nodes. Sparse attributes,
+classes, data, events, refs, and text-only elements likewise retain distinct contracts. Preserve
+those distinctions in a new target instead of flattening everything into a string-valued property.
 
-The DOM target compiles the AST into a namespace-correct `DocumentFragment`, captures dynamic part
-targets, and installs scoped updates. The HTML target compiles the same AST into ordered
-[`HtmlChunk`](/reference/modules/%40typed%2Ftemplate%2FHtmlChunk) values:
+## Follow the same parts into DOM and HTML
+
+The DOM target builds a namespace-correct static fragment, clones it per mount, and captures the
+updaters for its parts. The query property can then be assigned directly. A nested output position
+retains a bounded range that can insert/move/remove concrete nodes.
+
+The HTML target instead compiles ordered chunks. Static text has no value work; dynamic chunks carry
+context-aware rendering functions:
 
 ```ts
-import { addTemplateHash, templateToHtmlChunks } from "@typed/template/HtmlChunk";
 import { parse } from "@typed/template/Parser";
+import { addTemplateHash, templateToHtmlChunks } from "@typed/template/HtmlChunk";
 
-const template = parse([`<article><h1>`, `</h1></article>`]);
-const chunks = templateToHtmlChunks(template);
-const hydratable = addTemplateHash(chunks, template);
-
-const html = hydratable.map((chunk) => {
+const template = parse(["<article><h2>", "</h2></article>"]);
+const chunks = addTemplateHash(templateToHtmlChunks(template), template);
+export const serialized = chunks.map((chunk) => {
   switch (chunk._tag) {
-    case "text":
-      return chunk.text;
+    case "text": return chunk.text;
     case "part":
-    case "sparse-part":
-      return chunk.render("A title");
+    case "sparse-part": return chunk.render("Understanding <scopes>");
   }
 }).join("");
 ```
 
-Static markup is a `text` chunk. A `part` or `sparse-part` retains the parsed context and its
-escaping function, so a title interpolation is not accidentally serialized like a node or raw
-markup. `addTemplateHash` is for an HTML stream that a browser will later hydrate; static output
-can omit those adoption markers. Events do not have an HTML representation, while refs and
-renderer-only properties are handled according to the HTML target's documented policy.
+This example inspects one title interpolation; it is not a complete renderer for arbitrary streams
+and nested values. `addTemplateHash` adds the boundary information used by interactive adoption.
+Static output can omit it. `HtmlChunksBuilder` is the advanced assembly API when a target needs to
+construct a sequence incrementally.
 
-## Emit the RenderEvent your target owns
+A DOM property has no generic serialized attribute equivalent. Events have no server listener to
+install. Hydration refs have an explicit serialization protocol. These are target decisions, not
+reasons to discard the parsed kind and guess from a runtime value.
 
-The final boundary is [`RenderEvent`](/reference/modules/%40typed%2Ftemplate%2FRenderEvent).
-Use `DomRenderEvent` when the target already owns concrete DOM nodes; use `HtmlRenderEvent` when it
-already owns correctly serialized HTML. These constructors do not mount, subscribe, sanitize, or
-close anything. The producing `Fx` owns ordering, interruption, errors, and cleanup.
+## Preserve the contexts that strings alone erase
 
-```ts
-import { Fx } from "@typed/fx";
-import { DomRenderEvent, HtmlRenderEvent } from "@typed/template/RenderEvent";
+Nested templates compile in the namespace where they are inserted. Text-only elements such as
+script and textarea use their particular escaping/closing-tag rules. Sparse expressions combine
+literal and dynamic segments into one part. These details affect correctness before performance.
 
-const domOutput = Fx.sync(() => {
-  const element = document.createElement("aside");
-  element.textContent = "A foreign renderer's node";
-  return DomRenderEvent(element);
-});
+Use [Namespace-aware markup](/explore/template-namespaces-and-platform-markup) and
+[Text-only contexts](/explore/template-text-only-contexts) as concrete target cases. A renderer that
+only handles plain HTML text should explicitly document that subset and reject unsupported behavior;
+it should not claim browser or hydration parity.
 
-const htmlOutput = Fx.sync(() =>
-  HtmlRenderEvent(`<aside>A foreign renderer's HTML</aside>`, true),
-);
-```
+## Emit output and retain its lifetime
 
-`DomRenderEvent` carries the exact `Node`, `DocumentFragment`, `Wire`, or nested rendered values;
-Typed can insert those values into a bounded dynamic range without recreating them. `HtmlRenderEvent`
-is branded renderer-owned transport, not an application-level raw HTML escape hatch. Ordinary values
-belong in `html` interpolations, where the HTML target escapes them by context.
+DOM interpretation emits `DomRenderEvent`; HTML interpretation emits ordered `HtmlRenderEvent`
+chunks. Those values are transport, not owners of subscriptions or cleanup. The returned Fx must
+preserve input errors/service requirements and close per-render work on interruption.
 
-## What is public, and what is not
+Test parsing, target interpretation, and runtime lifetime independently. Start with a scalar part,
+sparse attribute, property, boolean, and nested template. Then exercise namespace/text context,
+expected failure, and an interrupted producer. For a browser target assert native identity; for
+HTML assert parsing recovers intended text and finite ordered completion.
 
-Renderer and framework authors can build against these published modules:
-
-- `@typed/template/Parser` — `parse`
-- `@typed/template/Template` — the AST node, attribute, part, and path models
-- `@typed/template/HtmlChunk` — `HtmlChunk`, `templateToHtmlChunks`, `addTemplateHash`, and the
-  advanced `HtmlChunksBuilder`
-- `@typed/template/RenderTemplate` — `RenderTemplate` and `html`
-- `@typed/template/Render` and `@typed/template/Html` — the DOM and HTML targets
-- `@typed/template/RenderEvent` — `RenderEvent`, `DomRenderEvent`, and `HtmlRenderEvent`
-
-Do not import `@typed/template/internal/*`. Names such as DOM diffing, marker construction,
-namespace fragment construction, template hashing, and many-item rendering are implementation
-details of the shipped targets, not a public extension point. If a renderer needs a behavior that is not
-expressed by the public AST, chunk, service, or event contracts, that is a missing public contract
-to discuss—not a reason to couple to an internal module.
-
-A target should test this boundary with the same literal in both media, a scalar part, a sparse
-attribute, a boolean, a property, a spread, a nested node output, an Effect failure, and interruption
-of a live source. Keep the tests at the public service and `RenderEvent` boundaries so a compiler
-can change without changing what framework authors observe.
-
-Continue with [Implement a RenderTemplate target](/explore/implementing-render-template) for the
-service contract, or [Server rendering and hydration](/explore/server-rendering-and-hydration) for
-the browser adoption side of the HTML pipeline.
+Use published `Parser`, `Template`, `HtmlChunk`, `RenderTemplate`, and `RenderEvent` modules.
+Private diffing, hashing, marker construction, and many-item implementations are evidence about
+the shipped renderer, not application extension contracts. Continue with
+[Implement a RenderTemplate target](/explore/implementing-render-template) to wrap or provide the
+service without coupling to those internals.

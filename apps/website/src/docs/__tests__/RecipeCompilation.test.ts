@@ -9,6 +9,13 @@ import {
 import { renderMarkdown } from "../../site/Markdown.js";
 
 describe("integration recipes", () => {
+  it("keeps named source files so examples can import one another", () => {
+    expect(extractTypeScriptFenceDocuments('```ts file="src/Save.ts"\nexport const save = 1;\n```')).toEqual([
+      { code: "export const save = 1;", extension: "ts", fileName: "src/Save.ts" },
+    ]);
+    expect(() => extractTypeScriptFenceDocuments('```ts file="../Save.ts"\nexport {};\n```')).toThrow("Invalid example file name");
+  });
+
   const domRecipe = recipes.find(({ slug }) => slug === "dom-output")!;
   const htmlRecipe = recipes.find(({ slug }) => slug === "html-output")!;
   const reactRecipe = recipes.find(({ slug }) => slug === "react")!;

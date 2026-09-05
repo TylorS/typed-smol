@@ -1,130 +1,116 @@
 ---
 title: "Preserve multi-node DOM output"
 summary: "Hand existing DOM output across a renderer boundary, including a stable multi-node range when one is genuinely needed."
-section: "DOM and platform"
+section: "Template internals"
 kind: "deep-dive"
-order: 5.35
+order: 3
 ---
 
-`Rendered` is the DOM-side output contract: a `Node`, `DocumentFragment`, `Wire`, or a nested
-readonly collection of those values. Application and integration code can hand any of those exact
-objects to `DomRenderEvent`. Typed then works with the object it received; it does not recreate its
-children or put an element around a multi-node value.
+A foreign summary renderer may produce a heading and paragraph without a wrapping element. A native
+DocumentFragment can deliver those children once, but insertion empties the fragment. If the producer
+must later identify or move that same group, it needs a persistent range representation.
 
-Most application code needs a node or a fragment. `Wire` is the small extra tool for a renderer that
-must keep a **multi-node** result addressable after normal DOM insertion has consumed its source
-fragment.
+Read [Using DomRenderEvent](/explore/dom-render-event) first. Most adapters should keep using a single
+node; this page explains the additional tool needed when a genuine multi-node result must survive
+fragment consumption.
 
-## Pass a real DOM value
-
-`DomRenderEvent` is the boundary value. It carries `Rendered`; it does not mount the value or take
-over the producer's lifetime.
+## Start with the native fragment behavior
 
 ```ts
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 import type { Rendered } from "@typed/template/Wire";
 
 const heading = document.createElement("h2");
-heading.textContent = "Account settings";
+heading.textContent = "Collection summary";
+const fragment = document.createDocumentFragment();
+const summary = document.createElement("p");
+summary.textContent = "12 saved articles";
+fragment.append(heading, summary);
 
-const details = document.createDocumentFragment();
-details.append(document.createTextNode("Change your profile and sign-in options."));
-
-const output: Rendered = [heading, details];
-const event = DomRenderEvent(output);
+const output: Rendered = fragment;
+export const event = DomRenderEvent(output);
 ```
 
-The receiving dynamic range may insert, remove, or move only the values represented by `event`.
-The browser still owns the node identities themselves: listeners, focus, selection, custom-element
-state, and foreign descendants remain attached to those exact nodes. A native `DocumentFragment`
-is consumed when the DOM inserts it—that is normal platform behavior. Use one when you only need a
-one-time group of children.
+When these children enter a parent, their identities are retained and the fragment becomes empty.
+This is normal [DocumentFragment behavior](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment).
+Emitting the same consumed fragment again does not describe the children that now live elsewhere.
 
-## Make a multi-node range persistent
+You can retain the exact nodes in a collection when that is the desired representation. A Wire
+adds persistent boundaries when a renderer needs the complete contiguous group to remain addressable
+as one output value. It avoids adding an element that could change layout, table structure, or
+accessibility semantics.
 
-`persistent` accepts a newly assembled fragment. Empty output stays a fragment, one child stays a
-node, and two or more children become a `Wire`: a transparent comment-bounded range with a stable
-multi-node identity. The range can subsequently move together without an extra wrapper element.
+## Make the range persistent before insertion
 
 ```ts
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 import { persistent } from "@typed/template/Wire";
 
 const fragment = document.createDocumentFragment();
-const title = document.createElement("h2");
-title.textContent = "Order summary";
-const total = document.createElement("p");
-total.textContent = "$42.00";
-fragment.append(title, total);
+const heading = document.createElement("h2");
+heading.textContent = "Collection summary";
+const summary = document.createElement("p");
+summary.textContent = "12 saved articles";
+fragment.append(heading, summary);
 
-const templateIdentity = "checkout-summary-v1"; // a unique-template-id-or-hash
-const output = persistent(document, templateIdentity, fragment);
-const event = DomRenderEvent(output);
+const output = persistent(document, "article-summary-v1", fragment);
+export const event = DomRenderEvent(output);
 ```
 
-The identity must identify the template or renderer shape that produced the range—use a real
-unique-template-id-or-hash, not a generic label such as `"foreign-view"`. That makes the boundary
-comments unambiguous when output is inspected or adopted. Once connected, a `Wire` moves its exact
-nodes as one range; where the browser provides it, Typed can use `moveBefore`, with `insertBefore`
-as the compatibility path. No child is cloned.
+`persistent` keeps empty output as a fragment and single-child output as that node. With multiple
+children it produces a transparent comment-bounded Wire. The identity string must identify the
+producer's template shape; do not give every unrelated adapter the same generic boundary ID.
 
-Use this only when a producer needs that persistent group. A normal fragment is simpler, and a
-single root element already has its own native identity.
+The Wire retains its start/end boundaries so its current nodes can be found after insertion.
+It does not clone children or own their foreign resources. The receiving range controls placement;
+the producer's scope still controls teardown, as described in the DOM event guide.
 
-## Treat boundary comments as renderer extension territory
+## Treat conversion as an operation, not just observation
 
-`fromComments` is public because hydration and renderer extensions sometimes already own exact
-range markers. It is marked **internal-but-published**, not an onboarding API. Application code
-should normally use `persistent` and let it create the comments.
+A Wire's `valueOf()` gathers its range into a DocumentFragment. On mounted output that moves nodes.
+`toHtml` and `getElements` use this conversion for Wire inputs, so calling them on a mounted range
+can change the document you meant to inspect. `DomRenderEvent.toString()` can reach the same path.
+
+For diagnostics, retain known nodes and read their properties, parent relationships, and boundaries.
+Perform consuming serialization only on detached output when moving it is intended. A "log the
+rendered HTML" statement can otherwise become the cause of a disappearing view.
+
+The public `Rendered` union also accepts nested readonly collections. Guard functions such as
+`isWire`, `isNode`, and `isDocumentFragment` let a renderer distinguish those representations without
+relying on arbitrary object shape.
+
+## Adopt existing boundaries only when your extension owns them
+
+`fromComments` is an internal-but-published renderer extension function. It is appropriate when an
+integration already owns both marker comments and the complete interval between them:
 
 ```ts
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 import { fromComments } from "@typed/template/Wire";
 
 const fragment = document.createDocumentFragment();
-const start = document.createComment("orders:start");
-const order = document.createElement("article");
-order.textContent = "Order #1042";
-const end = document.createComment("orders:end");
-fragment.append(start, order, end);
+const start = document.createComment("summary:start");
+const summary = document.createElement("p");
+summary.textContent = "12 saved articles";
+const end = document.createComment("summary:end");
+fragment.append(start, summary, end);
 
-const wire = fromComments(fragment, start, end);
-const event = DomRenderEvent(wire);
+export const event = DomRenderEvent(fromComments(fragment, start, end));
 ```
 
-An extension using `fromComments` owns both boundaries and every node between them. Do not point it
-at comments from another renderer, infer a range from arbitrary markup, or use it to claim a
-parent's unrelated siblings. Low-level reconciliation adapters have additional published helpers,
-but those are deliberately outside this application-facing guide.
+This is not permission to point at another renderer's comments or infer ownership from arbitrary
+nearby markup. The extension is responsible for coherent boundaries and all represented nodes.
+Likewise, `diffable` and `getAllSiblingsBetween` serve range/reconciliation machinery; normal
+application components should not manufacture an alternate hydration protocol with them.
 
-## Inspect detached output deliberately
+## Verify the group remains the same group
 
-`getElements` gives event delegation or a host adapter the concrete element roots. `toHtml` produces
-a current HTML snapshot; it is not a streaming SSR renderer and it does not sanitize markup.
+Capture the heading and paragraph before placement, then assert both exact objects after insertion
+and reordering. Check their order and that adjacent foreign siblings remain unchanged. For a removed
+range, assert producer finalizers separately from DOM removal. For a mounted Wire, ensure the test
+itself does not consume the range while inspecting it.
 
-```ts
-import { getElements, persistent, toHtml } from "@typed/template/Wire";
-
-const fragment = document.createDocumentFragment();
-const label = document.createElement("label");
-label.textContent = "Email";
-const input = document.createElement("input");
-input.type = "email";
-fragment.append(label, input);
-
-const output = persistent(document, "email-field-v1", fragment);
-const roots = getElements(output);
-const snapshot = toHtml(output);
-```
-
-For a `Node` or detached `DocumentFragment`, those utilities are straightforward observation. For a
-`Wire`, they normalize through `valueOf()`: the range is gathered back into its retained
-`DocumentFragment`. That is a consuming conversion, so inspect a `Wire` before handing it to a
-mounted renderer, or explicitly treat the conversion as moving the range out of its current parent.
-They are not a live-DOM inspection API for a mounted Wire.
-
-`DomRenderEvent` simply carries the same `Rendered` contract forward. Use it at the point an
-adapter has produced real DOM output; keep mount, updates, and cleanup in the producer's `Fx` or
-Effect Scope. For the receiving range and foreign-node ownership rules, continue with
-[Using DomRenderEvent](/explore/dom-render-event). For a renderer that wants trusted string output
-instead, use [HtmlRenderEvent](/explore/html-render-event).
+Typed prefers the platform's state-preserving move operation for eligible connected nodes and falls
+back to insertion. Retaining objects does not guarantee every browser-managed state survives that
+fallback. Use [local reconciliation](/explore/dom-updates-and-reconciliation) for the move/cost
+contract and the [Wire reference](/reference/modules/%40typed%2Ftemplate%2FWire) for exact conversions.

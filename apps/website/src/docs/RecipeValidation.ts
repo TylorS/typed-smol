@@ -14,6 +14,7 @@ export interface AuthoredExampleDocumentation {
 export interface TypeScriptFenceDocument {
   readonly code: string;
   readonly extension: "ts" | "tsx";
+  readonly fileName?: string;
 }
 
 export const extractTypeScriptFenceDocuments = (
@@ -21,12 +22,18 @@ export const extractTypeScriptFenceDocuments = (
 ): ReadonlyArray<TypeScriptFenceDocument> =>
   Array.from(
     markdown.matchAll(
-      /^```(ts|tsx|typescript|typescriptreact)\s*\r?\n([\s\S]*?)^```\s*$/gmu,
+      /^```(ts|tsx|typescript|typescriptreact)(?:[ \t]+file="([^"]+)")?[ \t]*\r?\n([\s\S]*?)^```\s*$/gmu,
     ),
-    ([, language, code]) => ({
-      code: code!.trim(),
-      extension: language === "tsx" || language === "typescriptreact" ? "tsx" : "ts",
-    }),
+    ([, language, fileName, code]) => {
+      if (fileName && !/^(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+\.(?:ts|tsx)$/u.test(fileName)) {
+        throw new Error(`Invalid example file name: ${fileName}`);
+      }
+      return {
+        code: code!.trim(),
+        extension: language === "tsx" || language === "typescriptreact" ? "tsx" : "ts",
+        ...(fileName ? { fileName } : {}),
+      };
+    },
   );
 
 export const extractTypeScriptFences = (markdown: string): ReadonlyArray<string> =>

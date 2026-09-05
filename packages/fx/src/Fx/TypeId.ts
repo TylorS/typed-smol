@@ -22,7 +22,7 @@ import type { Fx } from "./Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category symbol
+ * @category Runtime inspection
  */
 export const FxTypeId = Symbol.for("@typed/fx/Fx");
 
@@ -38,7 +38,7 @@ export const FxTypeId = Symbol.for("@typed/fx/Fx");
  *
  * This alias performs no runtime work.
  * @since 1.0.0
- * @category symbol
+ * @category Runtime inspection
  */
 export type FxTypeId = typeof FxTypeId;
 
@@ -64,7 +64,7 @@ export type FxTypeId = typeof FxTypeId;
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Runtime inspection
  */
 export function isFx(u: unknown): u is Fx<any, any, any> {
   return hasProperty(u, FxTypeId);

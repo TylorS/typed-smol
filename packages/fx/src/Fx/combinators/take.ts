@@ -26,7 +26,7 @@ import { unwrap } from "./unwrap.js";
  * @param n - The number of elements to take.
  * @returns An `Fx` that emits at most `n` elements.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const take: {
   (n: number): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;
@@ -56,7 +56,7 @@ export const take: {
  * @param count - Effect that produces the number of elements to take.
  * @returns An `Fx` that emits at most `n` elements.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const takeEffect: {
   <E2, R2>(

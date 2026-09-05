@@ -32,7 +32,7 @@ import { make } from "./make.js";
  * @param effect - The effect to convert.
  * @returns An `Fx` representing the execution of the effect.
  * @since 1.0.0
- * @category constructors
+ * @category Effect interop
  */
 export const fromEffect = <A, E = never, R = never>(effect: Effect.Effect<A, E, R>): Fx<A, E, R> =>
   /*#__PURE__*/ make<A, E, R>((sink) => Effect.matchCauseEffect(effect, sink));
@@ -61,6 +61,6 @@ export const fromEffect = <A, E = never, R = never>(effect: Effect.Effect<A, E, 
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Value sources
  */
 export const never: Fx<never, never, never> = make<never, never, never>(() => Effect.never);

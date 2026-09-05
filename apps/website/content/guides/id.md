@@ -48,6 +48,34 @@ Provide the Layer around the application or feature that shares the generator se
 it for every call discards that shared sequence state. UUIDv7 can also be used directly with
 `uuid7.pipe(Effect.provide(Uuid7State.Default))` from `@typed/id/Uuid7`.
 
+## Carry identity through optimistic creation and acknowledgment
+
+A newly created row often exists locally before the server responds. Give it a stable client key
+when the create command starts. If the server assigns a different persistent ID, store that ID as a
+separate field on the same entity instead of replacing the rendering key. Otherwise an acknowledgment
+looks like deleting one row and mounting another, which can reset focused inputs and local state.
+
+```ts
+import { Effect, Option } from "effect"
+import { Ids } from "@typed/id/Ids"
+
+const draft = Effect.map(Ids.uuid7, (clientKey) => ({
+  clientKey,
+  serverId: Option.none<string>(),
+  title: "Untitled issue",
+}))
+
+const acknowledge = <A extends { readonly clientKey: unknown; readonly title: string }>(
+  local: A,
+  serverId: string,
+) => ({ ...local, serverId: Option.some(serverId) })
+```
+
+The client key says “this local entity.” The server ID says “this stored record.” A retry identifier
+may be a third contract: whether reusing it deduplicates a request is decided by the server API,
+not by the random ID generator. Use the same entity key through
+[optimistic edits](/explore/async-data-optimistic-edits) and hydration.
+
 ## Match the format to the identity contract
 
 | Format | Useful property |
@@ -129,3 +157,12 @@ For server rendering, serialize IDs with the entity and restore those same IDs d
 A deterministic test Layer does not replace that production identity transfer. See
 [keyed collections](/explore/keyed-template-collections), [state hydration](/explore/refsubject-template-hydration),
 and the [ID reference](/reference/modules/%40typed%2Fid) for the related APIs.
+
+
+## Diagnose identity changes
+
+When identity appears to change unexpectedly, trace the creation site first. Count generator
+executions, inspect whether a route or component is remounted, and check whether sorting code
+rebuilds entities with fresh keys. Compare separate test runs only when both the starting generator
+state and sequence of generator calls are identical. A deterministic Layer makes that sequence
+repeatable; it cannot make different programs consume the same IDs.

@@ -4,10 +4,11 @@ title: "Use Vue and Typed together"
 summary: "Give Vue and Typed separate DOM ranges and connect their lifetimes at one stable host."
 ---
 
-Vue owns every descendant of its mount element. Typed may place, move, or remove that empty host, but never
-write below it. In the other direction, Vue creates an empty host and Typed owns only its children.
+A trading dashboard already has a Vue price card with plugins and local controls. Move its surrounding layout to Typed while keeping that card mounted. Keep Vue plugins, `provide`/`inject`, and component-local state inside the mounted app. Give Typed a stream of plain input props. Mounting one app for every price tick would reset selection and transitions; updating the shallow ref keeps that state with Vue.
 
-## Vue output inside Typed
+`shallowRef` replaces the props object as a unit. This is useful when incoming values are immutable snapshots; if you mutate a nested field in place, that operation does not become reactive merely because Typed emitted the object. Replace the snapshot or choose a Vue-owned reactive model intentionally. The [Vue reactivity reference](https://vuejs.org/api/reactivity-advanced.html#shallowref) describes this distinction.
+
+## Vue output inside Typed: update one dashboard card
 
 Mount one Vue app in one detached host. Normalize the props with `liftRenderableToFx`, update that app, and
 return the same `DomRenderEvent` for every value. Typed's component Scope unmounts Vue when the host leaves
@@ -16,18 +17,15 @@ the Typed range.
 ```ts
 import * as Effect from "effect/Effect";
 import * as Fx from "@typed/fx/Fx";
+import { RefSubject } from "@typed/fx";
 import { html, type Renderable } from "@typed/template";
 import { liftRenderableToFx } from "@typed/template/Render";
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 import { component } from "@typed/ui/Component";
+import { Button } from "@typed/ui/Button";
 import { createApp, defineComponent, h, nextTick, shallowRef } from "vue";
 
 type PriceProps = { readonly symbol: string; readonly last: number };
-
-const prices: Renderable<PriceProps> = Fx.fromIterable([
-  { symbol: "TYPED", last: 42 },
-  { symbol: "TYPED", last: 43 },
-]);
 
 const livePrice = component(function* <E, R>(values: Renderable<PriceProps, E, R>) {
   const current = shallowRef<PriceProps>();
@@ -35,7 +33,10 @@ const livePrice = component(function* <E, R>(values: Renderable<PriceProps, E, R
     () => () =>
       current.value === undefined
         ? null
-        : h("output", `${current.value.symbol}: ${current.value.last}`),
+        : h("section", [
+            h("label", ["Alert threshold ", h("input", { type: "number", value: 42 })]),
+            h("output", `${current.value.symbol}: ${current.value.last}`),
+          ]),
   );
   const host = document.createElement("div");
   const app = yield* Effect.acquireRelease(
@@ -61,13 +62,26 @@ const livePrice = component(function* <E, R>(values: Renderable<PriceProps, E, R
   );
 });
 
-const page = html`<main>${livePrice(prices)}</main>`;
+export const priceDemo = component(function* () {
+  const prices = yield* RefSubject.make<PriceProps>({ symbol: "DEMO", last: 42 });
+  return html`<main>
+    ${livePrice(prices)}
+    ${Button({
+      content: "Next price sample",
+      onclick: RefSubject.update(prices, (price) => ({ ...price, last: price.last + 1 })),
+    })}
+  </main>`;
+});
 ```
 
+Edit the Vue-owned alert threshold, then click Typed's “Next price sample.” The input should keep its value while the price changes. The button is a deliberate local source for exploring the boundary; replace that source with your validated market-data feed without changing the Vue mount/update contract. `nextTick` waits for each snapshot to reach the Vue DOM before the host is emitted.
+
 `Fx.never` keeps the single emitted host mounted after a finite source completes. Keep source errors and
-services on the returned `Fx`; this example is service-free and cannot fail.
+services on the returned `Fx`. This local source has no typed failures; an external price feed can retain its error channel through the generic adapter.
 
 ## Typed output inside Vue
+
+The reverse `TypedSlot` samples `props.value` during `onMounted`. It is designed for a stable live Typed renderable, not changing Vue prop identity. If the Vue parent must replace that value, add an explicit watcher that interrupts and awaits the old fiber before starting the replacement; otherwise a new prop will be ignored by this slot. Document that contract in your application's wrapper.
 
 Create the DOM runtime once at application bootstrap. Vue owns the outer `div`; its lifecycle starts one
 scoped Typed render fiber and interrupts only that fiber before Vue discards the host. Runtime disposal is an
@@ -116,7 +130,7 @@ const page = h(TypedSlot, { value: html`<h2>Typed profile</h2>` });
 Pass a live Typed renderable once; it updates its own child range without a Vue watch or remount. Configure
 additional services and expected-error handling where the application constructs the value.
 
-## Server rendering
+## Render a request-specific card on the server
 
 The same boundary exists on the server. Vue's `vue/server-renderer` may contribute trusted framework output to
 a Typed HTML stream as an `HtmlRenderEvent`.
@@ -126,17 +140,14 @@ import * as Effect from "effect/Effect";
 import * as Fx from "@typed/fx/Fx";
 import { html } from "@typed/template";
 import { HtmlRenderEvent } from "@typed/template/RenderEvent";
-import { component } from "@typed/ui/Component";
 import { createSSRApp, defineComponent, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 
 const Price = defineComponent(() => () => h("output", "TYPED: 42"));
 
-const vueHtml = component(function* () {
-  return Fx.fromEffect(
-    Effect.promise(async () => HtmlRenderEvent(await renderToString(createSSRApp(Price)), true)),
-  );
-});
+const vueHtml = Fx.fromEffect(
+  Effect.promise(async () => HtmlRenderEvent(await renderToString(createSSRApp(Price)), true)),
+);
 
 const page = html`<main>${vueHtml}</main>`;
 ```
@@ -172,3 +183,9 @@ const renderPage = async () => {
 Hydration follows ownership, not markup origin: Vue hydrates Vue-owned hosts. The `innerHTML` descendants
 above are opaque to Vue and do not become an interactive Typed island. To hydrate Typed, reserve a separate
 empty host that Vue does not render below, then start the DOM-rendering slot after Vue hydrates.
+
+## Prove updates and teardown reach Vue
+
+After each input update, await `nextTick` before reading the Vue-owned DOM. Type into a child input, update the Typed shell and price props, and verify the input remains the same node. Then remove the host and assert that Vue's unmount hooks and any plugin subscriptions run once. The [Vue lifecycle reference](https://vuejs.org/api/composition-api-lifecycle.html) distinguishes mounted DOM from component setup and explains when unmount hooks run.
+
+For SSR, create a fresh Vue app and request-specific state per request; an application-owned HTML rendering runtime does not justify sharing one user's Vue store with another request. Test simultaneous requests with different props. If hydration reports a mismatch, compare the initial props and generated markup before changing either renderer's reconciliation behavior. Continue with [HTML output](/integrate/html-output) and [server rendering and hydration](/explore/server-rendering-and-hydration).

@@ -22,7 +22,7 @@ import { extendScope } from "../internal/scope.js";
  * The type acquires no resources. Implementations return an Fx requiring
  * `Scope`; that Scope owns any admitted inner subscriptions and their cleanup.
  * @since 1.0.0
- * @category types
+ * @category Type contracts
  */
 export type FlatMapLike<Args extends ReadonlyArray<any> = []> = {
   <A, B, E2, R2>(
@@ -78,7 +78,7 @@ export type FlatMapLike<Args extends ReadonlyArray<any> = []> = {
  * @param f - A function that maps an element `A` to a new `Fx<B>`.
  * @returns An `Fx` that emits values from all inner streams.
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const flatMap: FlatMapLike = dual(
   2,

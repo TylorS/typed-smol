@@ -30,7 +30,7 @@ import type { Fx } from "../Fx.js";
  * @param Eq - The equivalence function to use.
  * @returns An `Fx` with consecutive duplicates removed.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const skipRepeatsWith =
   <A>(Eq: Equivalence.Equivalence<A>) =>

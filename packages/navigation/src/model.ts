@@ -21,7 +21,7 @@ import * as Schema from "effect/Schema";
  * const destination = decode({ url: "/settings", state: {}, sameDocument: true })
  * ```
  * @since 1.0.0
- * @category models
+ * @category Destination schemas
  */
 export const ProposedDestination = Schema.Struct({
   url: Schema.URLFromString,
@@ -41,7 +41,7 @@ export const ProposedDestination = Schema.Struct({
  * This type acquires no resources and adds no lifetime beyond the value it describes.
  *
  * @since 1.0.0
- * @category models
+ * @category Destination schemas
  */
 export type ProposedDestination = typeof ProposedDestination.Type;
 
@@ -65,7 +65,7 @@ export type ProposedDestination = typeof ProposedDestination.Type;
  * const decode = Schema.decodeUnknownSync(Destination)
  * ```
  * @since 1.0.0
- * @category models
+ * @category Destination schemas
  */
 export const Destination = Schema.Struct({
   ...ProposedDestination.fields,
@@ -84,7 +84,7 @@ export const Destination = Schema.Struct({
  * This type acquires no resources and adds no lifetime beyond the committed entry it describes.
  *
  * @since 1.0.0
- * @category models
+ * @category Destination schemas
  */
 export type Destination = typeof Destination.Type;
 
@@ -107,7 +107,7 @@ export type Destination = typeof Destination.Type;
  * Schema.decodeUnknownSync(NavigationType)("replace")
  * ```
  * @since 1.0.0
- * @category models
+ * @category Transition schemas
  */
 export const NavigationType = Schema.Union([
   Schema.Literal("push"),
@@ -126,7 +126,7 @@ export const NavigationType = Schema.Union([
  * This type acquires no resources.
  *
  * @since 1.0.0
- * @category models
+ * @category Transition schemas
  */
 export type NavigationType = typeof NavigationType.Type;
 
@@ -150,7 +150,7 @@ export type NavigationType = typeof NavigationType.Type;
  * const isTransition = Schema.is(Transition)
  * ```
  * @since 1.0.0
- * @category models
+ * @category Transition schemas
  */
 export const Transition = Schema.Struct({
   type: NavigationType,
@@ -170,7 +170,7 @@ export const Transition = Schema.Struct({
  * This type acquires no resources; the navigation service owns values described by it.
  *
  * @since 1.0.0
- * @category models
+ * @category Transition schemas
  */
 export type Transition = typeof Transition.Type;
 
@@ -194,7 +194,7 @@ export type Transition = typeof Transition.Type;
  * const isBeforeEvent = Schema.is(BeforeNavigationEvent)
  * ```
  * @since 1.0.0
- * @category events
+ * @category Navigation event schemas
  */
 export const BeforeNavigationEvent = Schema.Struct({
   type: NavigationType,
@@ -214,7 +214,7 @@ export const BeforeNavigationEvent = Schema.Struct({
  * This type acquires no resources; a single navigation operation owns each described value.
  *
  * @since 1.0.0
- * @category events
+ * @category Navigation event schemas
  */
 export type BeforeNavigationEvent = typeof BeforeNavigationEvent.Type;
 
@@ -238,7 +238,7 @@ export type BeforeNavigationEvent = typeof BeforeNavigationEvent.Type;
  * const isNavigationEvent = Schema.is(NavigationEvent)
  * ```
  * @since 1.0.0
- * @category events
+ * @category Navigation event schemas
  */
 export const NavigationEvent = Schema.Struct({
   type: NavigationType,
@@ -256,7 +256,7 @@ export const NavigationEvent = Schema.Struct({
  * This type acquires no resources; the navigation operation owns event dispatch.
  *
  * @since 1.0.0
- * @category events
+ * @category Navigation event schemas
  */
 export type NavigationEvent = typeof NavigationEvent.Type;
 
@@ -273,7 +273,7 @@ export type NavigationEvent = typeof NavigationEvent.Type;
  * propagates it; interruption still runs that Effect's normal finalizers.
  *
  * @since 1.0.0
- * @category errors
+ * @category Navigation failures
  */
 export class NavigationError extends Schema.TaggedError<NavigationError>()(
   `@typed/navigation/NavigationError`,
@@ -296,7 +296,7 @@ export class NavigationError extends Schema.TaggedError<NavigationError>()(
  * the redirected transition.
  *
  * @since 1.0.0
- * @category errors
+ * @category Transition control
  */
 export class RedirectError extends Schema.TaggedError<RedirectError>()(
   `@typed/navigation/RedirectError`,
@@ -324,7 +324,7 @@ export class RedirectError extends Schema.TaggedError<RedirectError>()(
  * releasing its transition state.
  *
  * @since 1.0.0
- * @category errors
+ * @category Transition control
  */
 export class CancelNavigation extends Schema.TaggedError<CancelNavigation>()(
   `@typed/navigation/CancelNavigation`,

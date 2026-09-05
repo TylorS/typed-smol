@@ -27,7 +27,7 @@ import { Result } from "effect";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefHashMap<
   in out K,
@@ -50,7 +50,7 @@ export interface RefHashMap<
  * and cleanup; source failures and services stay on reads and pushes.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<K, V, E = never, R = never>(
   initial:
@@ -79,7 +79,7 @@ export function make<K, V, E = never, R = never>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const set: {
   <K, V>(
@@ -109,7 +109,7 @@ export const set: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const remove: {
   <K>(key: K): <V, E, R>(ref: RefHashMap<K, V, E, R>) => Effect.Effect<HashMap.HashMap<K, V>, E, R>;
@@ -132,7 +132,7 @@ export const remove: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const modify: {
   <K, V>(
@@ -162,7 +162,7 @@ export const modify: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const modifyAt: {
   <K, V>(
@@ -197,7 +197,7 @@ export const modifyAt: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setMany: {
   <K, V>(
@@ -230,7 +230,7 @@ export const setMany: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const removeMany: {
   <K>(
@@ -258,7 +258,7 @@ export const removeMany: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const clear = <K, V, E, R>(
   ref: RefHashMap<K, V, E, R>,
@@ -278,7 +278,7 @@ export const clear = <K, V, E, R>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const union: {
   <K, V>(
@@ -305,7 +305,7 @@ export const union: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed HashMap and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filter: {
   <K, V>(
@@ -337,7 +337,7 @@ export const filter: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed HashMap and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const map: {
   <K, V>(
@@ -369,7 +369,7 @@ export const map: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <K, V, E, R>(ref: RefHashMap<K, V, E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, HashMap.size);
@@ -388,7 +388,7 @@ export const size = <K, V, E, R>(ref: RefHashMap<K, V, E, R>): RefSubject.Comput
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <K, V, E, R>(
   ref: RefHashMap<K, V, E, R>,
@@ -408,7 +408,7 @@ export const isEmpty = <K, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNonEmpty = <K, V, E, R>(
   ref: RefHashMap<K, V, E, R>,
@@ -428,7 +428,7 @@ export const isNonEmpty = <K, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const keys = <K, V, E, R>(
   ref: RefHashMap<K, V, E, R>,
@@ -448,7 +448,7 @@ export const keys = <K, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const values = <K, V, E, R>(
   ref: RefHashMap<K, V, E, R>,
@@ -468,7 +468,7 @@ export const values = <K, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const entries = <K, V, E, R>(
   ref: RefHashMap<K, V, E, R>,
@@ -488,7 +488,7 @@ export const entries = <K, V, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const has: {
   <K>(key: K): <V, E, R>(ref: RefHashMap<K, V, E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -511,7 +511,7 @@ export const has: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapValues: {
   <K, V, B>(
@@ -545,7 +545,7 @@ export const mapValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filterValues: {
   <K, V>(
@@ -578,7 +578,7 @@ export const filterValues: {
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filterMapValues: {
   <K, V, B>(
@@ -620,7 +620,7 @@ export const filterMapValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduce: {
   <K, V, B>(
@@ -656,7 +656,7 @@ export const reduce: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const some: {
   <K, V>(
@@ -689,7 +689,7 @@ export const some: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const every: {
   <K, V>(
@@ -726,7 +726,7 @@ export const every: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const get: {
   <K>(key: K): <V, E, R>(ref: RefHashMap<K, V, E, R>) => RefSubject.Filtered<V, E, R>;
@@ -749,7 +749,7 @@ export const get: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const findFirst: {
   <K, V>(

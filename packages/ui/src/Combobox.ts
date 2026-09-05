@@ -8,6 +8,8 @@
  * the state and pure operations without mounting UI, or supply custom hosts without replacing native
  * events and browser-owned focus.
  *
+ * Learn the interaction in the [Combobox guide](/explore/ui-combobox).
+ *
  * @since 1.0.0
  * @category modules
  * @packageDocumentation
@@ -31,50 +33,35 @@ import type { HostResult } from "./Dom/Types.js";
 import * as NativePopover from "./NativePopover.js";
 
 /**
- * Complete renderer-independent state for Combobox.
+ * Editable query text, popup visibility, and the active suggestion identity.
+ * `value` can contain unmatched text; active suggestion focus does not validate a domain choice.
  *
- * @remarks
- * ## Why
- *
- * Applications can inspect, update, and test Combobox behavior without mounting or coupling the
- * state to a renderer.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { State } from "@typed/ui/Combobox";` Extend the [Combobox.makeState
- * runnable setup](/reference/%40typed%2Fui%2FCombobox%23makeState). Inside the linked program,
- * `const snapshot: State = yield* state` exposes the current id, value, open state, and composite
- * focus state.
  * @since 1.0.0
- * @category models
+ * @category Query and popup state
  */
 export interface State extends Omit<Composite.State, "orientation"> {
   /**
    * Axis used to interpret Arrow-key movement.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly orientation: "vertical";
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Current semantic value selected or edited by the widget.
    * @since 1.0.0
-   * @category models
+   * @category Current value
    */
   readonly value: string;
   /**
    * Whether the associated native popover is open.
    * @since 1.0.0
-   * @category models
+   * @category Popup visibility
    */
   readonly open: boolean;
 }
@@ -83,54 +70,38 @@ export interface State extends Omit<Composite.State, "orientation"> {
  * Initial Combobox values. value defaults to an empty string, open to false, activeId to null,
  * loop to true, and virtual focus is enabled.
  *
- * @remarks
- * ## Why
- *
- * Making initialization explicit documents hydration-sensitive defaults and lets servers and
- * clients construct matching state.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InitialState } from "@typed/ui/Combobox";` Extend the
- * [Combobox.makeState runnable setup](/reference/%40typed%2Fui%2FCombobox%23makeState). Construct
- * state with
- * `const initial: InitialState = { id: "city", value: "", open: false }; const state = yield* Combobox.makeState(initial)`.
  * @since 1.0.0
- * @category models
+ * @category Query and popup state
  */
 export interface InitialState {
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Current semantic value selected or edited by the widget.
    * @since 1.0.0
-   * @category models
+   * @category Current value
    */
   readonly value?: string;
   /**
    * Whether the associated native popover is open.
    * @since 1.0.0
-   * @category models
+   * @category Popup visibility
    */
   readonly open?: boolean;
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly activeId?: string | null;
   /**
    * Whether movement wraps between the first and last enabled items.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly loop?: boolean;
 }
@@ -139,15 +110,6 @@ export interface InitialState {
  * Effect Schema used by makeState to encode, decode, and hydrate Combobox state.
  *
  * @remarks
- * ## Why
- *
- * A public schema makes hydration and serialized state use the same runtime validation as direct
- * construction.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
  * @example
  * ```ts
  * import * as Schema from "effect/Schema";
@@ -156,7 +118,7 @@ export interface InitialState {
  * const decodeState = Schema.decodeUnknownEffect(Combobox.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Query and popup state
  */
 export const StateSchema = Schema.Struct({
   id: Schema.String,
@@ -174,12 +136,6 @@ export const StateSchema = Schema.Struct({
  * null, loop to true, and virtual focus is enabled.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect creates the RefSubject when run. That state is renderer-independent;
  * collection registrations belong to the separate Scope that runs register or ref, not to state
  * creation.
@@ -198,7 +154,7 @@ export const StateSchema = Schema.Struct({
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Query and popup state
  */
 export function makeState(initial: InitialState) {
   return RefSubject.hydrate(StateSchema, {
@@ -217,12 +173,6 @@ export function makeState(initial: InitialState) {
  * Creates a scoped Collection for Combobox items.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
  * owned by the Scope that runs register, independently of this construction Effect.
  *
@@ -239,7 +189,7 @@ export function makeState(initial: InitialState) {
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Suggestion registration
  */
 export const makeCollection = Collection.makeState<string>;
 
@@ -247,24 +197,11 @@ export const makeCollection = Collection.makeState<string>;
  * Stores the input value, clears activeId, and opens the popup in one state update.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes Combobox's transition directly so callers can compose it in Effect
  * programs and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { setValue } from "@typed/ui/Combobox";` Extend the [Combobox.makeState
- * runnable setup](/reference/%40typed%2Fui%2FCombobox%23makeState). Inside the linked Effect
- * program invoke `yield* setValue(state, "New York")`, then read state to observe that value,
- * `activeId: null`, and `open: true`.
  * @since 1.0.0
- * @category combinators
+ * @category Query and popup state
  */
 export function setValue<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -330,42 +267,26 @@ function selectActive(
 /**
  * Inputs accepted by Combobox.Input in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InputOptions } from "@typed/ui/Combobox";` Extend the
- * [Combobox.makeState runnable setup](/reference/%40typed%2Fui%2FCombobox%23makeState). Enable
- * collection-driven keys with
- * `const options: InputOptions = { state, collection, placeholder: "Choose a city" }`.
  * @since 1.0.0
- * @category models
+ * @category Editable input
  */
 export interface InputOptions extends Dom.HostOptions<HTMLInputElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Native input placeholder text.
    * @since 1.0.0
-   * @category models
+   * @category Input prompt
    */
   readonly placeholder?: string;
 }
@@ -436,25 +357,12 @@ type InputProps<Options extends InputOptions> = ReturnType<ReturnType<typeof inp
  * handles Arrow, Enter, and Escape when a collection is supplied.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Input } from "@typed/ui/Combobox";` Extend the [Combobox.makeState runnable
- * setup](/reference/%40typed%2Fui%2FCombobox%23makeState). Replace the linked program's final
- * snapshot read with `Input({ state, placeholder: "Choose a city" })`; render that Fx before the
- * same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Editable input
  */
 export function Input<const Options extends InputOptions, const Host extends HostResult = never>(
   options: Options,
@@ -476,41 +384,26 @@ export function Input<const Options extends InputOptions, const Host extends Hos
 /**
  * Inputs accepted by Combobox.Popover in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { PopoverOptions } from "@typed/ui/Combobox";` Extend the
- * [Combobox.makeState runnable setup](/reference/%40typed%2Fui%2FCombobox%23makeState). The popup
- * input is `const options: PopoverOptions = { state, collection, content: "Cities" }`.
  * @since 1.0.0
- * @category models
+ * @category Suggestion popup
  */
 export interface PopoverOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -553,25 +446,12 @@ type PopoverProps<Options extends PopoverOptions> = ReturnType<
  * scrolls the selected option when opened.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Popover } from "@typed/ui/Combobox";` Extend the [Combobox.makeState
- * runnable setup](/reference/%40typed%2Fui%2FCombobox%23makeState). Replace the linked program's
- * final snapshot read with `Popover({ state, content: "Cities" })`; render that Fx before the same
- * Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Suggestion popup
  */
 export function Popover<
   const Options extends PopoverOptions,
@@ -602,66 +482,50 @@ export function Popover<
 /**
  * Inputs accepted by Combobox.Item in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { ItemOptions } from "@typed/ui/Combobox";` Extend the
- * [Combobox.makeState runnable setup](/reference/%40typed%2Fui%2FCombobox%23makeState). A
- * selectable choice is
- * `const options: ItemOptions = { state, collection, id: "nyc", value: "New York", content: "New York" }`.
  * @since 1.0.0
- * @category models
+ * @category Suggestions
  */
 export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Current semantic value selected or edited by the widget.
    * @since 1.0.0
-   * @category models
+   * @category Current value
    */
   readonly value: string;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Search text used by typeahead independently of rendered markup.
    * @since 1.0.0
-   * @category models
+   * @category Text matching
    */
   readonly textValue?: string;
   /**
    * Flag used by collection movement and widget handlers to skip activation by default.
    * @since 1.0.0
-   * @category models
+   * @category Availability
    */
   readonly disabled?: boolean;
 }
@@ -696,25 +560,12 @@ type ItemProps<Options extends ItemOptions> = ReturnType<ReturnType<typeof itemP
  * select on click.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Item } from "@typed/ui/Combobox";` Extend the [Combobox.makeState runnable
- * setup](/reference/%40typed%2Fui%2FCombobox%23makeState). Replace the linked program's final
- * snapshot read with `Item({ state, id: "nyc", value: "New York", content: "New York" })`; render
- * that Fx before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Suggestions
  */
 export function Item<const Options extends ItemOptions, const Host extends HostResult = never>(
   options: Options,

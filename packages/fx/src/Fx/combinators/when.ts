@@ -27,7 +27,7 @@ import { switchMap } from "./switchMap.js";
  * @param matchers - An object containing `onTrue` and `onFalse` Fx streams.
  * @returns An `Fx` that switches between `onTrue` and `onFalse` based on the condition.
  * @since 1.0.0
- * @category combinators
+ * @category Conditional sources
  */
 const if_: {
   <B, E2, R2, C, E3, R3>(matchers: {
@@ -85,7 +85,7 @@ export { if_ as if };
  * @param matchers - An object containing `onTrue` and `onFalse` values.
  * @returns An `Fx` that emits the matched value.
  * @since 1.0.0
- * @category combinators
+ * @category Conditional sources
  */
 export const when = <E, R, B, C>(
   condition: Fx<boolean, E, R>,

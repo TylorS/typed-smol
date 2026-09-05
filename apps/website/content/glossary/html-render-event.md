@@ -7,8 +7,10 @@ related: [render-event, ssr, fx]
 links: []
 ---
 
-`HtmlRenderEvent(html, last)` carries one ordered chunk and explicitly marks the terminal chunk. The
-producer owns ordering, interruption, and cleanup. It is a transport boundary for a renderer that
-already serialized safe HTML, not a sanitization shortcut for user data; ordinary template values
-remain escaped.
+`HtmlRenderEvent(html, last)` carries one trusted, renderer-owned HTML chunk and indicates whether
+it is terminal. The producer owns chunk ordering and lifetime; the event is output, not a resource
+manager.
 
+A server adapter can publish an already serialized fragment. Wrapping a user comment in this
+constructor would bypass ordinary escaping without sanitizing it. Keep application data on the
+normal template-value path. See [HTML render events](/explore/html-render-event).

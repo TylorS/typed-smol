@@ -59,22 +59,54 @@ const model: DocumentationModel = {
 };
 
 describe("documentation model", () => {
-  it("validates required prose, public imports, and relation targets", () => {
+  it("accepts concise declarations without prescribed prose sections", () => {
     expect(validateDocumentation(model)).toEqual([]);
-    expect(
-      validateDocumentation({
-        ...model,
-        symbols: [
-          { ...symbol, sections: {}, examples: [{ language: "ts", code: "DomRenderEvent(node)" }] },
-        ],
-      }),
-    ).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("Why"),
-        expect.stringContaining("Ownership and lifetime"),
-        expect.stringContaining("exact public import"),
-      ]),
-    );
+    expect(validateDocumentation({ ...model, symbols: [{ ...symbol, sections: {}, examples: [] }] })).toEqual([]);
+  });
+
+  it("requires the actual summary, signature, public import, and relation contracts", () => {
+    expect(validateDocumentation({
+      ...model,
+      symbols: [{
+        ...symbol,
+        summary: "  ",
+        signatures: [],
+        sections: {},
+        examples: [{ language: "ts", code: "DomRenderEvent(node)" }],
+        relations: [{ kind: "guide", target: "missing-guide" }],
+      }],
+    })).toEqual([
+      `${symbol.id} is missing a declaration summary`,
+      `${symbol.id} is missing a declaration signature`,
+      `${symbol.id} example must contain an exact public import`,
+      `${symbol.id} has broken relation guide:missing-guide`,
+    ]);
+    expect(validateDocumentation({ ...model, symbols: [{ ...symbol, signatures: [" "] }] }))
+      .toContain(`${symbol.id} is missing a declaration signature`);
+  });
+
+  it("recognizes multiline public imports and rejects private or invented import paths", () => {
+    const validateExample = (code: string) => validateDocumentation({
+      ...model,
+      symbols: [{ ...symbol, examples: [{ language: "ts", code }] }],
+    });
+    expect(validateExample('import {\n  DomRenderEvent\n} from "@typed/template/RenderEvent"')).toEqual([]);
+    for (const code of [
+      '// import { DomRenderEvent } from "@typed/template/RenderEvent"',
+      `const text = 'import { DomRenderEvent } from "@typed/template/RenderEvent"'`,
+      'import { internal } from "@typed/template/internal/render"',
+      'import { internal } from "@typed/template/src/render"',
+      'import { internal } from "@typed/template/*"',
+    ]) {
+      expect(validateExample(code)).toContain(`${symbol.id} example must contain an exact public import`);
+    }
+  });
+
+  it("validates guide relations without requiring unrelated prose headings", () => {
+    expect(validateDocumentation({
+      ...model,
+      guides: [{ ...model.guides[0]!, relations: [{ kind: "symbol", target: "missing-symbol" }] }],
+    })).toEqual(["guide:render-event-substrate has broken relation missing-symbol"]);
   });
 
   it("ranks exact, prefix, and prose matches deterministically", () => {

@@ -47,7 +47,7 @@ const fixedDateTimes = (
  * const deterministic = Ids.uuid7.pipe(Effect.provide(IdsTest({ currentTime: 0 })))
  * ```
  *
- * @category Testing
+ * @category Deterministic testing
  * @since 1.0.0
  */
 export const IdsTest = (

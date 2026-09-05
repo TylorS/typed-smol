@@ -26,7 +26,7 @@ import {
  * removal observer; removing the canvas is the observer's cleanup boundary.
  *
  * @since 1.0.0
- * @category testing
+ * @category Story lifetime
  */
 export interface MountedStory {
   /** Detached div containing the story's real rendered DOM. */
@@ -81,7 +81,7 @@ export interface MountedStory {
  * ```
  *
  * @since 1.0.0
- * @category testing
+ * @category Story mounting
  */
 export async function mount<E>(
   content: Fx.Fx<RenderEvent, E, Scope.Scope | RenderTemplate>,

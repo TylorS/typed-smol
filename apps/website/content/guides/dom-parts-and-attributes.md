@@ -1,88 +1,92 @@
 ---
 title: "DOM scalar parts and attributes"
 summary: "See which exact DOM location each scalar template interpolation owns and what one push changes."
-section: "DOM and platform"
+section: "Template rendering"
 kind: "deep-dive"
-order: 5.1
+order: 6
 ---
 
-Which part changes when a scalar value arrives? The parser turns each interpolation into a part with
-one exact target. The renderer subscribes to that value once and closes over the target. A later
-scalar push does not walk a component tree or search the document.
+Suppose the query state is correct in a log but the search field appears stale. There are several
+possible breaks: the input event read the wrong field, state was not published, the render was
+stopped, a queue hasn't applied the change, or another writer overwrote the native field. Debugging
+is easier when each step has a concrete target.
+
+This guide follows the editing loop from [template authoring](/explore/authoring-typed-templates).
+The syntax's set/clear rules live in [scalar bindings](/explore/template-element-bindings); this page
+uses them to locate a real update failure.
+
+## Start from one complete feedback loop
 
 ```ts
-import { Fx } from "@typed/fx";
+import { RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
 import { html } from "@typed/template";
+import * as EventHandler from "@typed/template/EventHandler";
 
-const query = Fx.fromIterable(["", "typed"]);
-const locked = Fx.fromIterable([false, true]);
-
-const search = html`<input
-  aria-label="Search"
-  .value=${query}
-  ?disabled=${locked}
-/>`;
+export const Search = component(function* () {
+  const query = yield* RefSubject.make("");
+  const readInput = EventHandler.make((event: Event) =>
+    RefSubject.set(query, (event.currentTarget as HTMLInputElement).value),
+  );
+  return html`<label>
+    Search articles
+    <input type="search" .value=${query} oninput=${readInput} />
+    <output>${query}</output>
+  </label>`;
+});
 ```
 
-The `.value` stream writes one live property and the `?disabled` stream toggles one boolean
-attribute. Neither rebuilds the input or searches the surrounding document.
+The browser changes the edit property, then dispatches `input`. The handler reads that property and
+sets the subject. Two subscribers receive the value: the input's `.value` part and the output's
+text part. A render queue can determine when the native writes happen. The component generator does
+not restart during that sequence.
 
-| Template syntax | Owned location | Update |
-| --- | --- | --- |
-| `${value}` in text | one text or comment target | set `textContent` |
-| `name=${value}` | one attribute node | set or remove that attribute |
-| `?disabled=${value}` | one boolean attribute | toggle attribute presence |
-| `.value=${value}` | one DOM property | assign that property |
-| `.data=${record}` | keys contributed by this data part | reconcile local `data-*` keys |
-| `class=${value}` | tokens contributed by this class part | reconcile its local token set |
-| `onclick=${handler}` | one native event registration | register it in the render Scope |
-| `...${properties}` | properties contributed by this spread | reconcile that local property set |
+## Know why a later write can be direct
 
-Scalar writes are O(1) with respect to the surrounding page. Collection-valued class, data, and
-spread parts cost the size of their own local collection. Event setup also depends on the registered
-entries and concrete delegation roots; it is not an O(1) scalar write.
+At setup, parsed part paths identify concrete targets in the cloned or adopted structure. The
+renderer captures those targets in updaters and subscribes their inputs. It does not run a document
+selector after every emission or search a component tree for the matching field.
 
-## Attributes and properties are different contracts
+An attribute updater retains its attribute/element target; a property updater retains its element
+and property name. A text-only updater writes its text target. A structural child hole instead
+owns a bounded range that can contain multiple nodes. Do not treat replacing nested output as the
+same operation as assigning a string to one field.
 
-Use an attribute for serialized element metadata and a property for live DOM state. For example,
-`value=${text}` sets an HTML attribute; `.value=${text}` updates the input's current value property.
-The distinction matters after a user edits a form control.
+## Use observations to choose the next boundary
 
-Boolean attributes use presence, not a string value. `?disabled=${false}` removes `disabled`; it
-does not render `disabled="false"`, which HTML still treats as disabled.
+| Observation | Inspect next |
+| --- | --- |
+| The input visibly changed but the subject didn't | handler registration, `currentTarget`, and the state operation |
+| Subject changed but neither consumer did | whether rendering is still running and whether work is queued |
+| `getAttribute("value")` is unchanged | read `input.value`; this template owns the property |
+| Output changed but input object was replaced | parent switching, root output, or a changing collection key |
+| Field changes then immediately reverts | another writer or another state publication |
+| Events stop after a spread change | whether the handler entry was removed and finalized |
 
-Each stream updates the location named by its syntax. Updating `.value` does not rebuild the input,
-replace its listeners, or touch its other attributes.
+An attribute MutationObserver cannot detect every property assignment. Inspect the native property
+as well, and use a DOM breakpoint on the actual suspect element rather than observing the entire
+page. Count producer publications and applied changes separately; queue coalescing can make those
+counts differ while retaining the latest value.
 
-## Data and spread parts remember their own keys
+## Draw the cooperation boundary around fields
 
-`.data=${record}` reconciles only keys previously emitted by that data part. Removing `status` from
-the next record removes its `data-status`; an unrelated `data-*` attribute added elsewhere remains.
-Spread properties use the same local-ownership idea across their supported property, event, and ref
-surface.
+Typed can own the edit property while an analytics helper owns a distinct data attribute and an
+animation library owns separate class tokens. It cannot merge simultaneous writes to `.value` or
+recover its captured input after another owner replaces the label's `innerHTML`.
 
-Avoid constructing a new spread object merely to update one known property. A direct part makes the
-target and cost clearer.
+The same rule explains why a spread is not one opaque assignment. Each accepted entry has its own
+field and lifetime; class/data entries additionally track local collections. Use
+[spread lifetimes](/explore/template-spreads-data) and [class contributions](/explore/dom-class-names)
+when the suspected conflict is inside those collections.
 
-## Events stay native
+## Keep the test proportional to the failure
 
-Event parts register with the platform's `EventTarget`. Typed does not manufacture a synthetic event
-class. Delegation may forward a Proxy with the correct `currentTarget`, but the event remains the
-browser's event and retains cancellation, propagation, composed paths, pointer or keyboard data,
-and default behavior.
+For a property binding, assert its native value and stable element identity after a real state
+change. For an event, assert dispatch/cancellation and cleanup. For a queue, assert the chosen
+scheduling condition rather than sleeping a guessed duration. For structural replacement, test the
+owned range and child lifetimes.
 
-The rendering Scope owns the listener. Closing it removes that listener without removing handlers
-installed by other code.
-
-## Collections have their own local cost
-
-A scalar part has one target, but class, data, and spread inputs contain local collections. Their
-work is proportional to the previous and next collection they reconcile, not to the page. Read
-[Class names without className replacement](/explore/dom-class-names) for the class-token ledger.
-
-## Structure is the separate case
-
-A node interpolation owns a bounded dynamic range rather than one scalar target. It can insert,
-remove, or move only values represented inside that range. Read
-[Direct updates, local reconciliation](/explore/dom-updates-and-reconciliation) for its cost model,
-then [Using DomRenderEvent](/explore/dom-render-event) for exact foreign DOM output.
+A passing text assertion proves only that text. It does not prove a selection survived, another
+owner's class remained, or a removed listener stopped running. Move to
+[Direct updates, local reconciliation](/explore/dom-updates-and-reconciliation) when the interaction
+actually changes a collection or nested range.

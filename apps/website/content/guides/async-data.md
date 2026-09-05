@@ -1,7 +1,7 @@
 ---
 title: "Async data without loading flags"
 summary: "Represent loading, refreshes, failure, and optimistic edits as values that work in any renderer."
-section: "State"
+section: "Async data"
 kind: "guide"
 order: 2.4
 ---
@@ -10,6 +10,18 @@ A results page needs more than a value and a `loading` boolean. It needs to dist
 that has not started, a first request, cached results being refreshed, and a failed request.
 `@typed/async-data` gives those states one structural union. It describes work; Effect and Fx still
 own execution, cancellation, and request ordering.
+
+## Name the resource before choosing its state
+
+Start by naming the resource: “the issue list for workspace W and query Q,” rather than “the
+loading state of this component.” That identity determines which previous success is safe to show,
+which requests may share work, and what must disappear when the user changes account.
+
+Read [Build an asynchronous issue search](/explore/async-data-requests-and-cache) for a complete
+request model, and [Optimistic edits and reconciliation](/explore/async-data-optimistic-edits) for
+writes whose provisional result becomes visible before the server accepts it. AsyncData belongs
+between those resource policies and the renderer; it can also be inspected in a command, test,
+worker, or server request.
 
 ## Keep the previous result while refreshing
 
@@ -121,6 +133,34 @@ const accepted = AsyncData.success(pending.value)
 For overlapping edits, the application must decide which response owns the latest state. Restoring
 an old `previous` after a newer edit can discard that edit. Serialize mutations or carry an operation
 identity and reconcile responses against it.
+
+## Transform the result without erasing its history
+
+`map` transforms the successful base and every optimistic value while retaining the union's
+structure, progress, and Cause. Use it for a display projection, such as selecting result labels.
+`mapError` adapts expected errors inside the Cause and keeps defects/interruption intact.
+
+```ts
+import { Cause } from "effect"
+import * as AsyncData from "@typed/async-data"
+
+const cached = AsyncData.success([{ id: "42", title: "Old title" }])
+const editing = AsyncData.optimistic(cached, [{ id: "42", title: "New title" }])
+const titles = AsyncData.map(editing, (issues) => issues.map((issue) => issue.title))
+const offline = AsyncData.mapError(
+  AsyncData.failure(Cause.fail({ status: 503 })),
+  ({ status }) => ({ kind: "unavailable" as const, retryable: status >= 500 }),
+)
+```
+
+`flatMap` has a different purpose: the callback returns the replacement AsyncData. It runs for the
+current Success or outer Optimistic value; it does **not** rebuild optimistic history for you.
+Returning `success(...)` from `flatMap` deliberately discards the input's progress and history.
+Choose `map` when retaining those is part of the contract.
+
+Progress is producer-supplied data. `{ loaded: 0 }` can mark indeterminate refresh; a determinate
+percentage needs a meaningful positive `total`, matching units, and application checks. The
+constructors do not measure a request, validate business ranges, or report bytes automatically.
 
 ## Validate data crossing a boundary
 

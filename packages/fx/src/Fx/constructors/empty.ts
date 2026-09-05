@@ -23,6 +23,6 @@ import { make } from "./make.js";
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Value sources
  */
 export const empty: Fx<never, never, never> = make<never, never, never>(() => void_);

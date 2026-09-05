@@ -1,104 +1,121 @@
 ---
 title: "Attributes, properties, and boolean state"
 summary: "Choose the exact browser field a scalar interpolation owns, including sparse attributes and boolean presence."
-section: "Templates"
+section: "Template bindings"
 kind: "deep-dive"
-order: 3.15
+order: 1
 ---
 
-An interpolation in an element opening tag is not one generic “prop.” Its spelling selects a
-native DOM surface. That choice matters when the value changes: a normal attribute changes the
-serialized attribute, a property changes the live object, and a boolean attribute changes whether
-the attribute exists at all.
+A search input can have `value="scope"` in its HTML while its visible text says `events`. That is
+normal: the attribute describes markup, while the property is the live edit buffer. A disabled
+button adds another distinction—its boolean attribute is true by being present, even if its text
+is `"false"`.
 
-The table is a useful first pass. The sections below define the set, clear, and ownership behavior
-of each form.
+After [authoring a template](/explore/authoring-typed-templates), learn these three browser contracts
+before choosing a binding. The syntax tells Typed which exact field should receive future values.
 
-| Syntax | Target | When a value changes |
-| --- | --- | --- |
-| `name=${value}` | one HTML, SVG, or MathML attribute | serializes a value; `null` and `undefined` remove it |
-| `name="before-${value}"` | one sparse attribute | joins its authored segments and writes the resulting string |
-| `.name=${value}` | one DOM property | assigns the value as-is |
-| `?name=${value}` | one boolean attribute | a truthy value adds it; a falsy value removes it |
+## Use attributes for serialized metadata
 
-Each scalar attribute, property, and boolean part retains its exact native target during a
-mount. A later scalar update is O(1) with respect to the surrounding tree. That does not make a
-whole template mount O(1).
-
-## Attributes serialize values
-
-Use an ordinary attribute when the browser's attribute is the thing you mean: `aria-*`, `role`,
-`title`, `id`, `href`, and similar markup metadata. Typed converts non-nullish values to text. In a
-full attribute part, `null` and `undefined` remove the attribute; `false` is not a removal signal
-and becomes the string `"false"`.
+An ordinary `name=${value}` part sets one attribute. Non-nullish values become strings; `null` and
+`undefined` remove the attribute. `false` becomes `"false"`, which is useful for an ARIA state but
+is not a removal signal.
 
 ```ts
 import { html } from "@typed/template";
 
-const label = "Open workspace settings";
+const description: string | null = "Search titles and descriptions";
 
-export const settingsButton = html`<button
-  aria-label=${label}
-  data-description="Action: ${label}"
->
-  Settings
-</button>`;
-```
-
-`aria-label=${label}` is a full part. `data-description="Action: ${label}"` is a sparse attribute:
-the literal text and the dynamic segment are joined in authored order. A nullish sparse segment
-becomes an empty string; it does not remove the surrounding attribute. Use the full form when
-absence is meaningful.
-
-## Properties write live element state
-
-Prefix a name with `.` when the value belongs to the element object instead of its serialized
-markup. Typed assigns the received value directly; it does not stringify it and it does not use
-`null` or `undefined` as a special removal convention. This is the right form for live control
-state such as an input's `value` or a checkbox's `indeterminate` property.
-
-```ts
-import { Fx } from "@typed/fx";
-import { html } from "@typed/template";
-
-const text = Fx.fromIterable(["Ada", "Grace"]);
-const indeterminate = true;
-
-export const nameControl = html`<input
-  .value=${text}
-  .indeterminate=${indeterminate}
+export const field = html`<input
+  type="search"
+  aria-label="Search saved articles"
+  title=${description}
 />`;
 ```
 
-For example, `value="Ada"` is an attribute in the markup, whereas `.value=${"Ada"}` assigns the
-input's current `value` property. Do not use a property part simply because an attribute has a
-similar name; choose the browser contract you need after the user and the platform have had a
-chance to change the element.
+If `description` is a live producer instead of this snapshot, its emissions update the same attribute.
+No input replacement is needed. Choose this form for metadata such as `aria-*`, `id`, `role`, `href`,
+and `title` when that attribute is the surface you mean.
 
-## Boolean attributes use presence
+A sparse expression such as `title="Search: ${description}"` is different. It joins literal and
+dynamic segments; a nullish segment becomes empty text but does not remove the whole attribute.
+Use a full attribute part when absence itself is meaningful.
 
-Boolean HTML attributes do not use the text `"true"` or `"false"`. Their native meaning is whether
-the attribute is present. Prefix the name with `?` so the part uses that model. The value is coerced
-by JavaScript truthiness: `true`, a non-empty string, and a non-zero number add the attribute;
-`false`, `null`, `undefined`, `0`, and `""` remove it. In particular, the string `"false"` adds the
-attribute because it is truthy.
+## Use properties for current browser state
+
+A leading dot means direct assignment to the element object. It does not stringify the value and
+does not treat nullish values as an instruction to remove an attribute.
 
 ```ts
-import { Fx } from "@typed/fx";
+import { RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
 import { html } from "@typed/template";
+import * as EventHandler from "@typed/template/EventHandler";
 
-const disabled = Fx.fromIterable([false, true]);
-
-export const saveButton = html`<button ?disabled=${disabled}>Save</button>`;
+export const QueryField = component(function* () {
+  const query = yield* RefSubject.make("scope");
+  const readQuery = EventHandler.make((event: Event) =>
+    RefSubject.set(query, (event.currentTarget as HTMLInputElement).value),
+  );
+  return html`<label>
+    Search saved articles
+    <input type="search" value="scope" .value=${query} oninput=${readQuery} />
+  </label>`;
+});
 ```
 
-This updates the `disabled` attribute's presence. It does not assign a `disabled` property and it
-never produces `disabled="false"`.
+The attribute provides initial serialized text. `.value` makes application state the writer of the
+current property, and `oninput` records user edits back into that state. The browser's
+[value property documentation](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/value)
+describes the live value you read here.
 
-Records and element lifetimes have different cost and ownership rules. Continue with
-[Spread props and data records](/explore/template-spreads-data) for `.data`, classes, nested
-properties, event handlers, and per-key cleanup; then read
-[Reference the native element](/explore/template-references-and-element-access) for `ref` timing,
-Scope ownership, and hydration. [Native events with Effect](/explore/native-events-with-effect)
-covers listeners, while [DOM scalar parts and attributes](/explore/dom-parts-and-attributes) follows
-these bindings into the renderer-level cost model.
+This does not create a generic two-way binding: the event and state update are explicit. If the
+application later assigns a different value, it is intentionally replacing the current edit buffer.
+Selection policy, validation, and request timing remain application decisions.
+
+DOM-only fields such as `.indeterminate` also belong to properties. Server HTML has no generic
+representation for property assignments; an initial `.value` alone does not serialize `value=`.
+Use an authored attribute where the initial response needs one, and let client setup apply the
+property when it starts.
+
+## Use boolean parts when presence means true
+
+`?disabled=${value}` toggles the attribute according to JavaScript truthiness:
+
+```ts
+import { RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
+import { html } from "@typed/template";
+
+export const SaveControl = component(function* () {
+  const readOnly = yield* RefSubject.make(false);
+  return html`<button type="button" ?disabled=${readOnly}>Save search</button>`;
+});
+```
+
+`false`, `null`, `undefined`, `0`, and an empty string remove the attribute. A nonempty string,
+including `"false"`, adds it. Pass a boolean when that is your domain meaning rather than relying
+on an accidental string conversion.
+
+Do not use the boolean form for `aria-expanded`: assistive technology needs an attribute string
+representing true or false, not a presence-only HTML boolean. `aria-expanded=${expanded}` and
+`?disabled=${disabled}` intentionally use different forms.
+
+## Inspect the field that the binding actually owns
+
+| Binding | Inspect | Clearing behavior |
+| --- | --- | --- |
+| `title=${value}` | `getAttribute("title")` | nullish removes the attribute |
+| `title="Search: ${value}"` | the complete joined attribute | nullish segment becomes empty text |
+| `.value=${value}` | `input.value` | assigns the supplied value directly |
+| `?disabled=${value}` | `hasAttribute("disabled")` | falsy removes presence |
+
+When DevTools shows a surprising result, compare the attribute and property instead of assuming
+the renderer missed a state change. A mutation observer for attributes cannot prove that a property
+wasn't written. When the input object itself changes, inspect a parent switch or changing key;
+one scalar binding does not require that replacement.
+
+These parts retain their exact targets after setup. A later write is direct relative to the
+surrounding tree; serialization and browser work can still depend on the value. Record-shaped
+bindings have additional local work, described in [Spread props and data records](/explore/template-spreads-data).
+For the full event-to-mutation debugging path, continue with
+[DOM scalar parts and attributes](/explore/dom-parts-and-attributes).

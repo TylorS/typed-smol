@@ -13,7 +13,7 @@
  * listener registration, handler fibers, interruption, and finalization.
  *
  * @since 1.0.0
- * @category events
+ * @category Native event handling
  * @packageDocumentation
  */
 import type * as Cause from "effect/Cause";
@@ -44,7 +44,7 @@ import type * as Context from "effect/Context";
  * ```
  *
  * @since 1.0.0
- * @category symbols
+ * @category Event handler protocol
  */
 export const EventHandlerTypeId = Symbol.for("@typed/template/EventHandler");
 
@@ -69,7 +69,7 @@ export const EventHandlerTypeId = Symbol.for("@typed/template/EventHandler");
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Event handler protocol
  */
 export type EventHandlerTypeId = typeof EventHandlerTypeId;
 
@@ -125,7 +125,7 @@ export type EventHandlerTypeId = typeof EventHandlerTypeId;
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Event handlers
  */
 export interface EventHandler<Ev extends Event = Event, E = never, R = never> extends Pipeable {
   /**
@@ -141,7 +141,7 @@ export interface EventHandler<Ev extends Event = Event, E = never, R = never> ex
    * This field is immutable metadata for the handler description.
    *
    * @since 1.0.0
-   * @category symbols
+   * @category Event handlers
    */
   readonly [EventHandlerTypeId]: EventHandlerTypeId;
   /**
@@ -158,7 +158,7 @@ export interface EventHandler<Ev extends Event = Event, E = never, R = never> ex
    * The mounted EventSource runs each Effect in a fiber owned by its Scope.
    *
    * @since 1.0.0
-   * @category handlers
+   * @category Event work
    */
   readonly handler: (event: Ev) => Effect.Effect<unknown, E, R>;
   /**
@@ -174,7 +174,7 @@ export interface EventHandler<Ev extends Event = Event, E = never, R = never> ex
    * EventSource reads this immutable record when attaching the listener.
    *
    * @since 1.0.0
-   * @category configuration
+   * @category Native listener policy
    */
   readonly options: (AddEventListenerOptions & EventOptions) | undefined;
 }
@@ -199,7 +199,7 @@ export interface EventHandler<Ev extends Event = Event, E = never, R = never> ex
  * ```
  *
  * @since 1.0.0
- * @category type-level
+ * @category Handler requirements
  */
 export type Services<T> = T extends EventHandler<infer _Ev, infer _E, infer R> ? R : never;
 
@@ -223,7 +223,7 @@ export type Services<T> = T extends EventHandler<infer _Ev, infer _E, infer R> ?
  * ```
  *
  * @since 1.0.0
- * @category type-level
+ * @category Handler failures
  */
 export type Error<T> = T extends EventHandler<infer _Ev, infer E, infer _R> ? E : never;
 
@@ -249,7 +249,7 @@ export type Error<T> = T extends EventHandler<infer _Ev, infer E, infer _R> ? E 
  * ```
  *
  * @since 1.0.0
- * @category type-level
+ * @category Native event types
  */
 export type EventOf<T> = T extends EventHandler<infer Ev, infer _E, infer _R> ? Ev : never;
 
@@ -275,7 +275,7 @@ export type EventOf<T> = T extends EventHandler<infer Ev, infer _E, infer _R> ? 
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Native listener policy
  */
 export type EventOptions = {
   readonly preventDefault?: boolean;
@@ -339,7 +339,7 @@ export type EventOptions = {
  * @param handler - The function to execute when the event occurs. Can return void or an Effect.
  * @param options - Optional configuration for the event listener.
  * @since 1.0.0
- * @category constructors
+ * @category Event handler creation
  */
 export function make<Ev extends Event, E = never, R = never>(
   handler: (event: Ev) => void | Effect.Effect<unknown, E, R>,
@@ -401,7 +401,7 @@ export function make<Ev extends Event, E = never, R = never>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Handler service provision
  */
 export const provide: {
   <R2 = never>(
@@ -456,7 +456,7 @@ export const provide: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Handler failure recovery
  */
 export const catchCause: {
   <E, E2 = never, R2 = never>(
@@ -502,7 +502,7 @@ export const catchCause: {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Handler normalization
  */
 export function fromEffectOrEventHandler<Ev extends Event, E = never, R = never>(
   handler: Effect.Effect<unknown, E, R> | EventHandler<Ev, E, R>,
@@ -538,7 +538,7 @@ export function fromEffectOrEventHandler<Ev extends Event, E = never, R = never>
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Event handler protocol
  */
 export function isEventHandler<Ev extends Event, E = never, R = never>(
   handler: unknown,
@@ -568,7 +568,7 @@ export function isEventHandler<Ev extends Event, E = never, R = never>(
  * ```
  *
  * @since 1.0.0
- * @category utilities
+ * @category Native event control
  */
 export function handleEventOptions<Ev extends Event>(eventOptions: EventOptions, ev: Ev): boolean {
   if (eventOptions.preventDefault) ev.preventDefault();
@@ -605,7 +605,7 @@ export function handleEventOptions<Ev extends Event>(eventOptions: EventOptions,
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Default action control
  */
 export function preventDefault<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
@@ -639,7 +639,7 @@ export function preventDefault<Ev extends Event, E = never, R = never>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Propagation control
  */
 export function stopPropagation<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
@@ -671,7 +671,7 @@ export function stopPropagation<Ev extends Event, E = never, R = never>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Propagation control
  */
 export function stopImmediatePropagation<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
@@ -705,7 +705,7 @@ export function stopImmediatePropagation<Ev extends Event, E = never, R = never>
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Listener lifetime
  */
 export function once<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,
@@ -739,7 +739,7 @@ export function once<Ev extends Event, E = never, R = never>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Native listener policy
  */
 export function passive<Ev extends Event, E = never, R = never>(
   handler: EventHandler<Ev, E, R>,

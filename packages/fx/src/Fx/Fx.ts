@@ -67,7 +67,7 @@ import { FxTypeId, isFx } from "./TypeId.js";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Type contracts
  */
 export interface Fx<A, E = never, R = never> extends Pipeable {
   /**
@@ -217,7 +217,7 @@ export declare namespace Fx {
    *
    * This conditional type performs no runtime work.
    * @since 1.0.0
-   * @category type-level
+   * @category Type contracts
    */
   export type Success<T> = [T] extends [never]
     ? never
@@ -238,7 +238,7 @@ export declare namespace Fx {
    *
    * This conditional type performs no runtime work.
    * @since 1.0.0
-   * @category type-level
+   * @category Type contracts
    */
   export type Error<T> = [T] extends [never]
     ? never
@@ -259,7 +259,7 @@ export declare namespace Fx {
    *
    * This conditional type performs no runtime work.
    * @since 1.0.0
-   * @category type-level
+   * @category Type contracts
    */
   export type Services<T> = [T] extends [never]
     ? never
@@ -291,7 +291,7 @@ export declare namespace Fx {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Providing services
    */
   export interface Service<Self, Id extends string, A, E> extends Fx<A, E, Self> {
     /**
@@ -406,7 +406,7 @@ export declare namespace Fx {
  *
  * This type alias performs no runtime work.
  * @since 1.0.0
- * @category type-level
+ * @category Type contracts
  */
 export type Success<T> = Fx.Success<T>;
 
@@ -422,7 +422,7 @@ export type Success<T> = Fx.Success<T>;
  *
  * This type alias performs no runtime work.
  * @since 1.0.0
- * @category type-level
+ * @category Type contracts
  */
 export type Error<T> = Fx.Error<T>;
 
@@ -438,7 +438,7 @@ export type Error<T> = Fx.Error<T>;
  *
  * This type alias performs no runtime work.
  * @since 1.0.0
- * @category type-level
+ * @category Type contracts
  */
 export type Services<T> = Fx.Services<T>;
 
@@ -477,7 +477,7 @@ const VARIANCE: Fx.Variance<any, any, any> = {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Providing services
  */
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): Fx.Class<Self, Id, A, E> => {

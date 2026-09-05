@@ -26,7 +26,7 @@ import { skipWhile, skipWhileEffect } from "./skipWhile.js";
  * @param predicate - The predicate function.
  * @returns An `Fx` that emits once the predicate first matches.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const dropUntil: {
   <A>(predicate: (a: A) => boolean): <E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;
@@ -68,7 +68,7 @@ export const dropUntil: {
  * @param predicate - Effectful predicate function.
  * @returns An `Fx` that emits once the predicate first matches.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const dropUntilEffect: {
   <A, E2, R2>(

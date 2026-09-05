@@ -1,108 +1,119 @@
 ---
 title: "Rendering HTML on the server"
 summary: "Serialize a template to HTML chunks or one string without coupling it to HTTP transport."
-section: "DOM and platform"
+section: "Template rendering"
 kind: "guide"
-order: 6.2
+order: 2
 ---
 
-An email needs a complete string. An HTTP response may be able to send chunks. A page that will
-become interactive needs hydration markers; an export does not. Make those two choices separately:
-the renderer layer chooses the markup contract, and the consumer chooses buffering or streaming.
+A saved-article page can serve three destinations: a static export, a buffered interactive response,
+or a streamed interactive response. Make two decisions independently. The renderer decides whether
+the markup includes adoption metadata; the consumer decides whether to collect the output or deliver
+ordered chunks.
 
-| Destination | Renderer | Consumer |
+This article starts after [template authoring](/explore/authoring-typed-templates). It owns
+serialization, not HTTP route setup. For the complete browser handoff, continue to
+[Server rendering and hydration](/explore/server-rendering-and-hydration).
+
+## Choose the destination's markup contract
+
+| Destination | Renderer layer | Typical consumer |
 | --- | --- | --- |
-| Email or static export | `StaticHtmlRenderTemplate` | usually `renderToHtmlString` |
-| Interactive page, buffered response | `HtmlRenderTemplate` | `renderToHtmlString` |
-| Interactive page, streamed response | `HtmlRenderTemplate` | `renderToHtml` |
+| Email or static export | `StaticHtmlRenderTemplate` | `renderToHtmlString` |
+| Interactive page with a complete buffered body | `HtmlRenderTemplate` | `renderToHtmlString` |
+| Interactive page with incremental transport | `HtmlRenderTemplate` | `renderToHtml` |
 
-## Produce a complete static document
+Static output deliberately omits Typed hydration metadata. A later browser mount can create fresh
+DOM, but it cannot infer adoption compatibility from arbitrary static HTML. Interactive output
+includes the template/range information its browser counterpart needs.
 
-Keep data as interpolations. An account name containing markup is text, not authored HTML.
+## Produce a complete export without involving HTTP
 
 ```ts
 import { Effect } from "effect";
 import { html, renderToHtmlString, StaticHtmlRenderTemplate } from "@typed/template";
 
-const receipt = (name: string, total: string) => html`<article>
-  <h1>Thank you, ${name}</h1>
-  <p>Your order total is ${total}.</p>
+const collection = (name: string, titles: ReadonlyArray<string>) => html`<article>
+  <h1>${name}</h1>
+  <ul>${titles.map((title) => html`<li>${title}</li>`)}</ul>
 </article>`;
 
-export const renderReceipt = (name: string, total: string) =>
-  receipt(name, total).pipe(
+export const exportCollection = (name: string, titles: ReadonlyArray<string>) =>
+  collection(name, titles).pipe(
     renderToHtmlString,
     Effect.provide(StaticHtmlRenderTemplate),
     Effect.scoped,
   );
 ```
 
-This function returns an Effect that succeeds with a string. It does not send mail or write a file.
-The application runs it and passes the result to its destination. Static rendering omits Typed's
-adoption metadata, so a later Typed browser mount will construct fresh output.
+No setup component is needed for this plain template function. Its returned Effect succeeds with
+a string; it does not send mail, write a file, or select response headers. The caller owns that next
+boundary. Ordinary titles remain text, including names containing `<` or `&`.
 
-`renderToHtmlString` buffers all emitted strings before joining them. Use it when the complete body
-is reasonably bounded or the destination requires a string. Its memory use grows with the document.
+Buffering keeps the entire output until completion, so memory grows with the document. It also
+allows a render failure to be handled before committing the body to its destination.
 
-## Keep chunks when the destination can consume them
+## Keep chunks only if the transport can use them
 
 ```ts
 import { Fx } from "@typed/fx";
 import { html, HtmlRenderTemplate, renderToHtml } from "@typed/template";
 
-const productPage = html`<main>
-  <h1>Desk lamp</h1>
-  <p>Adjustable light for your workspace.</p>
+const page = html`<main>
+  <h1>Saved articles</h1>
+  <p>Your collection is ready.</p>
 </main>`;
 
-export const productChunks = productPage.pipe(
-  renderToHtml,
-  Fx.provide(HtmlRenderTemplate),
-);
-
-// Hand this Stream to a response adapter that encodes strings as bytes.
-export const productStream = productChunks.pipe(Fx.toStream);
+export const chunks = page.pipe(renderToHtml, Fx.provide(HtmlRenderTemplate));
+export const responseStream = chunks.pipe(Fx.toStream);
 ```
 
-The result is ordered strings, not HTTP messages. The response adapter still owns content type,
-status, headers, encoding, and cancellation. If it buffers the Stream, you have not gained streaming
-at the transport boundary. Chunk boundaries are implementation output, not application message
-boundaries: a chunk need not contain a whole element.
+`responseStream` contains ordered strings. The response adapter must encode bytes and own status,
+headers, content type, cancellation, and backpressure at its transport boundary. If the adapter
+collects the stream before sending it, switching this API alone has not made the response stream.
+A chunk need not be a complete element or application message.
 
-Streaming also changes error timing. A buffered render can fail before a response body is committed.
-Once a streaming transport has sent headers and part of the body, it cannot replace those bytes with
-a different error page. Recover expected data failures before serialization when possible, and let
-the server decide how to log and close a failed response. Keep request-scoped rendering work inside
-the response consumer's lifetime so cancellation can interrupt it.
+Once a transport has committed headers and body bytes, a later render failure cannot replace them
+with a different status and error document. Resolve or recover expected request-data failures before
+serialization where possible. Request cancellation should interrupt rendering work rather than leave
+its producers alive after the client disconnects.
 
-## A server render needs initial values
+## Supply values that can exist during a response
 
-The HTML renderer reads the initial value of ordinary live inputs instead of subscribing forever.
-That is a snapshot for one response, not a promise that every source produces a value immediately.
-A source that never emits can stall its part. Resolve required request data, provide an intentional
-initial value, or put a timeout/recovery policy around the relevant Effect.
+Ordinary live sources are sampled for an initial response value. The server does not keep a query
+subscription open waiting for the visitor's future keystrokes. A browser-only event stream with no
+initial emission can therefore stall a part instead of producing an empty value automatically.
 
-A nested `HtmlRenderEvent` stream is different: it represents a sequence of renderer-owned chunks,
-so its terminal marker and ordered completion must be honored rather than taking only its first
-chunk. [Using HtmlRenderEvent](/explore/html-render-event) explains that protocol.
+Use request data or intentionally initialized state. Acquire services at the request boundary so
+concurrent requests do not share a module-global mutable subject. Errors and service requirements
+from interpolated Effects remain in the resulting program's `E` and `R` channels.
 
-Errors and required services from interpolated Effects remain in the returned `E` and `R` channels.
-Provide request-specific services at the request boundary; constructing the template does not run
-the service call. Avoid putting request state into a module-global mutable subject.
+Nested `HtmlRenderEvent` streams are different: their emissions are ordered chunks of one
+serialization, not successive application snapshots. They must be consumed according to their
+completion protocol. Taking only their first chunk would truncate the document; see
+[Using HtmlRenderEvent](/explore/html-render-event).
 
-## HTML represents only the serialized half of the view
+## Account for the fields HTML cannot represent
 
-The HTML renderer escapes ordinary dynamic text and attributes. Events and ordinary ref callbacks
-do not run on the server. DOM property parts such as `.value` are not serialized as attributes;
-provide an appropriate authored attribute as well when an initial control value must be visible
-before the client runs. Hydration refs are the explicit exception that serialize state metadata.
+Events and ordinary refs do not run on the server. DOM properties such as `.value` are not
+serialized as generic attributes. If the initial response should display a search query, provide
+an appropriate initial `value` attribute as well as any client-controlled property. Hydration refs
+are the explicit mechanism for serialized state metadata.
 
-`HtmlRenderEvent` asserts that another renderer already owns safe serialization. It does not
-sanitize a string. Use normal interpolations for user data and reserve that output type for an
-actual renderer adapter.
+Escaping depends on the part's context. Attribute/text data uses its corresponding escaping;
+script/style text has different closing-tag handling. `HtmlRenderEvent` asserts an existing
+serializer owns the string; it is not a sanitizer for user content.
+[Text-only contexts](/explore/template-text-only-contexts) develops that boundary.
 
-For an interactive page, the browser must mount the same inner template under a dedicated host.
-[Hydrating Typed HTML](/explore/hydrating-typed-html) covers that handoff. The
-[HTML output recipe](/integrate/html-output) adds Effect HTTP transport, and the
-[Html module](/reference/modules/%40typed%2Ftemplate%2FHtml) documents both renderer layers and
-consumers.
+## Locate a stalled response before changing render modes
+
+Observe data readiness, first chunk, and completion separately. If no initial data arrives, fix the
+producer; streaming does not invent it. If data is ready but serialization emits nothing, inspect
+required services and the selected renderer. If chunks arrive without completion, inspect nested
+output completion and live inputs. If serialization completes but the client sees nothing, inspect
+transport buffering and encoding.
+
+A focused serialization test parses the result and compares recovered text, verifies finite
+completion, and checks metadata for the chosen layer. Test HTTP cancellation and post-header
+failures at the transport adapter separately. The [Html reference](/reference/modules/%40typed%2Ftemplate%2FHtml)
+defines both layers and consumers; the [HTML output recipe](/integrate/html-output) adds transport.

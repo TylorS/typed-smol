@@ -1,111 +1,116 @@
 ---
 title: "RenderEvent: any UI can participate"
 summary: "Choose the output boundary that matches the renderer you already have."
-section: "Integration"
+section: "Template internals"
 kind: "concept"
-order: 10
+order: 1
 ---
 
-What should a renderer emit when it needs to participate in a Typed template? Emit
-`Fx<RenderEvent, E, R>` and choose the representation it actually owns: live DOM nodes in the
-browser, or trusted HTML chunks for server output.
+A search page can contain a canvas produced by a chart library and a server-rendered article preview
+produced by another serializer. Neither producer needs to become a Typed template interpreter.
+They need a small output boundary that says what representation they already own.
 
-## Choose the representation first
+This is the starting point for library authors. Application authors can compose normal templates
+using [renderable values](/explore/renderable-normalization). Here the question is how already-produced
+UI participates without surrendering its native identity or hiding its lifetime.
+
+## Choose output by what the producer actually has
+
+| Producer owns | Output value | What the consumer receives |
+| --- | --- | --- |
+| Native DOM node or range | `DomRenderEvent` | those exact objects |
+| Correctly serialized HTML | `HtmlRenderEvent` | trusted ordered string chunks |
+| Application text/data | ordinary interpolation | context-escaped data |
+
+The producing Fx supplies sequencing, failures, required services, and cancellation. Constructing
+an event value does none of those things by itself.
 
 ```ts
 import { Fx } from "@typed/fx";
 import { DomRenderEvent, HtmlRenderEvent } from "@typed/template/RenderEvent";
 
-const canvas = document.createElement("canvas");
-canvas.width = 640;
-canvas.height = 320;
-const domView = Fx.succeed(DomRenderEvent(canvas));
+export const browserOutput = Fx.sync(() => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 320;
+  canvas.height = 120;
+  return DomRenderEvent(canvas);
+});
 
-const htmlView = Fx.fromIterable([
-  HtmlRenderEvent("<article><h1>Catalog</h1>", false),
-  HtmlRenderEvent("<p>Rendered by the catalog service.</p></article>", true),
+export const serverOutput = Fx.fromIterable([
+  HtmlRenderEvent("<article><h2>Saved article</h2>", false),
+  HtmlRenderEvent("<p>A serializer-owned preview.</p></article>", true),
 ]);
 ```
 
-`DomRenderEvent` carries the exact `Node`, `DocumentFragment`, `Wire`, or nested readonly
-collection already produced by the renderer. `HtmlRenderEvent` carries one trusted string chunk
-and its `last` marker. A DOM consumer should not serialize nodes just to recover them later; an HTML
-consumer should not parse a string and pretend it had node identity.
+The browser value is lazy: each run creates its canvas. The server example contains constant
+serializer-owned markup and marks the terminal chunk. Those Fx values carry different update
+semantics despite sharing the `RenderEvent` union.
 
-The `Fx` channels remain visible at the boundary. `A` is the output, `E` is the expected failure
-type, and `R` is the Effect service requirement. The [Effect type](https://effect.website/docs/v4/getting-started/the-effect-type/)
-provides those channels; the running [Effect Scope](https://effect.website/docs/v4/resource-management/scope/)
-owns the producer's subscriptions and cleanup. Creating an output value does not start or stop the
-renderer that produced it.
+## Preserve the foreign renderer's actual update model
 
-## DOM output means identity
+An editor commonly creates one host, then updates its own descendants in place. Its adapter should
+usually emit that host once and keep the editor's work scoped. Recreating the host for every domain
+change would discard the identity the integration is supposed to retain.
 
-Use `DomRenderEvent` when the object itself matters: a custom element, media element, editor,
-canvas, map, or output from an existing renderer. The receiving template may place, move, or remove
-the represented nodes in its own dynamic range. It does not clone them, rewrite their descendants,
-or claim the parent and siblings around that range.
+A producer that truly replaces its root can emit replacement objects. The containing Typed range
+may insert, move, or remove those represented objects; the producer still owns internal descendants,
+resource teardown, and its application state. It does not gain authority over the surrounding
+page merely because its output can be placed there.
+
+For HTML, emissions are chunks of one finite serialization, not successive full replacement
+views. The consumer must preserve order and completion. Serializing a live node and parsing it
+again cannot preserve that node's listeners, selection, or identity.
+
+## Compose at the smallest useful boundary
 
 ```ts
 import { Fx } from "@typed/fx";
 import { html } from "@typed/template";
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 
-const map = document.createElement("canvas");
-map.dataset["renderer"] = "map";
-const mapOutput = Fx.succeed(DomRenderEvent(map));
-const page = html`<section aria-label="Price chart">${mapOutput}</section>`;
+const chart = Fx.sync(() => DomRenderEvent(document.createElement("canvas")));
+export const page = html`<main>
+  <h1>Saved-article activity</h1>
+  <section aria-label="Activity chart">${chart}</section>
+</main>`;
 ```
 
-`DomRenderEvent` is output transport, not a mount API. If the foreign renderer has an imperative
-`mount` and `dispose`, acquire and release those resources in the producer's Scope. See
-[Using DomRenderEvent](/explore/dom-render-event) for the exact-node contract and
-[Cooperative by design](/explore/cooperative-by-design) for the ownership rule around shared DOM.
+No wrapper protocol or assumed `foreign.mount()` return type appears here. The adapter models the
+foreign API it actually has. When setup acquires an editor, observer, or timer, use
+`component(function* (...) { ... return output; })` and scoped Effects. When no setup is needed,
+a direct template or Fx value is sufficient. A generator-backed non-view producer uses `Fx.fn`.
 
-## HTML output means trusted serialization
+The inferred `E` and `R` channels remain part of the caller's program. Do not erase a foreign
+initialization error behind an untracked Promise or start a hidden fiber that outlives the host.
+[Using DomRenderEvent](/explore/dom-render-event) develops a complete scoped browser adapter.
 
-Use `HtmlRenderEvent` when another renderer already owns escaping and serialization. The HTML
-consumer inserts `html` as renderer-owned transport, so the constructor deliberately performs no
-sanitization. Never pass user content to it:
+## Make trust explicit at the HTML boundary
+
+Ordinary text belongs in interpolation:
 
 ```ts
 import { html } from "@typed/template";
 
-const userName = "<script>alert('not markup')</script>";
-const safe = html`<p>Hello, ${userName}</p>`;
+const note = "<strong>This is saved text, not authored markup.</strong>";
+export const preview = html`<p>${note}</p>`;
 ```
 
-Ordinary interpolation is the application-data path; the HTML renderer escapes the value in its
-text context. Wrapping that same string in `HtmlRenderEvent` would make a false trust claim. See
-[Using HtmlRenderEvent](/explore/html-render-event) for chunk ordering and completion.
+Wrapping `note` in `HtmlRenderEvent` would make an unsupported claim that a serializer already owns
+its HTML interpretation. The constructor performs no sanitization. Keep application data on the
+escaped path; use branded HTML only for an actual serializer with a defined format/trust contract.
+See [Using HtmlRenderEvent](/explore/html-render-event) for terminal chunks and nested serialization.
 
-## The boundary is compositional
+## Decide whether you need an output adapter or an interpreter
 
-Templates can consume either form through their renderer service:
+If the library produces existing output, stop at `RenderEvent`. If it only needs to measure or
+configure a particular template element, a scoped [ref](/explore/template-references-and-element-access)
+is smaller still. Implement `RenderTemplate` only when the library must interpret template literals
+and their parts for a target.
 
-```ts
-import { html } from "@typed/template";
-import { Fx } from "@typed/fx";
-import { DomRenderEvent } from "@typed/template/RenderEvent";
+Test the boundary accordingly: exact node identity and teardown for DOM, escaped/trusted ownership
+and ordered completion for HTML, and propagated errors/cancellation for both. Public
+`isDomRenderEvent` and `isHtmlRenderEvent` guards distinguish the representations; avoid structural
+checks on arbitrary `toString` objects.
 
-const widget = document.createElement("x-widget");
-const output = Fx.succeed(DomRenderEvent(widget));
-const composed = html`<main><aside>${output}</aside></main>`;
-```
-
-No `foreign.mount()` return type is assumed. The adapter models the foreign system's actual update
-source, error path, service requirements, and teardown, then maps its output to `RenderEvent`. That
-small boundary is enough for templates, routers, custom elements, and server renderers to compose.
-
-If the renderer needs to branch on output, use the public `isDomRenderEvent` and
-`isHtmlRenderEvent` guards. Do not infer representation by checking arbitrary object shape.
-
-## Do not use one form for the other
-
-- Use `DomRenderEvent` for live node identity and browser-managed state.
-- Use `HtmlRenderEvent` for trusted, ordered server serialization.
-- Use ordinary `html` interpolation for application data.
-- Use a dedicated host or dynamic range when the surrounding DOM has another owner.
-
-For the next implementation step, read [Mounting DOM output](/explore/mounting-dom-output) or
-[rendering HTML on the server](/explore/rendering-html-on-the-server). For cost and identity
-behavior after output enters a template, read [Direct updates, local reconciliation](/explore/dom-updates-and-reconciliation).
+The next library steps are [multi-node output](/explore/wire-and-rendered-dom-output) for ranges,
+or [the compilation pipeline](/explore/template-compilation-pipeline) for a genuine interpreter.

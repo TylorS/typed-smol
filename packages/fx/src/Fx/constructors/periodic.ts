@@ -38,7 +38,7 @@ import { fromSchedule } from "./fromSchedule.js";
  * @param period - The duration between emissions.
  * @returns An `Fx` that emits repeatedly.
  * @since 1.0.0
- * @category constructors
+ * @category Time and rate
  */
 export const periodic = (period: Duration.Input): Fx<void> =>
   /*#__PURE__*/ fromSchedule(spaced(period));

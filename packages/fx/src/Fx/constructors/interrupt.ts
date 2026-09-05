@@ -28,6 +28,6 @@ import { failCause } from "./failCause.js";
  * @param id - Optional numeric fiber identifier responsible for the interruption.
  * @returns An `Fx` that is interrupted.
  * @since 1.0.0
- * @category constructors
+ * @category Failure sources
  */
 export const interrupt = /*#__PURE__*/ flow(Cause.interrupt, failCause);

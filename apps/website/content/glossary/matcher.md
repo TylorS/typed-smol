@@ -7,6 +7,11 @@ related: [route, router, fx]
 links: []
 ---
 
-A Matcher combines ordered [Route](#route) cases and produces `Fx` output when it runs. Registration
-is pure; matching, guard evaluation, selected-route lifetime, and navigation observation happen only
-with a [Router](#router) and its required services.
+A Matcher is an immutable table of ordered route cases that produces reactive output when run.
+Registration builds the description; matching, guards, navigation observation, and selected-route
+lifetime happen with the required Router services.
+
+If a broad parameterized case captures a URL intended for a more specific case, inspect registration
+order and guards. Changing browser history cannot resolve competing cases. See
+[live route selection](/explore/router-navigation-live-selection) and the
+[Matcher API](/reference/modules/%40typed%2Frouter%2FMatcher).

@@ -43,10 +43,12 @@ class Make<A, E, R> implements Fx<A, E, R> {
  *
  * ## Ownership and lifetime
  *
- * `make` only stores `run`; it starts no work. Every call to `Fx.run` executes that
- * function in the caller's fiber. The function must keep all acquisition and cleanup
- * inside its returned Effect or a required `Scope`; its error channel is `never`
- * because producer failures must be sent to `sink.onFailure`.
+ * `make` stores the callback without invoking it. Calling `fx.run(sink)` asks the
+ * callback to construct its Effect; executing that Effect performs the subscription.
+ * Keep acquisition, publication, and cleanup inside the returned Effect or a required
+ * `Scope`, rather than performing side effects while constructing it. The returned
+ * Effect has no typed failure channel because producer failures are delivered through
+ * `sink.onFailure`; defects and interruption can still affect the run.
  *
  * @example
  * ```ts
@@ -62,7 +64,7 @@ class Make<A, E, R> implements Fx<A, E, R> {
  * @param run - A function that takes a `Sink` and returns an `Effect` that drives the stream.
  * @returns An `Fx` instance.
  * @since 1.0.0
- * @category constructors
+ * @category Callback sources
  */
 export const make = <A, E = never, R = never>(
   run: <RSink = never>(sink: Sink<A, E, RSink>) => Effect.Effect<unknown, never, R | RSink>,
@@ -84,7 +86,7 @@ export const make = <A, E = never, R = never>(
  * inspect or interrupt that delivery. Retaining it after cleanup is unsupported.
  *
  * @since 1.0.0
- * @category models
+ * @category Callback protocol
  */
 export type Emit<A, E = never> = {
   /**
@@ -208,7 +210,7 @@ export type Emit<A, E = never> = {
  *              It can return a cleanup effect.
  * @returns An `Fx` adapted from the callback.
  * @since 1.0.0
- * @category constructors
+ * @category Callback sources
  */
 export const callback = <A, E = never, R = never>(
   run: (emit: Emit<A, E>) => void | Effect.Effect<unknown, never, R>,

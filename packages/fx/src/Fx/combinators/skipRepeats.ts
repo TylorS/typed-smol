@@ -26,6 +26,6 @@ const skipRepeats_ = skipRepeatsWith<any>(equals);
  * @param fx - The `Fx` stream.
  * @returns An `Fx` with consecutive duplicates removed.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const skipRepeats: <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R> = skipRepeats_;

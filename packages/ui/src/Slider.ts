@@ -1,3 +1,14 @@
+/**
+ * Native range input publishing numeric updates during input.
+ * Keep programmatic values coherent with bounds and control expensive downstream work separately.
+ *
+ * Read the [Slider guide](/explore/ui-slider) for a complete example.
+ *
+ * [APG interaction reference](https://www.w3.org/WAI/ARIA/apg/patterns/slider/).
+ * @since 1.0.0
+ * @category Overview
+ * @packageDocumentation
+ */
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { RefSubject } from "@typed/fx";
@@ -5,66 +16,30 @@ import { EventHandler, html, type Renderable } from "@typed/template";
 import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
-/** Current renderer-independent slider value.
- * @remarks
- * ## Why
- * Value logic remains testable without mounting a range input.
- * ## Ownership and lifetime
- * Plain state is resource-free; RefSubject ownership is Scope-based.
- * @since 1.0.0
- * @category state
+/**
  */
 export interface State {
-  /** Finite value reflected by the native input.
-   * @remarks
-   * ## Why
-   * A single numeric source prevents state and DOM drift.
-   * ## Ownership and lifetime
-   * Plain data acquires no resources.
-   * @since 1.0.0
-   * @category state
+  /**
    */
   readonly value: number;
 }
 
-/** Initial slider value.
- * @remarks
- * ## Why
- * Explicit state gives SSR and hydration the same numeric snapshot.
- * ## Ownership and lifetime
- * Configuration is inert.
- * @since 1.0.0
- * @category state
+/**
  */
 export interface InitialState {
-  /** Finite initial value.
-   * @remarks
-   * ## Why
-   * It seeds the synchronized input state.
-   * ## Ownership and lifetime
-   * Plain data retains no resources.
-   * @since 1.0.0
-   * @category state
+  /**
    */
   readonly value: number;
 }
 
-/** Schema for slider hydration state.
- * @remarks
- * ## Why
- * Finite validation prevents invalid serialized range values.
- * ## Ownership and lifetime
- * The immutable schema acquires no resources.
- * @since 1.0.0
- * @category schemas
+/**
  */
 export const StateSchema = Schema.Struct({ value: Schema.Finite });
 
-/** Creates hydrated slider state.
+/**
+ * Creates hydrated slider state.
  * @remarks
- * ## Why
  * State can be composed and tested independently of the renderer.
- * ## Ownership and lifetime
  * The calling Effect Scope owns the returned RefSubject.
  * @example
  * ```ts
@@ -76,30 +51,21 @@ export const StateSchema = Schema.Struct({ value: Schema.Finite });
  * })
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category State construction
  */
 export function makeState(initial: InitialState) {
   return RefSubject.hydrate(StateSchema, initial);
 }
 
-/** Updates the synchronized slider value.
- * @remarks
- * ## Why
- * An explicit Effect transition preserves RefSubject failures and services.
- * ## Ownership and lifetime
- * It uses the existing state lifetime and acquires no resource.
- * @example
- * ```ts
- * import { Effect } from "effect"
- * import * as Slider from "@typed/ui/Slider"
+/**
+ * Assigns a range value without clamping or snapping it.
  *
- * const program = Effect.gen(function* () {
- *   const state = yield* Slider.makeState({ value: 25 })
- *   yield* Slider.setValue(state, 50)
- * })
- * ```
+ * @remarks
+ * min, max, and step belong to the native input options and are not consulted here. Validate or
+ * normalize programmatic values before assignment so the subject and browser-sanitized range
+ * value stay consistent.
  * @since 1.0.0
- * @category state
+ * @category State transitions
  */
 export function setValue<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -108,55 +74,31 @@ export function setValue<E, R>(
   return RefSubject.update(state, (current) => ({ ...current, value }));
 }
 
-/** Options for a native range input.
- * @remarks
- * ## Why
- * Native range semantics provide keyboard and accessibility behavior while
- * Typed synchronizes renderer-independent state.
- * ## Ownership and lifetime
- * Options are inert; the mounted component owns subscriptions by Scope.
- * @since 1.0.0
- * @category models
+/**
  */
 export interface SliderOptions extends Dom.HostOptions<HTMLInputElement> {
-  /** Hydrated state synchronized to the input.
-   * @remarks
-   * ## Why
-   * One source serves SSR, UI, and state-only tests.
-   * ## Ownership and lifetime
-   * The component borrows state and subscribes only while mounted.
+  /**
+   * Hydrated state synchronized to the input.
    * @since 1.0.0
-   * @category state
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
-  /** Native minimum value.
-   * @remarks
-   * ## Why
-   * The platform uses this bound for keyboard and constraint behavior.
-   * ## Ownership and lifetime
-   * Dynamic attributes follow the component Scope.
+  /**
+   * Native minimum value.
    * @since 1.0.0
-   * @category attributes
+   * @category Numeric bounds
    */
   readonly min?: Renderable.Any<number | null | undefined>;
-  /** Native maximum value.
-   * @remarks
-   * ## Why
-   * The platform uses this bound for keyboard and constraint behavior.
-   * ## Ownership and lifetime
-   * Dynamic attributes follow the component Scope.
+  /**
+   * Native maximum value.
    * @since 1.0.0
-   * @category attributes
+   * @category Numeric bounds
    */
   readonly max?: Renderable.Any<number | null | undefined>;
-  /** Native step value or `"any"`.
-   * @remarks
-   * ## Why
-   * Step semantics remain delegated to the input element.
-   * ## Ownership and lifetime
-   * Dynamic attributes follow the component Scope.
+  /**
+   * Native step value or `"any"`.
    * @since 1.0.0
-   * @category attributes
+   * @category Numeric bounds
    */
   readonly step?: Renderable.Any<number | "any" | null | undefined>;
 }
@@ -182,26 +124,37 @@ type SliderInternalProps<Options extends SliderOptions> = ReturnType<
   ReturnType<typeof internalProps<Options>>
 >;
 
-/** Renders a native range input synchronized with hydrated state.
+/**
+ * Renders a native range input whose input events update numeric state.
+ *
  * @remarks
- * ## Why
- * Browser pointer, keyboard, constraints, and accessibility remain intact;
- * input events update the same RefSubject consumed elsewhere.
- * ## Ownership and lifetime
- * Running the Fx owns native listeners and subscriptions in its Scope. A
- * custom host must preserve type, value, range props, and the hydration ref.
+ * Dragging publishes through input, so expensive downstream work should control its own update
+ * rate. Native min/max/step, keyboard interaction, and pointer behavior stay with the browser.
+ * Supply a label and a unit-bearing readout; a custom non-input host must implement the
+ * interaction itself.
+ *
  * @example
  * ```ts
- * import { Effect } from "effect"
- * import * as Slider from "@typed/ui/Slider"
+ * import { RefSubject } from "@typed/fx";
+ * import { html } from "@typed/template";
+ * import { component } from "@typed/ui/Component";
+ * import * as Slider from "@typed/ui/Slider";
  *
- * const program = Effect.gen(function* () {
- *   const state = yield* Slider.makeState({ value: 50 })
- *   return Slider.Slider({ state, min: 0, max: 100 })
- * })
+ * export const ZoomControl = component(function* () {
+ *   const state = yield* Slider.makeState({ value: 100 });
+ *   const percentage = RefSubject.map(state, ({ value }) => `${value}%`);
+ *   return html`<div class="zoom-control">
+ *     <label for="preview-zoom">Preview zoom</label>
+ *     ${Slider.Slider({
+ *       state, min: 50, max: 200, step: 10,
+ *       props: { id: "preview-zoom", name: "zoom", "aria-valuetext": percentage },
+ *     })}
+ *     <output for="preview-zoom">${percentage}</output>
+ *   </div>`;
+ * });
  * ```
  * @since 1.0.0
- * @category components
+ * @category Native controls
  */
 export function Slider<const Options extends SliderOptions, const Host extends HostResult = never>(
   options: Options,

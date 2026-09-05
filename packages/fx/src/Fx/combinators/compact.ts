@@ -26,7 +26,7 @@ import type { Fx } from "../Fx.js";
  * @param self - An `Fx` emitting `Option<A>`.
  * @returns An `Fx` emitting `A`.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const compact = <A, E, R>(self: Fx<Option.Option<A>, E, R>): Fx<A, E, R> =>
   make<A, E, R>((sink) => self.run(sinkCore.compact(sink)));

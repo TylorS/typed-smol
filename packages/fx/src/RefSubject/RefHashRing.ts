@@ -27,7 +27,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefHashRing<
   in out A extends PrimaryKey.PrimaryKey,
@@ -49,7 +49,7 @@ export interface RefHashRing<
  * and cleanup; source failures and services stay on reads and pushes.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<A extends PrimaryKey.PrimaryKey, E = never, R = never>(
   initial:
@@ -74,7 +74,7 @@ export function make<A extends PrimaryKey.PrimaryKey, E = never, R = never>(
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function empty<A extends PrimaryKey.PrimaryKey, E = never, R = never>(options?: {
   readonly baseWeight?: number;
@@ -108,7 +108,7 @@ function copyRing<A extends PrimaryKey.PrimaryKey>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const add: {
   <A extends PrimaryKey.PrimaryKey>(
@@ -145,7 +145,7 @@ export const add: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const addMany: {
   <A extends PrimaryKey.PrimaryKey>(
@@ -182,7 +182,7 @@ export const addMany: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const remove: {
   <A extends PrimaryKey.PrimaryKey>(
@@ -218,7 +218,7 @@ export const remove: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const has: {
   <A extends PrimaryKey.PrimaryKey>(
@@ -250,7 +250,7 @@ export const has: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <A extends PrimaryKey.PrimaryKey, E, R>(
   ref: RefHashRing<A, E, R>,
@@ -270,7 +270,7 @@ export const size = <A extends PrimaryKey.PrimaryKey, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <A extends PrimaryKey.PrimaryKey, E, R>(
   ref: RefHashRing<A, E, R>,
@@ -291,7 +291,7 @@ export const isEmpty = <A extends PrimaryKey.PrimaryKey, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const getNode: {
   (
@@ -326,7 +326,7 @@ export const getNode: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const getShards: {
   (
@@ -360,7 +360,7 @@ export const getShards: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const values = <A extends PrimaryKey.PrimaryKey, E, R>(
   ref: RefHashRing<A, E, R>,
@@ -385,7 +385,7 @@ export const values = <A extends PrimaryKey.PrimaryKey, E, R>(
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const get: {
   (

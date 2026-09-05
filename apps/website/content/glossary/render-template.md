@@ -7,8 +7,10 @@ related: [render-event, effect, scope]
 links: []
 ---
 
-RenderTemplate turns a shared template program into target-specific output while retaining the same
-Effect requirements and lifetime rules. DOM rendering applies events to local ranges; HTML rendering
-serializes trusted chunks for [SSR](#ssr). The template service is a renderer choice, not a reason for
-an integration to invent a framework adapter.
+RenderTemplate is the service that interprets a template for a target. The same `html` expression
+can use DomRenderTemplate in a browser or HtmlRenderTemplate for server output. Providing the service
+selects its interpretation; the resulting program still needs to run.
 
+An adapter that already has nodes usually needs a RenderEvent rather than another interpreter.
+Read [the compilation pipeline](/explore/template-compilation-pipeline) before
+[implementing a renderer](/explore/implementing-render-template).

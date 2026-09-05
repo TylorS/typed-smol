@@ -35,7 +35,7 @@ import type { Fx } from "../Fx.js";
  * @param f - A function that transforms values of type `A` to an Effect of `B`.
  * @returns An `Fx` that emits values of type `B`.
  * @since 1.0.0
- * @category combinators
+ * @category Transforming values
  */
 export const mapEffect: {
   <A, B, E2, R2>(

@@ -46,7 +46,7 @@ const fromRandom = (random: (typeof Random.Random)["Service"]): RandomValues["Se
  * import { Effect } from "effect"
  * const bytes = Effect.provide(RandomValues.call(16), RandomValues.Default)
  * ```
- * @category Services
+ * @category Entropy services
  * @since 1.0.0
  */
 export class RandomValues extends Context.Service<RandomValues>()("@typed/id/RandomValues", {
@@ -68,7 +68,7 @@ export class RandomValues extends Context.Service<RandomValues>()("@typed/id/Ran
    * import { Effect } from "effect"
    * const bytes = RandomValues.call(32).pipe(Effect.provide(RandomValues.Default))
    * ```
-   * @category Services
+   * @category Entropy services
    * @since 1.0.0
    */
   static override readonly call = <const N extends number>(
@@ -83,7 +83,7 @@ export class RandomValues extends Context.Service<RandomValues>()("@typed/id/Ran
    * Production IDs need platform entropy. Missing `globalThis.crypto.getRandomValues` and platform exceptions are Effect defects, not typed errors, rather than silently weakening randomness.
    * ## Ownership and lifetime
    * The Layer owns no mutable generator state; each request returns a fresh buffer. The runtime must provide Web Crypto or the request defects.
-   * @category Layers
+   * @category Entropy layers
    * @since 1.0.0
    */
   static readonly Default = Layer.effect(RandomValues, RandomValues.make);
@@ -95,7 +95,7 @@ export class RandomValues extends Context.Service<RandomValues>()("@typed/id/Ran
    * Deterministic tests and simulations need replaceable entropy; this Layer is not cryptographically secure.
    * ## Ownership and lifetime
    * The provided Effect Random service owns sequence state for the Layer lifetime; each request returns a fresh buffer.
-   * @category Layers
+   * @category Entropy layers
    * @since 1.0.0
    */
   static readonly Random = Layer.effect(

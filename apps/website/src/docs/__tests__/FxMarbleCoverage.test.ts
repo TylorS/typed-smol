@@ -3,7 +3,11 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseGuideDocumentation } from "../Frontmatter.js";
-import { extractFxMarbleOperators, validateFxMarbleCoverage } from "../FxMarbleCoverage.js";
+import {
+  extractFxMarbleOperators,
+  validateFxMarbleCoverage,
+} from "../FxMarbleCoverage.js";
+import { fxNonTemporalExports } from "../FxOperatorAtlas.js";
 import { renderMarkdown } from "../../site/Markdown.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
@@ -25,68 +29,88 @@ After.`),
     ).toEqual(["map", "mapEffect"]);
   });
 
+  it("does not count a covers claim when its figure cannot render", () => {
+    expect(
+      extractFxMarbleOperators("```fx-marble\ncovers: map\noperator: map\n```"),
+    ).toEqual([]);
+  });
+
   it("reports missing, duplicate, and non-public operator names", () => {
-    const report = validateFxMarbleCoverage(["map", "filter"], [
-      {
-        slug: "transforming",
-        body: `\`\`\`fx-marble
+    const report = validateFxMarbleCoverage(
+      ["map", "filter"],
+      [
+        {
+          slug: "transforming",
+          body: `\`\`\`fx-marble
 covers: map, internalMap
 input: 1 |
 operator: map
 output: 2 |
 \`\`\``,
-      },
-      {
-        slug: "more-transforming",
-        body: `\`\`\`fx-marble
+        },
+        {
+          slug: "more-transforming",
+          body: `\`\`\`fx-marble
 covers: map
 input: 2 |
 operator: map
 output: 3 |
 \`\`\``,
-      },
-    ]);
+        },
+      ],
+    );
 
     expect(report.missing).toEqual(["filter"]);
     expect(report.duplicates).toEqual(["map"]);
     expect(report.unexpected).toEqual(["internalMap"]);
   });
 
-  it("covers every public @typed/fx/Fx combinator exactly once", async () => {
+  it("covers every public temporal export in the canonical atlas", async () => {
     const inventory = JSON.parse(
-      fs.readFileSync(path.join(websiteRoot, "src/generated/reference.json"), "utf8"),
+      fs.readFileSync(
+        path.join(websiteRoot, "src/generated/reference.json"),
+        "utf8",
+      ),
     ) as {
       readonly modules: ReadonlyArray<{
         readonly consumerSpecifier: string;
-        readonly categories: ReadonlyArray<{
-          readonly name: string;
-          readonly exposureIds: ReadonlyArray<string>;
-        }>;
+        readonly exposureIds: ReadonlyArray<string>;
       }>;
     };
+    const nonTemporal = new Set(fxNonTemporalExports.map(({ name }) => name));
     const publicOperators = inventory.modules
       .find(({ consumerSpecifier }) => consumerSpecifier === "@typed/fx/Fx")!
-      .categories.find(({ name }) => name === "combinators")!
-      .exposureIds.map((id) => id.slice(id.indexOf("#") + 1));
+      .exposureIds.map((id) => id.slice(id.indexOf("#") + 1))
+      .filter((name) => !name.includes(".") && !nonTemporal.has(name));
     const guides = fs
       .readdirSync(path.join(websiteRoot, "content/guides"))
       .filter((fileName) => fileName.endsWith(".md"))
       .map((fileName) =>
         parseGuideDocumentation(
           fileName,
-          fs.readFileSync(path.join(websiteRoot, "content/guides", fileName), "utf8"),
+          fs.readFileSync(
+            path.join(websiteRoot, "content/guides", fileName),
+            "utf8",
+          ),
         ),
       );
-    const report = validateFxMarbleCoverage(publicOperators, guides);
-
-    expect(publicOperators).toHaveLength(117);
-    expect(report).toMatchObject({ duplicates: [], missing: [], unexpected: [] });
+    const atlas = guides.filter(({ slug }) => slug === "fx-operator-atlas");
+    expect(atlas).toHaveLength(1);
+    const report = validateFxMarbleCoverage(publicOperators, atlas);
+    expect(validateFxMarbleCoverage(publicOperators, guides).unexpected).toEqual([]);
+    expect(report).toMatchObject({
+      duplicates: [],
+      missing: [],
+      unexpected: [],
+    });
     expect(report.appearances).toHaveLength(publicOperators.length);
 
-    const rendered = await Promise.all(guides.map(({ body }) => renderMarkdown(body)));
+    const rendered = await Promise.all(
+      atlas.map(({ body }) => renderMarkdown(body)),
+    );
     const renderedOperators = rendered.flatMap(({ code }) =>
-      [...code.matchAll(/data-fx-operators="([^"]+)"/gu)].flatMap(
-        ([, names]) => names!.split(" "),
+      [...code.matchAll(/data-fx-operators="([^"]+)"/gu)].flatMap(([, names]) =>
+        names!.split(" "),
       ),
     );
     expect(renderedOperators.toSorted()).toEqual(publicOperators.toSorted());

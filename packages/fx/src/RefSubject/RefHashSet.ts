@@ -25,7 +25,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefHashSet<
   in out V,
@@ -47,7 +47,7 @@ export interface RefHashSet<
  * and cleanup; source failures and services stay on reads and pushes.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<V, E = never, R = never>(
   initial:
@@ -76,7 +76,7 @@ export function make<V, E = never, R = never>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const add: {
   <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
@@ -99,7 +99,7 @@ export const add: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const remove: {
   <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => Effect.Effect<HashSet.HashSet<V>, E, R>;
@@ -122,7 +122,7 @@ export const remove: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const clear = <V, E, R>(ref: RefHashSet<V, E, R>): Effect.Effect<HashSet.HashSet<V>, E, R> =>
   RefSubject.update(ref, () => HashSet.empty());
@@ -141,7 +141,7 @@ export const clear = <V, E, R>(ref: RefHashSet<V, E, R>): Effect.Effect<HashSet.
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const union: {
   <V>(
@@ -169,7 +169,7 @@ export const union: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const intersection: {
   <V>(
@@ -197,7 +197,7 @@ export const intersection: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const difference: {
   <V>(
@@ -224,7 +224,7 @@ export const difference: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed HashSet and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filter: {
   <V>(
@@ -251,7 +251,7 @@ export const filter: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed HashSet and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const map: {
   <V>(
@@ -280,7 +280,7 @@ export const map: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, HashSet.size);
@@ -299,7 +299,7 @@ export const size = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<num
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, HashSet.isEmpty);
@@ -318,7 +318,7 @@ export const isEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNonEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, (s) => !HashSet.isEmpty(s));
@@ -337,7 +337,7 @@ export const isNonEmpty = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Comput
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const has: {
   <V>(value: V): <E, R>(ref: RefHashSet<V, E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -360,7 +360,7 @@ export const has: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const some: {
   <V>(
@@ -388,7 +388,7 @@ export const some: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const every: {
   <V>(
@@ -416,7 +416,7 @@ export const every: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isSubset: {
   <V>(
@@ -441,7 +441,7 @@ export const isSubset: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapValues: {
   <V, B>(
@@ -469,7 +469,7 @@ export const mapValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filterValues: {
   <V>(
@@ -501,7 +501,7 @@ export const filterValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduce: {
   <V, B>(
@@ -531,7 +531,7 @@ export const reduce: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const values = <V, E, R>(ref: RefHashSet<V, E, R>): RefSubject.Computed<Array<V>, E, R> =>
   RefSubject.map(ref, (s) => Array.from(s));

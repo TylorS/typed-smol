@@ -47,7 +47,7 @@ import type { Fx } from "../Fx.js";
  * @param fx - The Fx streams to merge.
  * @returns An `Fx` that emits values in order.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export function mergeOrdered<FX extends ReadonlyArray<Fx<any, any, any>>>(
   ...fx: FX

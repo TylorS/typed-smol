@@ -14,7 +14,7 @@ interface State {
  * ## Ownership and lifetime
  * Options are inert and retain no resources.
  * @since 1.0.0
- * @category models
+ * @category Native display options
  */
 export interface Options {
   /** Whether opening uses the modal top layer; defaults to true.
@@ -25,7 +25,7 @@ export interface Options {
    * ## Ownership and lifetime
    * The flag is read during synchronization and retains no resources.
    * @since 1.0.0
-   * @category behavior
+   * @category Native display options
    */
   readonly modal?: boolean;
 }
@@ -42,8 +42,10 @@ export interface Options {
  *
  * ## Ownership and lifetime
  *
- * Applying the ref forks an observer in the current Effect Scope. Finalization
- * interrupts that observer but does not close state owned elsewhere or remove
+ * Applying the ref forks an observer in the current Effect Scope. Modal opening
+ * waits for a detached host to connect; a newer state or Scope finalization cancels
+ * that pending connection check. Hidden documents may defer the check until animation
+ * frames resume. Finalization does not close state owned elsewhere or remove
  * the element. `Dialog.Content` handles native `cancel`, `close`, and `toggle`
  * events and composes exactly one hydration owner.
  *
@@ -60,7 +62,7 @@ export interface Options {
  * ```
  *
  * @since 1.0.0
- * @category refs
+ * @category Native synchronization
  */
 export function ref<S extends State, E, R>(
   state: RefSubject.RefSubject<S, E, R>,
@@ -69,13 +71,33 @@ export function ref<S extends State, E, R>(
   return Effect.fn((element) =>
     Effect.asVoid(
       Effect.forkScoped(
-        Fx.observe(
-          state,
-          Effect.fn((value) => Effect.sync(() => synchronize(element, value.open, options))),
+        Fx.drain(
+          Fx.switchMapEffect(state, (value) =>
+            Effect.andThen(
+              value.open && options.modal !== false ? whenConnected(element) : Effect.void,
+              Effect.sync(() => synchronize(element, value.open, options)),
+            ),
+          ),
         ),
       ),
     ),
   );
+}
+
+// Template refs run before their host is inserted. Native showModal requires a connected element.
+function whenConnected(element: HTMLDialogElement): Effect.Effect<void> {
+  return Effect.callback((resume) => {
+    if (element.isConnected) {
+      resume(Effect.void);
+      return;
+    }
+    const check = () => {
+      if (element.isConnected) resume(Effect.void);
+      else frame = requestAnimationFrame(check);
+    };
+    let frame = requestAnimationFrame(check);
+    return Effect.sync(() => cancelAnimationFrame(frame));
+  });
 }
 
 function synchronize(element: HTMLDialogElement, open: boolean, options: Options): void {

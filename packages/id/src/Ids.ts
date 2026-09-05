@@ -80,7 +80,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
    * The facade shares the Ids-owned CuidState instead of allocating a new sequence for every call.
    * ## Ownership and lifetime
    * This Effect acquires no resources and uses state owned by the provided Ids Layer.
-   * @category Generators
+   * @category ID generation
    * @since 1.0.0
    */
   static readonly cuid: Effect.Effect<Cuid, never, Ids> = Effect.flatMap(Ids, ({ cuid }) => cuid);
@@ -92,7 +92,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
    * The facade reuses captured time and entropy while retaining `IllegalArgumentError` for invalid KSUID timestamps.
    * ## Ownership and lifetime
    * This Effect acquires no persistent resource and uses services owned by the provided Ids Layer.
-   * @category Generators
+   * @category ID generation
    * @since 1.0.0
    */
   static readonly ksuid: Effect.Effect<Ksuid, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
@@ -107,7 +107,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
    * The facade makes the selected entropy implementation available through one application dependency.
    * ## Ownership and lifetime
    * This Effect acquires no persistent resource and uses entropy owned by the provided Ids Layer.
-   * @category Generators
+   * @category ID generation
    * @since 1.0.0
    */
   static readonly nanoId: Effect.Effect<NanoId, never, Ids> = Effect.flatMap(
@@ -122,7 +122,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
    * The facade reuses captured time and entropy while retaining `IllegalArgumentError` for invalid 48-bit timestamps.
    * ## Ownership and lifetime
    * This Effect acquires no persistent resource and uses services owned by the provided Ids Layer.
-   * @category Generators
+   * @category ID generation
    * @since 1.0.0
    */
   static readonly ulid: Effect.Effect<Ulid, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
@@ -137,7 +137,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
    * The facade keeps entropy selection replaceable while preserving UUID version and variant semantics.
    * ## Ownership and lifetime
    * This Effect acquires no persistent resource and uses entropy owned by the provided Ids Layer.
-   * @category Generators
+   * @category ID generation
    * @since 1.0.0
    */
   static readonly uuid4: Effect.Effect<Uuid4, never, Ids> = Effect.flatMap(
@@ -158,7 +158,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
    * import { Effect } from "effect"
    * const program = Ids.uuid5.dns("example.com").pipe(Effect.provide(Ids.Default))
    * ```
-   * @category Generators
+   * @category ID generation
    * @since 1.0.0
    */
   static readonly uuid5: {
@@ -197,7 +197,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
    * The facade shares one lazy Uuid7State per Ids Layer, preserving local monotonicity and typed timestamp errors.
    * ## Ownership and lifetime
    * This Effect acquires no resources and uses sequence state owned by the provided Ids Layer.
-   * @category Generators
+   * @category ID generation
    * @since 1.0.0
    */
   static readonly uuid7: Effect.Effect<Uuid7, Cause.IllegalArgumentError, Ids> = Effect.flatMap(
@@ -212,7 +212,7 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
    * The standard Layer uses system time and Web Crypto while lazily creating sequence state only when CUID or UUIDv7 is first requested.
    * ## Ownership and lifetime
    * The surrounding Layer Scope owns captured services and lazy sequence state; Web Crypto must exist in the runtime.
-   * @category Layers
+   * @category Production layers
    * @since 1.0.0
    */
   static readonly Default: Layer.Layer<Ids | DateTimes | RandomValues, never, never> = Layer.effect(

@@ -17,28 +17,19 @@ describe("Template compilation pipeline guide", () => {
 
     expect(guide).toMatchObject({
       slug: "template-compilation-pipeline",
-      section: "Integration",
+      section: "Template internals",
       kind: "deep-dive",
-      order: 10.05,
     });
-    expect(guide.headings).toEqual(
-      expect.arrayContaining([
-        "The public pipeline",
-        "Parse once, retain part paths",
-        "Compile for DOM or HTML",
-        "Emit the RenderEvent your target owns",
-      ]),
-    );
-    expect(source).toContain("TemplateStringsArray");
-    expect(source).toContain("templateToHtmlChunks");
-    expect(source).toContain("addTemplateHash");
-    expect(source).toContain("DomRenderEvent");
-    expect(source).toContain("HtmlRenderEvent");
-    expect(source).toContain("@typed/template/internal");
-    expect(source).toContain("not a public extension point");
+    for (const contract of ["Template.hash", "templateToHtmlChunks", "addTemplateHash", "DomRenderEvent", "HtmlRenderEvent", "HtmlChunksBuilder"]) {
+      expect(source).toContain(contract);
+    }
+    expect(guide.body).toContain("/explore/implementing-render-template");
+    expect(guide.body).toContain("/explore/template-namespaces-and-platform-markup");
+    expect(guide.body).toContain("/explore/template-text-only-contexts");
 
     const examples = extractTypeScriptFences(source);
-    expect(examples.length).toBeGreaterThanOrEqual(4);
+    expect(examples.some((example) => example.includes("@typed/template/Parser"))).toBe(true);
+    expect(examples.some((example) => example.includes("@typed/template/HtmlChunk"))).toBe(true);
     expect(examples.some((example) => example.includes("@typed/template/internal"))).toBe(false);
     expect(validateAuthoredExampleQuality([guide])).toEqual([]);
 

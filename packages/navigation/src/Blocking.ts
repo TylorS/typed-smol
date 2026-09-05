@@ -28,7 +28,7 @@ import { Navigation, type NavigationNavigateOptions } from "./Navigation.js";
  * Closing that Scope cancels an outstanding block and unregisters the handler.
  *
  * @since 1.0.0
- * @category state
+ * @category Blocking state
  */
 export interface BlockNavigation extends RefSubject.Filtered<Blocking> {
   /**
@@ -42,7 +42,7 @@ export interface BlockNavigation extends RefSubject.Filtered<Blocking> {
    * The blocker Scope owns this reactive member; observing it does not extend that Scope.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Blocking state
    */
   readonly isBlocking: RefSubject.Computed<boolean>;
 }
@@ -60,7 +60,7 @@ export interface BlockNavigation extends RefSubject.Filtered<Blocking> {
  * original transition, `cancel` keeps the current destination, and `redirect` starts a replacement.
  *
  * @since 1.0.0
- * @category events
+ * @category Blocking decisions
  */
 export interface Blocking extends BeforeNavigationEvent {
   /**
@@ -75,7 +75,7 @@ export interface Blocking extends BeforeNavigationEvent {
    * blocker instance's outstanding transition.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Blocking decisions
    */
   readonly cancel: Effect.Effect<Destination>;
   /**
@@ -90,7 +90,7 @@ export interface Blocking extends BeforeNavigationEvent {
    * Scope keeps ownership until that Effect settles or the Scope closes.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Blocking decisions
    */
   readonly confirm: Effect.Effect<Destination>;
   /**
@@ -105,7 +105,7 @@ export interface Blocking extends BeforeNavigationEvent {
    * original proposed transition is never committed by this settlement.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Blocking decisions
    */
   readonly redirect: (
     urlOrPath: string | URL,
@@ -146,7 +146,7 @@ const Blocked = (event: BeforeNavigationEvent) =>
  * {@link useBlockNavigation}; redirects and cancellations remain typed navigation control flow.
  *
  * @since 1.0.0
- * @category options
+ * @category Blocking policy
  */
 export interface UseBlockNavigationParams<R = never> {
   /**
@@ -160,7 +160,7 @@ export interface UseBlockNavigationParams<R = never> {
    * The blocker Scope owns this reactive member; observing it does not extend that Scope.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Blocking policy
    */
   readonly shouldBlock?: (
     event: BeforeNavigationEvent,
@@ -192,7 +192,7 @@ export interface UseBlockNavigationParams<R = never> {
  * https://effect.website/docs/resource-management/scope/.
  *
  * @since 1.0.0
- * @category navigation
+ * @category Blocking policy
  */
 export const useBlockNavigation = <R = never>(
   params: UseBlockNavigationParams<R> = {},

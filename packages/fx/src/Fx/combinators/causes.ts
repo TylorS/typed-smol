@@ -34,7 +34,7 @@ import { filterMap } from "./filterMap.js";
  * @param fx - The `Fx` stream.
  * @returns An `Fx` emitting `Cause<E>`.
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const causes = <A, E, R>(fx: Fx<A, E, R>): Fx<Cause.Cause<E>, never, R> =>
   filterMap(

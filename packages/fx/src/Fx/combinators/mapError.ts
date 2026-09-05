@@ -29,7 +29,7 @@ import type { Fx } from "../Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const mapError: {
   <E, E2>(f: (e: E) => E2): <A, R>(self: Fx<A, E, R>) => Fx<A, E2, R>;

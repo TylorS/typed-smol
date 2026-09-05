@@ -1,37 +1,21 @@
 ---
 id: "reactive-state"
-title: "Own reactive state"
-summary: "Let RefSubject own the count and pass Effects directly to native event bindings."
+title: "Add the counter"
+summary: "Create the view, render it, and click its buttons."
 order: 3
 demo: "counter-reactive"
 ---
 
-A RefSubject is both current state and an Fx of later values. Interpolating it renders
-the current count and keeps that dynamic part subscribed. The button handlers are ordinary Effects;
-Template acquires and disposes their listeners with the render Scope.
+Create `src/Counter.ts`. The count is a `RefSubject`: the template observes its value, and the button Effects update it.
 
-### src/main.ts: add reactive state
+```ts file="src/Counter.ts"
+// @source examples/learn-3/src/Counter.ts
+```
+
+Replace `src/main.ts` to render the counter into the page:
 
 ```ts file="src/main.ts"
-import { Fx, RefSubject } from "@typed/fx"
-import { DomRenderTemplate, html, render } from "@typed/template"
-import { Effect, Layer } from "effect"
-
-const Counter = Fx.gen(function* () {
-  const count = yield* RefSubject.make(0)
-
-  return html`<main>
-    <h1>Counter</h1>
-    <button onclick=${RefSubject.decrement(count)}>−</button>
-    <output>${count}</output>
-    <button onclick=${RefSubject.increment(count)}>+</button>
-  </main>`
-})
-
-await render(Counter, document.body).pipe(
-  Fx.drainLayer,
-  Layer.provide(DomRenderTemplate),
-  Layer.launch,
-  Effect.runPromise,
-)
+// @source examples/learn-3/src/main.ts
 ```
+
+Open the URL printed by Vite. Click **+**: the count changes from **0** to **1**. You have a running Typed application.

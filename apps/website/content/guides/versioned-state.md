@@ -6,8 +6,10 @@ kind: "guide"
 order: 2.22
 ---
 
-`Versioned` is the public contract for state supplied by another owner. It combines three related,
-but independently typed, channels:
+A library may already own a cache or external store. Its consumers need to read the latest
+snapshot, observe updates, and detect invalidation without receiving the producer's write API.
+`Versioned` bundles those capabilities while leaving the existing owner in charge. It combines
+three related, but independently typed, channels:
 
 - `version`: an Effect that reads a numeric invalidation token;
 - the `Fx` itself: updates that observers receive over time;
@@ -25,35 +27,49 @@ them for you. The version is whatever the supplied Effect returns: `Versioned` d
 it, require it to be monotonic, or prove that it and a current read are one atomic snapshot. Its
 producer defines what a changed token invalidates and coordinates current values with publications.
 
-```ts
-import { Effect } from "effect";
-import * as Fx from "@typed/fx/Fx";
-import * as Versioned from "@typed/fx/Versioned";
+Here is a small external settings store with synchronous writes. Its adapter supplies an initial
+snapshot on every subscription and unregisters only that subscription on teardown.
 
-const status = Versioned.make(
-  Effect.succeed(7),
-  Fx.succeed("ready"),
-  Effect.succeed({ state: "ready" as const, checkedAt: 7 }),
-);
+```ts file="Settings.ts"
+import { Effect } from "effect"
+import * as Fx from "@typed/fx/Fx"
+import * as Versioned from "@typed/fx/Versioned"
 
-const readStatus = Effect.gen(function* () {
-  return {
-    version: yield* status.version,
-    current: yield* status,
-    updates: yield* Fx.collectAll(status),
-  };
-});
+type Settings = { readonly density: "compact" | "comfortable" }
 
-await Effect.runPromise(readStatus);
+export const makeSettingsStore = (initial: Settings) => {
+  let current = initial
+  let revision = 0
+  const listeners = new Set<(value: Settings) => void>()
+  const state = Versioned.make(
+    Effect.sync(() => revision),
+    Fx.callback<Settings>((emit) => {
+      const publish = (value: Settings) => { emit.succeed(value) }
+      listeners.add(publish)
+      publish(current)
+      return Effect.sync(() => { listeners.delete(publish) })
+    }),
+    Effect.sync(() => current),
+  )
+  const set = (next: Settings) => {
+    current = next
+    revision += 1
+    for (const publish of listeners) publish(current)
+  }
+  return { state, set }
+}
 ```
 
-The update and current channels may intentionally have different value types, as they do above.
-They also keep separate errors and service requirements. A consumer reading `status` sees only the
-current-read Effect's error and services; a consumer observing `status` sees the Fx channel's;
-`status.version` has its own pair.
+`set` belongs to the external owner. Give consumers `store.state`; they can read and observe
+settings without receiving `set`. Registration and the first snapshot happen synchronously in
+one callback here. An asynchronous transport needs its own snapshot/subscription handoff protocol.
+Callback emissions run sink effects in fibers; this adapter is intended for observing settings,
+not an ordered command log whose consumers must finish processing every write before the next.
 
-`Versioned.of(value)` is the small constant constructor: it supplies version `1`, one update, and
-that same current value. It is useful for composition and focused tests, not as a mutable store.
+The update and current channels may intentionally have different types. A change feed could emit
+events while its current Effect returns a full snapshot. Each channel keeps its own error and
+service requirements. `Versioned.of(value)` is the constant constructor: it supplies version `1`,
+one update, and that same current value for composition and focused tests.
 
 ## Read now, observe later, and let the producer own writes
 
@@ -72,23 +88,44 @@ For practical cache work, treat `version` as an invalidation key attached to a r
 before committing a result when updates may race the work. Do not infer a transaction from two
 separate Effects just because they are exposed by one `Versioned` value.
 
+## Combine independent sources without promising a transaction
+
+`Versioned.struct` and `tuple` combine three channels, just as the underlying values do.
+`map` and `mapEffect` take explicit `onFx` and `onEffect` projections for their separate channels;
+`filterMap` introduces meaningful
+absence on current reads while skipping absent update values. Use these when exposing an external
+store adapter. Use RefSubject's higher-level views when your source already is a RefSubject.
+
+A price feed and an inventory feed can be combined for display, but a combined value does not
+establish that their snapshots describe the same instant. A checkout invariant needs an authoritative
+reservation operation. Version tokens can tell you to recompute a quote; they do not lock inventory.
+
 ```ts
-import { Effect } from "effect";
-import * as Versioned from "@typed/fx/Versioned";
+import { Effect } from "effect"
+import * as Versioned from "@typed/fx/Versioned"
 
-const profile = Versioned.of({ id: "u-42", name: "Ada" });
-
-const cacheInput = Effect.gen(function* () {
-  const version = yield* profile.version;
-  const value = yield* profile;
-  return { version, value };
-});
-
-await Effect.runPromise(cacheInput);
+const price = Versioned.of(2500)
+const available = Versioned.of(3)
+const quote = Versioned.map(
+  Versioned.tuple([price, available]),
+  {
+    onFx: ([cents, stock]) => ({ cents, canOrder: stock > 0 }),
+    onEffect: ([cents, stock]) => ({ cents, canOrder: stock > 0 }),
+  },
+)
+const currentQuote = Effect.map(quote, (value) => value.canOrder ? value.cents : undefined)
 ```
 
-The producer chooses whether one version represents one value, a refreshed remote snapshot, or a
-larger batch of invalidated work. That is the contract callers should document and test.
+For an external-store adapter, verify the handoff between “read current” and “subscribe.” A producer
+that publishes between those operations can lose an update unless its subscription replays current
+state or its version protocol detects the race. `Versioned.make` cannot repair an inconsistent
+producer. Write the promised behavior into the adapter test: update during subscription startup,
+read during an in-flight refresh, failure followed by recovery, and closing the observer while the
+producer remains alive.
+
+Do not compare version tokens from different producers. Even when both happen to return `7`, the
+number identifies only that producer's invalidation state. A persisted cache should also include
+resource identity and schema/version information; a bare token is not a portable cache key.
 
 ## Preserve errors, services, and lifetime
 
@@ -140,39 +177,30 @@ No application shell is needed to test a `Versioned` contract. Construct a finit
 three channels, and assert the producer's promised relation between them. Separately test failures,
 required services, and scoped sharing when the concrete producer uses those features.
 
-```ts
-import { describe, expect, it } from "vitest";
-import { Effect } from "effect";
-import * as Fx from "@typed/fx/Fx";
-import * as Versioned from "@typed/fx/Versioned";
+```ts file="Settings.test.ts"
+import { Effect, Option } from "effect"
+import { expect, it } from "vitest"
+import * as Fx from "@typed/fx/Fx"
+import { makeSettingsStore } from "./Settings.js"
 
-describe("profile Versioned contract", () => {
-  it("exposes the producer's current value, updates, and invalidation token", async () => {
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const profile = Versioned.make(
-          Effect.succeed(3),
-          Fx.succeed("Ada"),
-          Effect.succeed({ name: "Ada" }),
-        );
-
-        return {
-          version: yield* profile.version,
-          current: yield* profile,
-          updates: yield* Fx.collectAll(profile),
-        };
-      }),
-    );
-
-    expect(result).toEqual({
-      version: 3,
-      current: { name: "Ada" },
-      updates: ["Ada"],
-    });
-  });
-});
+it("reads the external owner and gives a new subscriber its current snapshot", () =>
+  Effect.gen(function* () {
+    const store = makeSettingsStore({ density: "comfortable" })
+    expect(yield* store.state).toEqual({ density: "comfortable" })
+    expect(yield* store.state.version).toBe(0)
+    store.set({ density: "compact" })
+    expect(yield* store.state).toEqual({ density: "compact" })
+    expect(yield* store.state.version).toBe(1)
+    expect(yield* Fx.first(store.state)).toEqual(Option.some({ density: "compact" }))
+    // Ending one observer leaves the independently owned store usable.
+    store.set({ density: "comfortable" })
+    expect(yield* store.state).toEqual({ density: "comfortable" })
+  }).pipe(Effect.scoped, Effect.runPromise),
+)
 ```
 
-This style checks the public Effect and Fx behavior that a consumer actually receives. Add a
-scoped observation test when sharing, replay, interruption, or a live producer is part of the
-contract.
+This tests the adapter's real snapshot and ownership promises. A producer with asynchronous
+startup needs additional tests for updates during registration, in-flight reads, and failure
+recovery. Continue with [RefSubject](/explore/refsubject-renderer-independent-state) when the
+application itself should own writable state, or the
+[Versioned reference](/reference/modules/%40typed%2Ffx%2FVersioned) for all channel transformations.

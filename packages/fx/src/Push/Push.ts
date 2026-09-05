@@ -84,7 +84,7 @@ import * as Sink from "../Sink.js";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Bidirectional contracts
  */
 export interface Push<in A, in E, out R, out B, out E2, out R2>
   extends Sink.Sink<A, E, R>, Fx.Fx<B, E2, R2> {}
@@ -104,7 +104,7 @@ export namespace Push {
    * This type alias creates no value or resource and changes no runtime lifetime.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Type contracts
    */
   export type Any = Push<any, any, any, any, any, any>;
 
@@ -136,7 +136,7 @@ export namespace Push {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Push services
    */
   export interface Service<Self, Id extends string, A, E, B, E2> extends Push<
     A,
@@ -256,7 +256,7 @@ export namespace Push {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Push services
    */
   export interface Class<Self, Id extends string, A, E, B, E2> extends Service<
     Self,
@@ -334,7 +334,7 @@ export namespace Push {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Push construction
  */
 export const make: {
   <B, E2, R2>(
@@ -423,7 +423,7 @@ class PushImpl<A, E, R, B, E2, R2> implements Push<A, E, R, B, E2, R2> {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming inputs
  */
 export const mapInput: {
   <C, A>(
@@ -485,7 +485,7 @@ export const mapInput: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming inputs
  */
 export const mapInputEffect: {
   <C, R3, E, A>(
@@ -553,7 +553,7 @@ export const mapInputEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export const filterInput: {
   <A>(
@@ -611,7 +611,7 @@ export const filterInput: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export const filterInputEffect: {
   <A, R3, E>(
@@ -681,7 +681,7 @@ export const filterInputEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export const filterMapInput: {
   <C, A>(
@@ -749,7 +749,7 @@ export const filterMapInput: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting inputs
  */
 export const filterMapInputEffect: {
   <C, R3, E, A>(
@@ -825,7 +825,7 @@ export const filterMapInputEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming outputs
  */
 export const map: {
   <B, C>(
@@ -875,7 +875,7 @@ export const map: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming outputs
  */
 export const mapEffect: {
   <B, C, E3, R3>(
@@ -939,7 +939,7 @@ export const mapEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Output failures
  */
 export const mapError: {
   <E2, E3>(
@@ -994,7 +994,7 @@ export const mapError: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Transforming outputs
  */
 export const mapBoth: {
   <B, C, E2, E3>(options: {
@@ -1050,7 +1050,7 @@ export const mapBoth: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting outputs
  */
 export const filter: {
   <B>(
@@ -1103,7 +1103,7 @@ export const filter: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting outputs
  */
 export const filterEffect: {
   <B, R3, E3>(
@@ -1164,7 +1164,7 @@ export const filterEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting outputs
  */
 export const filterMap: {
   <B, C>(
@@ -1217,7 +1217,7 @@ export const filterMap: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Selecting outputs
  */
 export const filterMapEffect: {
   <B, C, E3, R3>(
@@ -1301,7 +1301,7 @@ export const filterMapEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent output work
  */
 export const switchMap: {
   <B, C, E3, R3>(
@@ -1382,7 +1382,7 @@ export const switchMap: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent output work
  */
 export const switchMapEffect: {
   <B, C, E3, R3>(
@@ -1465,7 +1465,7 @@ export const switchMapEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent output work
  */
 export const flatMap: {
   <B, C, E3, R3>(
@@ -1543,7 +1543,7 @@ export const flatMap: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent output work
  */
 export const flatMapEffect: {
   <B, C, E3, R3>(
@@ -1630,7 +1630,7 @@ export const flatMapEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent output work
  */
 export const exhaustMap: {
   <B, C, E3, R3>(
@@ -1710,7 +1710,7 @@ export const exhaustMap: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent output work
  */
 export const exhaustMapEffect: {
   <B, C, E3, R3>(
@@ -1798,7 +1798,7 @@ export const exhaustMapEffect: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent output work
  */
 export const exhaustLatestMap: {
   <B, C, E3, R3>(
@@ -1879,7 +1879,7 @@ export const exhaustLatestMap: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent output work
  */
 export const exhaustLatestMapEffect: {
   <B, C, E3, R3>(
@@ -1945,7 +1945,7 @@ export const exhaustLatestMapEffect: {
  * @param f - Reducer `(state, value) => [nextState, emitted]`.
  * @returns A `Push` whose Fx side emits the accumulated/mapped values.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful outputs
  */
 export const mapAccum: {
   <S, B, C>(
@@ -2056,7 +2056,7 @@ export const mapAccum: {
  * @param f - Effectful reducer `(state, value) => Effect<[nextState, emitted]>`.
  * @returns A `Push` whose Fx side emits the accumulated/mapped values.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful outputs
  */
 export const mapAccumEffect: {
   <S, B, C, E3, R3>(
@@ -2141,7 +2141,7 @@ export const mapAccumEffect: {
  * ```
  *
  * @since 1.0.0
- * @category services
+ * @category Push services
  */
 export function Service<Self, A, E = never, B = never, E2 = never>() {
   return <const Id extends string>(id: Id): Push.Class<Self, Id, A, E, B, E2> => {

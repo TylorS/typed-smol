@@ -1,5 +1,7 @@
 ---
 import "../styles.css";
+import "../components/MarblePlayback.css";
+import "../components/Search.css";
 import Theme from "../components/Theme.js";
 import Search from "../components/Search.js";
 import { siteHref } from "../../SiteHref.js";
@@ -45,28 +47,13 @@ const nav = [
         try {
           saved = localStorage.getItem("typed-theme");
         } catch {}
-        const system = matchMedia("(prefers-color-scheme: dark)");
-        const apply = () => {
-          document.documentElement.dataset.theme =
-            saved === "matrix" || saved === "matrix-light"
-              ? saved
-              : system.matches
-                ? "matrix"
-                : "matrix-light";
-        };
-        apply();
-        system.addEventListener("change", () => {
-          try {
-            saved = localStorage.getItem("typed-theme");
-          } catch {}
-          apply();
-        });
-        addEventListener("storage", (event) => {
-          if (event.key === "typed-theme") {
-            saved = event.newValue;
-            apply();
-          }
-        });
+        // Set the first paint before modules load. Typed owns subsequent changes.
+        document.documentElement.dataset.theme =
+          saved === "matrix" || saved === "matrix-light"
+            ? saved
+            : matchMedia("(prefers-color-scheme: dark)").matches
+              ? "matrix"
+              : "matrix-light";
       })();
     </script>
   </head>
@@ -74,9 +61,13 @@ const nav = [
     <a class="skip" href="#main-content">Skip to content</a>
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href={siteHref("/")} aria-label="Typed home"
-          >typed<span>_</span></a
+        <a
+          class="brand brand-animated"
+          href={siteHref("/")}
+          aria-label="Typed home"
         >
+          <span class="typewriter" aria-hidden="true"></span>
+        </a>
         <nav class="site-nav" aria-label="Primary navigation">
           {
             nav.map(([href, label]) => (
@@ -117,5 +108,11 @@ const nav = [
         </nav>
       </div>
     </footer>
+    <script>
+      import { Effect } from "effect";
+      import { page } from "../Page.js";
+
+      Effect.runFork(page(document));
+    </script>
   </body>
 </html>

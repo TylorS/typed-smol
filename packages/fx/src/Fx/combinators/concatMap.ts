@@ -46,7 +46,7 @@ import type { FlatMapEffectLike } from "./flatMapEffect.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const concatMap: FlatMapLike = dual(
   2,
@@ -95,7 +95,7 @@ export const concatMap: FlatMapLike = dual(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const concatMapEffect: FlatMapEffectLike = dual(
   2,

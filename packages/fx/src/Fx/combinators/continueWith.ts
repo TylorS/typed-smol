@@ -48,7 +48,7 @@ import type { Fx } from "../Fx.js";
  * @param f - A function that returns the next Fx to run.
  * @returns An `Fx` that emits values from the first Fx, then from the second Fx.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const continueWith: {
   <B, E2, R2>(f: () => Fx<B, E2, R2>): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B, E | E2, R | R2>;
@@ -90,7 +90,7 @@ export const continueWith: {
  * @param value - The value to append.
  * @returns An `Fx` that emits values from the input Fx, then the appended value.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const append: {
   <B>(value: B): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B, E, R>;
@@ -131,7 +131,7 @@ export const append: {
  * @param value - The value to prepend.
  * @returns An `Fx` that emits the prepended value, then values from the input Fx.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const prepend: {
   <B>(value: B): <A, E, R>(fx: Fx<A, E, R>) => Fx<B | A, E, R>;
@@ -173,7 +173,7 @@ export const prepend: {
  * @param after - The value to emit after the Fx completes.
  * @returns An `Fx` that emits `before`, then values from the input Fx, then `after`.
  * @since 1.0.0
- * @category combinators
+ * @category Combining sources
  */
 export const delimit: {
   <B, C>(before: B, after: C): <A, E, R>(fx: Fx<A, E, R>) => Fx<A | B | C, E, R>;

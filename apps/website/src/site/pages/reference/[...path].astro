@@ -54,7 +54,7 @@ const description = symbol?.summary ?? descriptions[packageName];
   <main
     id="main-content"
     tabindex="-1"
-    class="page-container"
+    class="page-container reference-page"
     data-symbol-id={exposure?.id}
   >
     <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -102,7 +102,8 @@ const description = symbol?.summary ?? descriptions[packageName];
     <footer class="catalog-section">
       <p>
         Reference formats: <a href={siteHref(route.markdownPath)}>Markdown</a> · <a
-          href={siteHref(route.jsonPath)}>JSON</a>
+          href={siteHref(route.jsonPath)}>JSON</a
+        >
       </p>
     </footer>
   </main>

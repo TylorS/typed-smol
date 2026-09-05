@@ -30,7 +30,7 @@ import { make } from "./make.js";
  * @param cause - The cause of failure.
  * @returns An `Fx` that terminates with the given cause.
  * @since 1.0.0
- * @category constructors
+ * @category Failure sources
  */
 export const failCause = <E>(cause: Cause.Cause<E>): Fx<never, E, never> =>
   /*#__PURE__*/ make<never, E, never>((sink) => sink.onFailure(cause));

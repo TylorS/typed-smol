@@ -1,146 +1,140 @@
 ---
 title: "Reference the native element"
 summary: "Use ref for the small set of browser integrations that need the exact element, with an Effect-owned lifetime and explicit hydration behavior."
-section: "Templates"
+section: "Template bindings"
 kind: "guide"
-order: 3.35
+order: 5
 ---
 
-`ref=${handler}` is the escape hatch for a browser API that needs the native element itself. It is
-not a component instance, a mutable ref object, or a general-purpose post-mount hook. The handler
-receives the exact `HTMLElement | SVGElement` created for that template instance. Annotate a
-narrower element type when the markup makes that safe.
+Most field behavior belongs in attributes, properties, and events. An element reference becomes
+necessary when a browser API needs the element object itself—for example, observing a results panel's
+size or creating a foreign editor on its host. `ref` attaches that setup to the concrete template
+instance and lets Effect own the resource lifetime.
 
-Use attributes, properties, classes, data, and event parts for their ordinary jobs. Reach for `ref`
-when an API accepts an element: an observer, a custom-element method, imperative focus management
-coordinated by the mounting application, or a browser integration with its own lifecycle.
+Read [Native events with Effect](/explore/native-events-with-effect) before using a ref merely to
+install an event listener. A named event part already expresses that job more precisely.
 
-## Capture an element without a component wrapper
+## Capture the exact element without inventing a component instance
 
-The handler is called while the renderer prepares or adopts the element. For a newly rendered
-template, that happens before the outer `render()` consumer inserts its emitted output into a root;
-do not treat it as an "after paint" callback. A plain `void` return only captures or configures the
-element. It does not create cleanup work.
+A direct ref accepts a function, or a nullish value to do nothing. The function receives the native
+element; this input annotation is safe because the authored tag is an input:
 
 ```ts
 import { html } from "@typed/template";
 
-const configureSearch = (element: HTMLInputElement) => {
-  element.autocomplete = "off";
-  element.setAttribute("aria-keyshortcuts", "Meta+K");
+const configureSearch = (input: HTMLInputElement) => {
+  input.autocomplete = "off";
+  input.setAttribute("aria-keyshortcuts", "Meta+K");
 };
 
-export const search = html`<input
-  ref=${configureSearch}
-  type="search"
-  aria-label="Search documentation"
-/>`;
+export const search = html`<input type="search" aria-label="Search articles" ref=${configureSearch} />`;
 ```
 
-Typed invokes `configureSearch` once for this concrete template instance. Updating a sibling text,
-attribute, or property part does not call it again. If a parent replaces this whole template instance,
-the new element has its own ref setup. Keyed collection moves preserve the retained child instance and
-its native element; a removed key closes that child scope.
+For ordinary declarative fields, prefer writing their template parts directly. This small callback
+only shows when and with what object the ref runs. It returns `void`, so it acquires no cleanup work.
+Passing a mutable ref-shaped object, string, or DOM node instead of a function is not this protocol
+and fails at runtime.
 
-Only a function (or `null` / `undefined` to do nothing) is valid in a direct ref part. Passing a
-string, object, or DOM node as `ref` is a runtime error. A function may return `void`, an `Effect`,
-an `Fx`, or an Effect `Stream`; a returned cleanup function is merely a plain value and is not a
-cleanup protocol.
+The renderer invokes the ref while preparing fresh output or wiring adopted output. A fresh element
+may not yet be inserted into the outer host. Element availability therefore does not imply layout,
+paint, focusability, or connection. Do not treat a ref as an after-paint callback.
 
-## Let the rendering Scope own an external resource
+## Tie an observer to the element's running lifetime
 
-Return a scoped Effect when the browser integration acquires a resource. `Effect.acquireRelease`
-registers its finalizer with the template's rendering Scope, so the Effect may complete after the
-observer is installed. Cleanup runs when that Scope closes—when its containing output is interrupted
-or removed—not when the callback returns.
+A results panel can report its width through `ResizeObserver`. The browser observer has a resource
+lifetime that must end when the view ends:
 
 ```ts
 import { Effect } from "effect";
 import { html } from "@typed/template";
 
-const reportWidth = (element: HTMLElement) =>
-  Effect.acquireRelease(
-    Effect.sync(() => {
-      const observer = new ResizeObserver(([entry]) => {
-        element.style.setProperty("--measured-width", `${entry.contentRect.width}px`);
-      });
-      observer.observe(element);
-      return observer;
-    }),
-    (observer) => Effect.sync(() => observer.disconnect()),
-  );
+const measurePanel = (element: HTMLElement) => Effect.acquireRelease(
+  Effect.sync(() => {
+    const observer = new ResizeObserver(([entry]) => {
+      element.style.setProperty("--measured-width", `${entry.contentRect.width}px`);
+    });
+    observer.observe(element);
+    return observer;
+  }),
+  (observer) => Effect.sync(() => observer.disconnect()),
+);
 
-export const measuredPanel = html`<section ref=${reportWidth}>Content</section>`;
+export const results = html`<section aria-label="Search results" ref=${measurePanel}>
+  Results appear here.
+</section>`;
 ```
 
-The effect's expected error and service channels become part of the template's own `E` and `R`
-types. An `Fx` return follows the same ownership rule: its emissions are drained, and its
-subscription is interrupted with the rendering Scope. Keep output mutations declarative when there
-is a named template part; this pattern is for an API, such as `ResizeObserver`, that has no attribute
-or property equivalent.
+The returned Effect installs the observer and registers its finalizer with the rendering scope.
+It can finish after acquisition without immediately disconnecting the observer. The observer lives
+until that owner closes—for example when a keyed result is removed or the containing render stops.
 
-The same directive can live in a properties spread: `...${{ ref: reportWidth }}`. That is useful for
-a reusable property record, but it is not a second ref system. If a reactive spread later removes its
-`ref` key, Typed closes the resource owned by that ref before dropping the key.
+A ref may also return an Fx or Effect Stream; its emissions are drained and its subscription is
+interrupted with that scope. Returning a plain JavaScript cleanup function is not a cleanup protocol.
+Use Effect resource management so error and service requirements remain visible to the template.
 
-## Hydrate state through the element that carries it
+The style custom property in this example belongs to the observer. Avoid another writer replacing
+the same style state. A library requiring a connected host also needs explicit mount coordination;
+adding a guessed timeout does not establish connection or layout readiness.
 
-`RefSubject.hydrate` returns state that is also a callable `HydrationRef`. Passing it to `ref` gives
-the HTML renderer a designated attribute host for serialized state and lets the DOM renderer restore
-that state from the exact server-rendered element. The state is still normal renderer-independent
-state; `ref` only names its DOM handoff point.
+## Distinguish retained elements from replaced capabilities
+
+Changing a sibling text part does not reinstall the ref. A retained keyed child keeps its existing
+ref setup when it moves. Removing the child closes its scope. Replacing the whole template creates
+a new element and a new setup lifetime.
+
+A spread can contain the same `ref` callback. Removing that key closes the ref's resource even if
+the host element remains. This is useful for enabling and disabling a feature with a shorter lifetime
+than the panel. [Spread props and data records](/explore/template-spreads-data) explains that per-key
+ownership.
+
+## Use hydration refs for state that crosses the response boundary
+
+An ordinary callback cannot run on a server without its browser element and produces no HTML
+representation. `RefSubject.hydrate` deliberately adds another capability: its result is both state
+and a callable `HydrationRef` that can serialize state on a designated host.
 
 ```ts
-import { Effect, Schema } from "effect";
+import { Schema } from "effect";
 import { RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
 import { html } from "@typed/template";
 
-export const counter = Effect.fn("counter")(function* () {
-  const count = yield* RefSubject.hydrate(Schema.Finite, 0);
-
-  return html`<button ref=${count} onclick=${RefSubject.increment(count)}>
-    ${count}
-  </button>`;
+export const SearchState = component(function* () {
+  const query = yield* RefSubject.hydrate(Schema.String, "scope");
+  return html`<section ref=${query}><output>Query: ${query}</output></section>`;
 });
 ```
 
-For interactive HTML, the ref contributes the encoded hydration attributes. During client hydration,
-Typed invokes the `HydrationRef` before ordinary reactive parts begin, decodes the server value, and
-removes the consumed unnamed hydration envelope. It adopts the exact server-rendered element when
-the template markers match, so native identity and browser state are retained rather than replaced.
-If no compatible server output exists, normal DOM rendering creates a fresh element and runs the same
-ref setup there.
+The HTML target writes the encoded state at this ref host. During adoption the DOM target restores
+it before ordinary reactive parts begin and removes the consumed unnamed envelope. The state remains
+a RefSubject; the ref identifies its server-to-browser handoff point.
 
-An ordinary callback ref has no HTML representation: server rendering neither calls it nor emits a
-marker for it. `StaticHtmlRenderTemplate` deliberately omits hydration metadata as well. That makes
-the server/client boundary visible in the value you choose rather than pretending a DOM callback can
-run on the server.
-
-## Compose one hydration boundary when state shares a host
-
-Use `hydrateAll` when several hydrated refs should share one host. Unnamed members use one versioned
-envelope; named members use their own `data-*` attributes. Each member retains its Schema errors and
-codec service requirements, and duplicate named attributes are rejected immediately as a configuration
-mistake.
+When several refs share an element, combine them with `hydrateAll`:
 
 ```ts
-import { Effect, Schema } from "effect";
+import { Schema } from "effect";
 import { RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
 import { html } from "@typed/template";
 
-export const preferences = Effect.fn("preferences")(function* () {
+export const SearchPreferences = component(function* () {
   const page = yield* RefSubject.hydrate(Schema.FiniteFromString, 1, { name: "page" });
-  const density = yield* RefSubject.hydrate(Schema.String, "comfortable");
-  const state = RefSubject.hydrateAll(page, density);
-
-  return html`<section ref=${state}>
-    <p>Page ${page}</p>
-    <p>Density ${density}</p>
+  const query = yield* RefSubject.hydrate(Schema.String, "scope");
+  return html`<section ref=${RefSubject.hydrateAll(page, query)}>
+    <output>Page ${page}; query ${query}</output>
   </section>`;
 });
 ```
 
-`HydrationRef` is a public protocol, but application code normally constructs it with
-`RefSubject.hydrate` and combines it with `hydrateAll`; do not hand-build its symbol metadata. Read
-[Hydrating Typed HTML](/explore/hydrating-typed-html) for the full request-to-browser flow and
-[DOM parts and attributes](/explore/dom-parts-and-attributes) for the directive choice and cost model.
+Named members use their `data-*` attributes; unnamed members share a versioned envelope. Duplicate
+named attributes are a configuration error. Codec failures and required services remain typed.
+Static HTML rendering omits hydration metadata entirely.
+
+## Test the resource and the handoff you actually depend on
+
+For the observer, count acquisition/finalization across fresh render, keyed removal, and spread-ref
+removal. Assert the callback receives the expected native object. For hydrated state, assert both
+the decoded value and adopted node identity; valid state and compatible DOM are separate checks.
+
+Continue with [Hydrating Typed HTML](/explore/hydrating-typed-html) for adoption diagnosis and
+[Hydrated template state](/explore/refsubject-template-hydration) for schema/envelope behavior.

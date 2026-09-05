@@ -58,7 +58,7 @@ import { extendScope } from "../internal/scope.js";
  * @param concurrency - A positive safe-integer limit for concurrent inner streams. Invalid limits fail with `Cause.IllegalArgumentError`.
  * @returns An `Fx` that emits values from the inner streams.
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const flatMapConcurrently: {
   <A, B, E2, R2>(

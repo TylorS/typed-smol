@@ -8,6 +8,8 @@
  * the state and pure operations without mounting UI, or supply custom hosts without replacing native
  * events and browser-owned focus.
  *
+ * Learn the interaction in the [Tree guide](/explore/ui-tree).
+ *
  * @since 1.0.0
  * @category modules
  * @packageDocumentation
@@ -30,43 +32,29 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /**
- * Complete renderer-independent state for Tree.
+ * The focused node and expanded parent identities.
+ * Expansion controls visible traversal; file selection or opening is a separate application action.
  *
- * @remarks
- * ## Why
- *
- * Applications can inspect, update, and test Tree behavior without mounting or coupling the state
- * to a renderer.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { State } from "@typed/ui/Tree";` Extend the [Tree.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTree%23makeState). Inside the linked program,
- * `const snapshot: State = yield* state` exposes active and expanded ids independently.
  * @since 1.0.0
- * @category models
+ * @category Hierarchy state
  */
 export interface State {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly activeId: string | null;
   /**
    * Ids whose child tree groups are currently visible.
    * @since 1.0.0
-   * @category models
+   * @category Expansion
    */
   readonly expandedIds: readonly string[];
   /**
    * Whether movement wraps between the first and last enabled items.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly loop: boolean;
 }
@@ -74,41 +62,26 @@ export interface State {
 /**
  * Initial Tree values. activeId defaults null and expandedIds defaults empty.
  *
- * @remarks
- * ## Why
- *
- * Making initialization explicit documents hydration-sensitive defaults and lets servers and
- * clients construct matching state.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InitialState } from "@typed/ui/Tree";` Extend the [Tree.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTree%23makeState). Construct an expanded branch with
- * `const initial: InitialState = { activeId: "src", expandedIds: ["src"] }; const state = yield* Tree.makeState(initial)`.
  * @since 1.0.0
- * @category models
+ * @category Hierarchy state
  */
 export interface InitialState {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly activeId?: string | null;
   /**
    * Ids whose child tree groups are currently visible.
    * @since 1.0.0
-   * @category models
+   * @category Expansion
    */
   readonly expandedIds?: readonly string[];
   /**
    * Whether movement wraps between the first and last enabled items.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly loop?: boolean;
 }
@@ -117,15 +90,6 @@ export interface InitialState {
  * Effect Schema used by makeState to encode, decode, and hydrate Tree state.
  *
  * @remarks
- * ## Why
- *
- * A public schema makes hydration and serialized state use the same runtime validation as direct
- * construction.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
  * @example
  * ```ts
  * import * as Schema from "effect/Schema";
@@ -134,7 +98,7 @@ export interface InitialState {
  * const decodeState = Schema.decodeUnknownEffect(Tree.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Hierarchy state
  */
 export const StateSchema = Schema.Struct({
   activeId: Schema.NullOr(Schema.String),
@@ -146,12 +110,6 @@ export const StateSchema = Schema.Struct({
  * Creates hydrated Tree state. activeId defaults null and expandedIds defaults empty.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect creates the RefSubject when run. That state is renderer-independent;
  * collection registrations belong to the separate Scope that runs register or ref, not to state
  * creation.
@@ -170,7 +128,7 @@ export const StateSchema = Schema.Struct({
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Hierarchy state
  */
 export function makeState(initial: InitialState = {}) {
   return RefSubject.hydrate(StateSchema, {
@@ -184,34 +142,23 @@ export function makeState(initial: InitialState = {}) {
  * Tree collection value recording an item's parent relationship.
  *
  * @remarks
- * ## Why
- *
  * The public model lets custom composites reuse Tree's deterministic policy without copying an
  * internal shape.
  *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { ItemValue } from "@typed/ui/Tree";` Extend the [Tree.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTree%23makeState). A hierarchical collection value
- * identifies child capability: `const value: ItemValue = { parentId: "root", hasChildren: true }`.
  * @since 1.0.0
- * @category models
+ * @category Node registration
  */
 export interface ItemValue {
   /**
    * Id whose expansion controls this descendant group.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly parentId?: string;
   /**
    * Whether aria-expanded is emitted and hierarchical keys may open descendants.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly hasChildren: boolean;
 }
@@ -220,12 +167,6 @@ export interface ItemValue {
  * Creates a scoped Collection for Tree items.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
  * owned by the Scope that runs register, independently of this construction Effect.
  *
@@ -242,7 +183,7 @@ export interface ItemValue {
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Node registration
  */
 export const makeCollection = Collection.makeState<ItemValue>;
 
@@ -250,12 +191,8 @@ export const makeCollection = Collection.makeState<ItemValue>;
  * Tests membership in expandedIds without touching the DOM.
  *
  * @remarks
- * ## Why
- *
  * Separating this deterministic policy from event wiring lets applications test it directly and
  * reuse it in custom composites.
- *
- * ## Ownership and lifetime
  *
  * This is a synchronous calculation. It acquires no resources and does not mutate the input array,
  * state, event, or DOM.
@@ -267,7 +204,7 @@ export const makeCollection = Collection.makeState<ItemValue>;
  * const expanded = Tree.isExpanded({ activeId: null, expandedIds: ["parent"], loop: true }, "parent");
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Expansion
  */
 export function isExpanded(state: State, id: string): boolean {
   return state.expandedIds.includes(id);
@@ -277,24 +214,11 @@ export function isExpanded(state: State, id: string): boolean {
  * Adds an id once to expandedIds.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes Tree's transition directly so callers can compose it in Effect programs
  * and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { expand } from "@typed/ui/Tree";` Extend the [Tree.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTree%23makeState). Inside the linked Effect program invoke
- * `yield* expand(state, "item-2")`, then read the state snapshot to observe the transition
- * described above.
  * @since 1.0.0
- * @category combinators
+ * @category Expansion
  */
 export function expand<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -309,24 +233,11 @@ export function expand<E, R>(
  * Removes an id from expandedIds.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes Tree's transition directly so callers can compose it in Effect programs
  * and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { collapse } from "@typed/ui/Tree";` Extend the [Tree.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTree%23makeState). Inside the linked Effect program invoke
- * `yield* collapse(state, "item-2")`, then read the state snapshot to observe the transition
- * described above.
  * @since 1.0.0
- * @category combinators
+ * @category Expansion
  */
 export function collapse<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -342,24 +253,11 @@ export function collapse<E, R>(
  * Sets the active tree item id without changing expansion.
  *
  * @remarks
- * ## Why
- *
  * The operation exposes Tree's transition directly so callers can compose it in Effect programs
  * and native event handlers.
  *
- * ## Ownership and lifetime
- *
- * The returned Effect performs the update or DOM side effect only when run, preserves the declared
- * error and service channels, and retains no resources after completion.
- *
- * ## Example
- *
- * Import with `import { activate } from "@typed/ui/Tree";` Extend the [Tree.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTree%23makeState). Inside the linked Effect program invoke
- * `yield* activate(state, "item-2")`, then read the state snapshot to observe the transition
- * described above.
  * @since 1.0.0
- * @category combinators
+ * @category Node focus
  */
 export function activate<E, R>(
   state: RefSubject.RefSubject<State, E, R>,
@@ -371,47 +269,32 @@ export function activate<E, R>(
 /**
  * Inputs accepted by Tree.Root in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { RootOptions } from "@typed/ui/Tree";` Extend the [Tree.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTree%23makeState). Enable tree navigation with
- * `const options: RootOptions = { state, collection, label: "Files", content: "Items" }`.
  * @since 1.0.0
- * @category models
+ * @category Tree surface
  */
 export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<ItemValue>>;
   /**
    * Accessible label rendered through aria-label.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly label: Renderable.Any<string | null | undefined>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -456,25 +339,12 @@ type RootInternalProps<Options extends RootOptions> = ReturnType<
  * Renders the tree root and applies hierarchy-aware keyboard navigation to registered items.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Root } from "@typed/ui/Tree";` Extend the [Tree.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTree%23makeState). Replace the linked program's final snapshot
- * read with `Root({ state, label: "Files", content: "Items" })`; render that Fx before the same
- * Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Tree surface
  */
 export function Root<const Options extends RootOptions, const Host extends HostResult = never>(
   options: Options,
@@ -502,71 +372,56 @@ export function Root<const Options extends RootOptions, const Host extends HostR
 /**
  * Inputs accepted by Tree.Item in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { ItemOptions } from "@typed/ui/Tree";` Extend the [Tree.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTree%23makeState). A branch item is
- * `const options: ItemOptions = { state, collection, id: "src", level: 1, hasChildren: true, content: "src" }`.
  * @since 1.0.0
- * @category models
+ * @category Tree nodes
  */
 export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<ItemValue>>;
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Id whose expansion controls this descendant group.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly parentId?: string;
   /**
    * One-based hierarchy level exposed through aria-level.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly level?: number;
   /**
    * Whether aria-expanded is emitted and hierarchical keys may open descendants.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly hasChildren?: boolean;
   /**
    * Flag used by collection movement and widget handlers to skip activation by default.
    * @since 1.0.0
-   * @category models
+   * @category Availability
    */
   readonly disabled?: boolean;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -606,25 +461,12 @@ type ItemInternalProps<Options extends ItemOptions> = ReturnType<
  * state.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Item } from "@typed/ui/Tree";` Extend the [Tree.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTree%23makeState). Replace the linked program's final snapshot
- * read with `Item({ state, id: "src", hasChildren: true, content: "src" })`; render that Fx before
- * the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Tree nodes
  */
 export function Item<const Options extends ItemOptions, const Host extends HostResult = never>(
   options: Options,
@@ -652,41 +494,26 @@ export function Item<const Options extends ItemOptions, const Host extends HostR
 /**
  * Inputs accepted by Tree.Group in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { GroupOptions } from "@typed/ui/Tree";` Extend the [Tree.makeState
- * runnable setup](/reference/%40typed%2Fui%2FTree%23makeState). Relate descendants to their branch
- * with `const options: GroupOptions = { state, parentId: "src", content: "Children" }`.
  * @since 1.0.0
- * @category models
+ * @category Child visibility
  */
 export interface GroupOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Id whose expansion controls this descendant group.
    * @since 1.0.0
-   * @category models
+   * @category Hierarchy
    */
   readonly parentId: string;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -706,25 +533,12 @@ type GroupInternalProps<Options extends GroupOptions> = ReturnType<
  * Renders a child group and hides it while its parent id is not expanded.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Group } from "@typed/ui/Tree";` Extend the [Tree.makeState runnable
- * setup](/reference/%40typed%2Fui%2FTree%23makeState). Replace the linked program's final snapshot
- * read with `Group({ state, parentId: "src", content: "Children" })`; render that Fx before the
- * same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Child visibility
  */
 export function Group<const Options extends GroupOptions, const Host extends HostResult = never>(
   options: Options,

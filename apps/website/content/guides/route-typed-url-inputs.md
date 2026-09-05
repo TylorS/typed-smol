@@ -1,239 +1,182 @@
 ---
-title: "Route: typed URL inputs"
-summary: "Define path and query contracts as Effect Schema codecs before application code runs."
-section: "Applications"
+title: "Route: make the URL an input contract"
+summary: "Design shareable queue filters and issue links, decode domain parameters once, and distinguish malformed URLs from missing pages."
+section: "Routing"
 kind: "guide"
 order: 6.7
 ---
 
-A `Route` describes one family of URLs. It owns the path grammar, the names exposed to application
-code, and the codecs that translate URL strings into domain values. It does not observe history,
-run a handler, or render output.
+A review queue starts with a list of issues. Users then ask to share their filtered list, reload a
+detail page, and use Back to return to the same search. Keeping the selected issue and filters only
+in component state cannot provide those behaviors: the URL needs to describe them.
 
-That separation is useful well beyond UI routing. The same Route can validate a browser location,
-an HTTP request, a generated link, a test fixture, or an agent-produced URL.
+A `Route` is the typed contract for one URL family. It describes path/query syntax and the codecs
+that turn URL strings into handler input. It does not observe the browser, select a page, or run a
+request. That separation lets the same contract serve links, browser routing, HTTP handlers, and tests.
+Read the [routing overview](/explore/routing-routes-matchers-and-navigation) for how those pieces fit.
 
-## The public Route surface
+## Decide which state should survive a copied link
 
-| Task | API |
-| --- | --- |
-| Parse a complete typed pattern | `Route.Parse(pattern)` |
-| Match the root or remaining path | `Route.Slash`, `Route.Wildcard` |
-| Build a reusable string segment | `Route.Param(name)` |
-| Decode a number or integer segment | `Route.Number(name)`, `Route.Int(name)` |
-| Decode a segment with any Effect Schema Codec | `Route.ParamWithSchema(name, codec)` |
-| Combine reusable Route fragments | `Route.Join(...routes)` |
-| Build from the public Route AST | `Route.make(ast)` |
-| Read normalized syntax and codecs | `route.path`, `route.pathSchema`, `route.querySchema`, `route.paramsSchema` |
-| Extract decoded contracts | `Route.Type`, `Route.PathType`, `Route.QueryType` |
-| Type generic route utilities | `Route.Any`, `Route.Params`, and the `Route` type namespace |
-
-Most application routes start with `Parse` or `Join`. `make` is the extension point for libraries
-that construct the public [`RouteAst`](/reference/modules/%40typed%2Frouter%2FAST) directly.
-
-## Read the route grammar
-
-`Parse` turns a literal route pattern into a typed value. Parameter names become object keys without
-an interface or cast beside the route.
-
-Its path syntax supports literals, parameters, constrained parameters, optional segments, and a
-terminal wildcard. A Route only describes that syntax and its codecs here; the
-[Router guide](/explore/router-navigation-live-selection) covers how Matcher selects application
-work from a URL.
-
-| Pattern | Meaning | Decoded fields |
-| --- | --- | --- |
-| `/issues` | literal path | `{}` |
-| `/issues/:issueId` | required path parameter | `{ issueId: string }` |
-| `/issues/:issueId?` | optional path parameter | `{ issueId?: string }` |
-| `/issues/:issueId(\\d+)` | regex-constrained parameter | `{ issueId: string }` |
-| `/files/*` | remaining path | `{ "*": string }` |
-| `/issues?tab=:tab` | required query value | `{ tab: string }` |
-| `/issues?tab=:tab?` | optional query value | `{ tab?: string }` |
-| `/issues?view=compact` | literal query constraint | `{}` |
+For this queue, the workspace identifies the collection; `q` and `status` describe filters. They
+belong in the URL because a copied link should reconstruct the same search. A draft comment and
+whether the user has opened a temporary menu can remain local.
 
 ```ts
 import * as Route from "@typed/router/Route"
 
-const Issue = Route.Parse("/issues/:issueId?tab=:tab?&view=full")
+const Queue = Route.Parse("/workspaces/:workspaceId/issues?q=:q?&status=:status?")
+type QueueParams = Route.Type<typeof Queue>
+// workspaceId: string; q?: string; status?: string
 
-type IssueParams = Route.Type<typeof Issue>
-// { readonly issueId: string; readonly tab?: string | undefined }
+const queueHref = ({ workspaceId, q, status }: QueueParams) => {
+  const query = new URLSearchParams()
+  if (q !== undefined && q !== "") query.set("q", q)
+  if (status !== undefined && status !== "all") query.set("status", status)
+  const encoded = query.toString()
+  return `/workspaces/${encodeURIComponent(workspaceId)}/issues${encoded ? `?${encoded}` : ""}`
+}
+
+const href = queueHref({ workspaceId: "typed", q: "render & hydrate", status: "open" })
 ```
 
-`Issue` accepts `/issues/42?view=full` and `/issues/42?tab=activity&view=full`. It rejects
-`view=compact`: a literal query value is a constraint, not a default.
+The optional placeholders yield optional fields. The helper defines a canonical representation:
+empty query and `all` status are omitted. Route does not infer these defaults; application code
+should derive them once after decoding, then reuse that policy for links and loaders.
 
-A `?` after a terminal parameter normally begins the query declaration, so
-`/issues/:issueId?tab=:tab` keeps `issueId` required. Use the explicit `??` boundary when the
-terminal path parameter is optional: `/issues/:issueId??tab=:tab`.
+`URLSearchParams` handles query encoding, including characters such as `&` inside a value. Pass
+unencoded values to it and avoid encoding its output a second time. Path values are encoded as
+individual segments so separators remain separators. See the platform's
+[URLSearchParams contract](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
 
-## Keep path and query decoding separate when it helps
+This route accepts arbitrary string status values. If only `open`, `closed`, and `all` are valid,
+add that vocabulary to a Schema/Guard at the input boundary. A placeholder name gives a field a
+name and string shape, not a business constraint.
 
-Every Route exposes three Effect Schema codecs:
+## Decode into the type the operation actually needs
 
-| Codec | Input it owns |
-| --- | --- |
-| `pathSchema` | declared path parameters only |
-| `querySchema` | declared query parameters only |
-| `paramsSchema` | the combined handler input |
-
-```ts
-import { Schema } from "effect"
-import * as Route from "@typed/router/Route"
-
-const Issue = Route.Parse("/issues/:issueId?tab=:tab?")
-
-const decodePath = Schema.decodeEffect(Issue.pathSchema)
-const decodeQuery = Schema.decodeEffect(Issue.querySchema)
-const decodeParams = Schema.decodeEffect(Issue.paramsSchema)
-
-const path = decodePath({ issueId: "42" })
-const query = decodeQuery({ tab: "activity" })
-const params = decodeParams({ issueId: "42", tab: "activity" })
-```
-
-These are ordinary Effect Schema decoders. Their parse failures and service requirements remain in
-the returned Effect. Tooling can validate path and query data independently, while a Matcher uses
-`paramsSchema` before invoking a handler.
-
-Declared query values are scalar. Repeating a declared key, such as
-`?tab=activity&tab=history`, fails with `RouteDecodeError` instead of silently selecting one value.
-Undeclared query keys are ignored by route decoding.
-
-## Decode path segments into domain values
-
-Use `Int` and `Number` for common numeric parameters. Use `ParamWithSchema` when the decoded value
-has a domain-specific Codec.
+The detail operation expects a numeric issue ID. Declare that at the Route boundary instead of
+calling `Number` independently in a component, loader, and command.
 
 ```ts
 import { Effect, Schema } from "effect"
 import * as Route from "@typed/router/Route"
 
-const WorkspaceId = Schema.String.pipe(Schema.brand("WorkspaceId"))
+const Issue = Route.Join(Route.Parse("/issues"), Route.Int("issueId"))
+type IssueParams = Route.Type<typeof Issue>
 
+const decodeIssue = Schema.decodeEffect(Issue.paramsSchema)
+const issueHref = (params: IssueParams) =>
+  Schema.encodeEffect(Issue.paramsSchema)(params).pipe(
+    Effect.map(({ issueId }) => `/issues/${encodeURIComponent(issueId)}`),
+  )
+
+const example = Effect.gen(function* () {
+  const decoded = yield* decodeIssue({ issueId: "42" })
+  const href = yield* issueHref(decoded)
+  const invalid = yield* Effect.exit(decodeIssue({ issueId: "forty-two" }))
+  return { decoded, href, invalid }
+})
+
+const result = await Effect.runPromise(example)
+```
+
+The decoder receives extracted parameter records, not a whole URL. Matcher owns path lookup and
+extracts those records before decoding. `SchemaError` remains in the decoder's expected-error
+channel; `Effect.exit` in the example lets the test inspect an invalid input without throwing away
+its Cause. Matcher reports route-selection failures with its own structured routing errors.
+
+The codec's decoded side has a number; its encoded side supplies a string suitable for a segment.
+Encoding also returns an Effect because a codec can fail or require services. Do not cast the
+encoded side to a domain type or assert away `R` just to make a link helper synchronous.
+
+`Int` rejects decimals and malformed numeric input. `Number` accepts finite decimal/exponent forms
+and rejects NaN and infinity. Use `ParamWithSchema` when the operation needs a domain-specific codec,
+such as a branded workspace identifier:
+
+```ts
+import { Schema } from "effect"
+import * as Route from "@typed/router/Route"
+
+const WorkspaceId = Schema.String.pipe(Schema.brand("WorkspaceId"))
 const Workspace = Route.Join(
   Route.Parse("/workspaces"),
   Route.ParamWithSchema("workspaceId", WorkspaceId),
 )
-
-type WorkspaceParams = Route.Type<typeof Workspace>
-// { readonly workspaceId: string & Brand<"WorkspaceId"> }
-
-const decodeWorkspace = Schema.decodeEffect(Workspace.paramsSchema)
-const encodeWorkspace = Schema.encodeEffect(Workspace.paramsSchema)
-
-const roundTrip = decodeWorkspace({ workspaceId: "typed" }).pipe(
-  Effect.flatMap(encodeWorkspace),
-)
+const Issue = Route.Join(Workspace, Route.Parse("/issues"), Route.Int("issueId"))
+type WorkspaceIssue = Route.Type<typeof Issue>
 ```
 
-The encoded side remains a URL string. The decoded side is the branded domain value. A Codec may
-also require services. The `Route` type namespace preserves those decoding and encoding
-requirements for generic link and matching utilities.
+The brand distinguishes this identifier in TypeScript; its schema decides runtime validity. Joining
+reusable fragments preserves the combined decoded shape. Duplicate decoded names are rejected at
+construction: two different fragments cannot both silently claim `id`.
 
-`Int("issueId")` similarly decodes `"42"` to `42` and rejects decimals or malformed input.
-`Number("value")` accepts finite decimal and exponent forms while rejecting `NaN` and infinity.
+## Read path and query grammar without guessing
 
-## Compose route fragments
+`Parse` is useful when a complete pattern is clearer than constructors. `Slash`, `Wildcard`,
+`Param`, numeric constructors, and `Join` all produce the same Route interface.
 
-`Join` composes reusable route fragments and intersects their decoded parameter records. The
-resulting Route still has one normalized path and one combined Codec.
+| Pattern | Interpretation |
+| --- | --- |
+| `/issues/:issueId` | Required string path parameter |
+| `/issues/:issueId?` | Optional terminal path parameter |
+| `/issues/:issueId(\\d+)` | Regex-constrained string; constraint does not make it a number |
+| `/files/*` | Remaining path captured as `"*"` |
+| `/issues?tab=:tab?` | Optional scalar query parameter |
+| `/issues?view=compact` | Required literal query constraint, not a default |
+| `/issues/:issueId??tab=:tab` | Optional terminal path parameter followed by query declaration |
+
+The double `??` boundary matters: `/issues/:issueId?tab=:tab` means required `issueId` plus query
+`tab`, not optional `issueId`. Include ambiguous boundaries in route tests rather than relying on
+how punctuation looks at a glance.
+
+A repeated declared query key, such as `?status=open&status=closed`, fails route decoding instead of
+silently choosing one value. Undeclared query keys are ignored by route decoding. A search feature
+that intentionally supports repeated values needs an explicit representation and decoding policy;
+a scalar placeholder does not become an array automatically.
+
+## Keep validation close to the appropriate boundary
+
+Each Route exposes `pathSchema`, `querySchema`, and `paramsSchema`. They let tooling validate path
+or query records independently, while the selected handler normally receives the combined decoded
+record. Use these codecs instead of maintaining parallel interfaces.
 
 ```ts
+import { Schema } from "effect"
 import * as Route from "@typed/router/Route"
 
-const Organization = Route.Join(
-  Route.Parse("/organizations"),
-  Route.Param("organizationId"),
-)
-const Issue = Route.Join(Organization, Route.Parse("/issues"), Route.Int("issueId"))
-const SearchPage = Route.Join(Route.Parse("/search"), Route.Number("page"))
-const Assets = Route.Join(Route.Parse("/assets"), Route.Wildcard)
-const Home = Route.Slash
-
-type IssueParams = Route.Type<typeof Issue>
-// { readonly organizationId: string; readonly issueId: number }
+const Queue = Route.Parse("/workspaces/:workspaceId/issues?q=:q?&status=:status?")
+const path = Schema.decodeEffect(Queue.pathSchema)({ workspaceId: "typed" })
+const query = Schema.decodeEffect(Queue.querySchema)({ q: "hydration", status: "open" })
+const params = Schema.decodeEffect(Queue.paramsSchema)({ workspaceId: "typed", status: "open" })
 ```
 
-Route construction rejects duplicate decoded field names. Joining `Param("id")` with `Int("id")`,
-or mapping two query keys to the same placeholder name, fails immediately instead of overwriting a
-value later.
+Syntax validation and authorization are different boundaries. A well-formed workspace ID still
+needs a permission check when data is loaded or mutated. A page Guard can enrich or reject decoded
+input for selection; it cannot replace authorization in the server operation itself.
 
-`Slash`, `Wildcard`, `Param`, `Int`, `Number`, `ParamWithSchema`, `Parse`, and `Join` all produce the
-same Route interface. Choose constructors for reusable fragments and `Parse` for a route whose shape
-is clearest as one pattern.
+Library helpers can project Route types without creating another route model. `Route.Path` gives
+the normalized literal pattern; `Route.Params` describes raw syntax parameters; `Route.Type` gives
+the decoded handler shape; `PathType` and `QueryType` select their parts. `Route.Schema`,
+`DecodingServices`, and `EncodingServices` expose the codec contract for generic utilities.
 
-## Generate a URL from decoded parameters
+`Route.make(ast)` is the extension point for code generators and routing libraries. It accepts the
+public [Route AST](/reference/modules/%40typed%2Frouter%2FAST); ordinary applications usually express
+the same model more clearly with Parse and Join. Type-level Path, Parser, and Uri modules underpin
+literal inference and are useful when building such tooling, not prerequisites for a queue page.
 
-A Route Codec encodes a parameter record; it does not turn that record into a complete URL.
-Keep those two steps explicit. For a small application, one helper beside the route can encode
-its domain value and construct its URL without maintaining another input interface:
+## Test the URL as an external input
 
-```ts
-import { Effect, Schema } from "effect";
-import * as Route from "@typed/router/Route";
+Test both directions. Generate a URL from decoded parameters, let Matcher select and decode it,
+and assert the handler's input. Include spaces, non-ASCII text, reserved characters, missing
+optional values, invalid numbers, repeated declared query keys, and duplicate decoded names.
+Testing only that a link string “looks right” misses its relationship to the decoder.
 
-const Issue = Route.Join(Route.Parse("/issues"), Route.Int("issueId"));
+When a deep link fails, inspect pathname and search separately, then the Route's normalized path and
+codecs. If they are correct, investigate [Matcher candidate selection](/explore/router-navigation-live-selection).
+If clicking a correct link changes history unexpectedly, investigate
+[Navigation's push/replace policy](/explore/navigation-as-an-effect-service). The Route contract
+should not acquire a browser listener just to diagnose either problem.
 
-const issueHref = (params: Route.Type<typeof Issue>) =>
-  Schema.encodeEffect(Issue.paramsSchema)(params).pipe(
-    Effect.map(({ issueId }) => `/issues/${encodeURIComponent(issueId)}`),
-  );
-
-const link = issueHref({ issueId: 42 });
-```
-
-Encoding can fail or require services, so the helper returns an Effect. For query strings, use
-`URLSearchParams` after encoding rather than joining unescaped `key=value` fragments. Omit absent
-optional query values instead of serializing the string `"undefined"`. Treat path parameters as
-individual segments when encoding; encoding the whole URL would also escape its separators.
-
-For user-facing navigation, render the resulting href through
-[UI Link](/reference/modules/%40typed%2Fui%2FLink) or an ordinary anchor. Keep canonical URL
-construction near the route declaration so browser links, server redirects, and tests agree.
-
-## Read a Route's types
-
-The module exports the common decoded helpers directly. The `Route` interface also carries helpers
-for the literal pattern, combined Codec, and its service requirements.
-
-```ts
-import { Parse, type Route } from "@typed/router/Route"
-
-const Issue = Parse("/issues/:issueId?tab=:tab?")
-
-type Pattern = Route.Path<typeof Issue>
-type EncodedParams = Route.Params<typeof Issue>
-type DecodedParams = Route.Type<typeof Issue>
-type PathParams = Route.PathType<typeof Issue>
-type QueryParams = Route.QueryType<typeof Issue>
-type ParamsCodec = Route.Schema<typeof Issue>
-type DecodeRequirements = Route.DecodingServices<typeof Issue>
-type EncodeRequirements = Route.EncodingServices<typeof Issue>
-```
-
-These are projections of the Route you already declared; they do not create a second route model.
-Most handlers only need `Route.Type`. Library code that generates links or builds Matchers may also
-need the Codec and service helpers.
-
-## Build a Route from its AST
-
-`Route.make` exists for routing libraries and code generators that need to construct the same public
-model without parsing a string pattern.
-
-```ts
-import * as RouteAst from "@typed/router/AST"
-import * as Route from "@typed/router/Route"
-
-const Account = Route.make<"/account">(
-  RouteAst.path(RouteAst.literal("account")),
-)
-```
-
-Application code should normally prefer `Route.Parse` and `Route.Join`: they express the URL more
-directly while producing the same `Route` interface.
-
-See [Effect v4](https://www.effect.website/docs/v4),
-[Route](/reference/modules/%40typed%2Frouter%2FRoute), and the
-[Router guide](/explore/router-navigation-live-selection).
+Continue with [Matcher](/explore/router-navigation-live-selection) to turn this input contract into
+live page work, or the [Route reference](/reference/modules/%40typed%2Frouter%2FRoute) for the precise
+constructors and type projections.

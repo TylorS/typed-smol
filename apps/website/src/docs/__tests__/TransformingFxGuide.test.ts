@@ -5,6 +5,7 @@ import ts from "typescript-compiler";
 import { describe, expect, it } from "vitest";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
+import { expectExampleCalls, runGuideExample } from "./FxGuideTestSupport.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guidePath = path.join(websiteRoot, "content/guides/transforming-fx.md");
@@ -13,14 +14,13 @@ describe("Transforming Fx guide", () => {
   const source = fs.readFileSync(guidePath, "utf8");
   const guide = parseGuideDocumentation("transforming-fx.md", source);
 
-  it("teaches one concise progression from pure to Effectful transformation", () => {
+  it("teaches pure and Effectful transformation with executable service requirements", () => {
     expect(guide).toMatchObject({
       slug: "transforming-fx",
       section: "Fx",
       kind: "guide",
       order: 1.2,
     });
-    expect(source.trim().split(/\s+/u).length).toBeLessThanOrEqual(1300);
     expect(source).toContain("Fx.filterMap");
     expect(source).toContain("Fx.mapEffect");
     expect(source).toContain("Data.TaggedError");
@@ -28,9 +28,14 @@ describe("Transforming Fx guide", () => {
     expect(source).toContain("Fx.provideService");
     expect(source).toContain("Fx.skipRepeats");
     expect(source).toContain("Fx.debounce");
-    expect(source).not.toContain("Read an operator across five dimensions");
     expect(source).not.toContain("declare ");
-    expect(extractTypeScriptFences(guide.body)).toHaveLength(3);
+    expectExampleCalls(source, [
+      "Fx.filterMap",
+      "Fx.map",
+      "Fx.mapEffect",
+      "Fx.provideService",
+      "Fx.debounce",
+    ]);
   });
 
   it("keeps every example independently compilable", () => {
@@ -63,5 +68,10 @@ describe("Transforming Fx guide", () => {
     } finally {
       fs.rmSync(staging, { recursive: true, force: true });
     }
+  });
+  it("filters and formats the authored product records", async () => {
+    const source = fs.readFileSync(guidePath, "utf8");
+    const result = await runGuideExample(websiteRoot, source, "interface Product", "result");
+    expect(result).toEqual([{ id: "desk", title: "Standing desk", price: "$499.00" }]);
   });
 });

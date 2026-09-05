@@ -18,7 +18,7 @@ import type { Apply, Identity, InputOf, Pipe, TypeFunction } from "./TypeFunctio
  * ```
  *
  * @since 1.0.0
- * @category type-level
+ * @category URI type inference
  */
 export type ParseUri<Input extends string, BaseUri extends string = never> =
   Pipe<
@@ -49,7 +49,7 @@ export type ParseUri<Input extends string, BaseUri extends string = never> =
  * `Uri` is a compile-time component record. Supplying its type arguments creates no runtime URL object or retained input.
  *
  * @since 1.0.0
- * @category type-level
+ * @category URI type inference
  */
 export interface Uri<
   Protocol extends string = string,
@@ -72,7 +72,7 @@ export interface Uri<
    * The `Uri.protocol` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   readonly protocol: Protocol;
   /**
@@ -86,7 +86,7 @@ export interface Uri<
    * The `Uri.username` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   readonly username: Username;
   /**
@@ -100,7 +100,7 @@ export interface Uri<
    * The `Uri.password` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   readonly password: Password;
   /**
@@ -114,7 +114,7 @@ export interface Uri<
    * The `Uri.hostname` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   readonly hostname: Hostname;
   /**
@@ -128,7 +128,7 @@ export interface Uri<
    * The `Uri.port` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   readonly port: Port;
   /**
@@ -142,7 +142,7 @@ export interface Uri<
    * The `Uri.pathname` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   readonly pathname: Pathname;
   /**
@@ -156,7 +156,7 @@ export interface Uri<
    * The `Uri.query` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   readonly query: Query;
   /**
@@ -170,7 +170,7 @@ export interface Uri<
    * The `Uri.hash` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   readonly hash: Hash;
 }
@@ -190,7 +190,7 @@ export declare namespace Uri {
    * The `Any` component is carried only as a type argument on `Uri`; no runtime field or resource exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category URI type inference
    */
   export type Any = Uri<string, string, string, string, number | "", string, string, string>;
 }
@@ -206,7 +206,7 @@ export declare namespace Uri {
  * `FormatUri` assembles only a string-literal type from the supplied `Uri`; it produces no runtime string.
  *
  * @since 1.0.0
- * @category type-level
+ * @category URI type inference
  */
 export type FormatUri<Uri extends Uri.Any, BaseUri extends string = never> = Apply<
   FormatUrlLambda,

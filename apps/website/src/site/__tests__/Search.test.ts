@@ -82,7 +82,9 @@ describe("Astro Typed search", () => {
     expect(host.querySelector(".search-results a")?.textContent).toContain("RefSubject");
     dialog.close();
     host.dispatchEvent(new Event("astro:unmount"));
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }),
+    );
     expect(dialog.open).toBe(false);
   });
 
@@ -112,8 +114,8 @@ describe("Astro Typed search", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(artifact)));
     vi.stubGlobal("fetch", fetch);
     const { host, dialog, input } = await mount();
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "k", ctrlKey: true, cancelable: true }),
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "k", ctrlKey: true, cancelable: true, bubbles: true }),
     );
     await vi.waitFor(() => expect(dialog.open).toBe(true));
     input.value = "first";
@@ -127,5 +129,128 @@ describe("Astro Typed search", () => {
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await vi.waitFor(() => expect(host.textContent).toContain("another-missing-api"));
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("moves focus through native links, opens from the input, and clears before closing", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(artifact))));
+    const { host, dialog, input, trigger } = await mount();
+    trigger.click();
+    await vi.waitFor(() => expect(dialog.open).toBe(true));
+    input.focus();
+    input.value = "RefSubject";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await vi.waitFor(() => expect(host.querySelector(".search-result-link")).not.toBeNull());
+    const link = host.querySelector<HTMLAnchorElement>(".search-result-link")!;
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
+    );
+    expect(document.activeElement).toBe(link);
+    link.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }),
+    );
+    expect(document.activeElement).toBe(input);
+    const clicked = vi.fn((event: Event) => event.preventDefault());
+    link.addEventListener("click", clicked);
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }),
+    );
+    await vi.waitFor(() => expect(clicked).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(dialog.open).toBe(false));
+    trigger.click();
+    await vi.waitFor(() => expect(dialog.open).toBe(true));
+    input.focus();
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+    );
+    await vi.waitFor(() => expect(input.value).toBe(""));
+    expect(dialog.open).toBe(true);
+    expect(document.activeElement).toBe(input);
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+    );
+    await vi.waitFor(() => expect(dialog.open).toBe(false));
+  });
+
+  it("cancels browser defaults synchronously and releases global keyboard handling with its scope", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(artifact))));
+    const { host, dialog, input } = await mount();
+    const shortcut = new KeyboardEvent("keydown", {
+      key: "k",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(shortcut);
+    expect(shortcut.defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(dialog.open).toBe(true));
+    input.focus();
+    input.value = "RefSubject";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await vi.waitFor(() => expect(host.querySelector(".search-result-link")).not.toBeNull());
+    const down = new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(host.querySelector(".search-result-link"));
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    document.activeElement!.dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(input.value).toBe(""));
+    expect(dialog.open).toBe(true);
+    dialog.close();
+    host.dispatchEvent(new Event("astro:unmount"));
+    await vi.waitFor(() => {
+      const afterUnmount = new KeyboardEvent("keydown", {
+        key: "k",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      document.body.dispatchEvent(afterUnmount);
+      expect(afterUnmount.defaultPrevented).toBe(false);
+      expect(dialog.open).toBe(false);
+    });
+  });
+
+  it("retries interrupted loading and retains only successful results within the island", async () => {
+    const fetch = vi
+      .fn()
+      .mockImplementationOnce(
+        (_url: RequestInfo | URL, options?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => reject(new Error("Aborted")), {
+              once: true,
+            });
+          }),
+      )
+      .mockImplementation(() => Promise.resolve(new Response(JSON.stringify(artifact))));
+    vi.stubGlobal("fetch", fetch);
+    const first = await mount();
+    first.trigger.click();
+    first.input.value = "RefSubject";
+    first.input.dispatchEvent(new Event("input", { bubbles: true }));
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    first.dialog.close();
+    await vi.waitFor(() =>
+      expect((fetch.mock.calls[0]?.[1] as RequestInit)?.signal?.aborted).toBe(true),
+    );
+    first.trigger.click();
+    await vi.waitFor(() => expect(first.host.querySelector(".search-result-link")).not.toBeNull());
+    expect(fetch).toHaveBeenCalledTimes(2);
+    first.input.value = "another-query";
+    first.input.dispatchEvent(new Event("input", { bubbles: true }));
+    await vi.waitFor(() => expect(first.host.textContent).toContain("No results"));
+    expect(fetch).toHaveBeenCalledTimes(2);
+    first.dialog.close();
+    first.host.dispatchEvent(new Event("astro:unmount"));
+    const second = await mount();
+    second.trigger.click();
+    second.input.value = "RefSubject";
+    second.input.dispatchEvent(new Event("input", { bubbles: true }));
+    await vi.waitFor(() => expect(second.host.querySelector(".search-result-link")).not.toBeNull());
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 });

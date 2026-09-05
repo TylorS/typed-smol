@@ -24,7 +24,7 @@ import { unwrap } from "./unwrap.js";
  * const page: Fx.Bounds = { skip: 20, take: 10 }
  * ```
  * @since 1.0.0
- * @category models
+ * @category Operator options
  */
 export interface Bounds {
   /**
@@ -86,7 +86,7 @@ export interface Bounds {
  * @param bounds - The `Bounds` specifying how many elements to skip and take.
  * @returns An `Fx` representing the slice.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const slice: {
   (bounds: Bounds): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;
@@ -119,7 +119,7 @@ export const slice: {
  * @param bounds - Effect that produces slice bounds.
  * @returns An `Fx` representing the slice.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const sliceEffect: {
   <E2, R2>(

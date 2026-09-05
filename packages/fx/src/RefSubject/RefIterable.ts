@@ -27,7 +27,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefIterable<
   in out A,
@@ -49,7 +49,7 @@ export interface RefIterable<
  * and cleanup; source failures and services stay on reads and pushes.
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<A, E = never, R = never>(
   initial: Iterable<A> | Effect.Effect<Iterable<A>, E, R> | Fx.Fx<Iterable<A>, E, R>,
@@ -75,7 +75,7 @@ export function make<A, E = never, R = never>(
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const prepend: {
   <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
@@ -98,7 +98,7 @@ export const prepend: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const prependAll: {
   <A>(value: Iterable<A>): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
@@ -121,7 +121,7 @@ export const prependAll: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const append: {
   <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
@@ -144,7 +144,7 @@ export const append: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const appendAll: {
   <A>(value: Iterable<A>): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
@@ -167,7 +167,7 @@ export const appendAll: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const drop: {
   (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
@@ -190,7 +190,7 @@ export const drop: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const take: {
   (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
@@ -213,7 +213,7 @@ export const take: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const takeWhile: {
   <A>(
@@ -240,7 +240,7 @@ export const takeWhile: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed Iterable and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filter: {
   <A>(
@@ -267,7 +267,7 @@ export const filter: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed Iterable and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const map: {
   <A>(
@@ -295,7 +295,7 @@ export const map: {
  * committed value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const dedupeAdjacent = <A, E, R>(
   ref: RefIterable<A, E, R>,
@@ -315,7 +315,7 @@ export const dedupeAdjacent = <A, E, R>(
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const intersperse: {
   <A>(middle: A): <E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
@@ -338,7 +338,7 @@ export const intersperse: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const repeat: {
   (n: number): <A, E, R>(ref: RefIterable<A, E, R>) => Effect.Effect<Iterable<A>, E, R>;
@@ -361,7 +361,7 @@ export const repeat: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const flatMap: {
   <A>(
@@ -392,7 +392,7 @@ export const flatMap: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed Iterable and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const filterMap: {
   <A>(
@@ -431,7 +431,7 @@ export const filterMap: {
  * The Effect starts when run, participates in the source ref's serialized update boundary, and
  * acquires no resource. It returns the committed Iterable and retains the ref's E and R channels.
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const getSomes = <A, E, R>(
   ref: RefIterable<Option.Option<A>, E, R>,
@@ -456,7 +456,7 @@ export const getSomes = <A, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, Iterable.isEmpty);
@@ -475,7 +475,7 @@ export const isEmpty = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, Iterable.size);
@@ -494,7 +494,7 @@ export const size = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<nu
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapValues: {
   <A, B>(
@@ -527,7 +527,7 @@ export const mapValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filterValues: {
   <A>(
@@ -559,7 +559,7 @@ export const filterValues: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const groupBy: {
   <A>(
@@ -587,7 +587,7 @@ export const groupBy: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduce: {
   <A, B>(
@@ -622,7 +622,7 @@ export const reduce: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const some: {
   <A>(
@@ -650,7 +650,7 @@ export const some: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const contains: {
   <A>(value: A): <E, R>(ref: RefIterable<A, E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -673,7 +673,7 @@ export const contains: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const countBy: {
   <A>(
@@ -701,7 +701,7 @@ export const countBy: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const toArray = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed<Array<A>, E, R> =>
   RefSubject.map(ref, (iter) => Array.from(iter));
@@ -724,7 +724,7 @@ export const toArray = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Computed
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const head = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Filtered<A, E, R> =>
   RefSubject.filterMap(ref, Iterable.head);
@@ -743,7 +743,7 @@ export const head = <A, E, R>(ref: RefIterable<A, E, R>): RefSubject.Filtered<A,
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const findFirst: {
   <A>(
@@ -768,7 +768,7 @@ export const findFirst: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const findLast: {
   <A>(

@@ -1,224 +1,258 @@
 ---
-title: "Navigation: history as an Effect service"
-summary: "Read, change, guard, and test history without coupling application behavior to a renderer."
-section: "Applications"
+title: "Navigation: history and unsaved-work decisions"
+summary: "Design a queue's Back behavior, observe committed versus pending destinations, and coordinate an editor's leave confirmation through Effect."
+section: "Routing"
 kind: "guide"
 order: 6.85
 ---
 
-`Navigation` is the application-facing history service. A Matcher consumes it to select route work,
-but Navigation is useful without a Matcher: a command palette can navigate, a form can prevent leaving
-with unsaved changes, and an analytics service can react after a destination commits.
+A user filters a queue, opens issue 42, changes its tab, then presses Back. The expected destination
+is a product decision: should Back undo each filter keystroke, leave the issue entirely, or return
+to its previous tab? A URL contract describes valid inputs; it cannot decide this history policy.
 
-`BrowserRouter` and `ServerRouter` from `@typed/router/Router`, and `TestRouter` from
-`@typed/router/RouterTest`, provide the same Navigation contract. Browser
-history, SSR memory, and deterministic tests therefore differ at the boundary, not throughout
-application code.
+Navigation owns history and transitions through an Effect service. Views read its live state;
+commands request changes. Matcher consumes committed locations to select page work, but a command
+palette, editor, or analytics operation can use Navigation without depending on a renderer or Matcher.
+Start with the [routing overview](/explore/routing-routes-matchers-and-navigation) if those jobs are
+not yet distinct.
 
-## The Navigation surface
+## Make push and replacement deliberate
 
-| Need                                    | API                                                                          |
-| --------------------------------------- | ---------------------------------------------------------------------------- |
-| Read the committed destination          | `Navigation.currentEntry`, `CurrentPath`                                     |
-| Read history and traversal availability | `Navigation.entries`, `Navigation.canGoBack`, `Navigation.canGoForward`      |
-| Show work before a destination commits  | `Navigation.transition`                                                      |
-| Push or replace a URL                   | `Navigation.navigate(url, options)`                                          |
-| Traverse retained entries               | `Navigation.back()`, `Navigation.forward()`, `Navigation.traverseTo(key)`    |
-| Change only the current entry state     | `Navigation.updateCurrentEntry({ state })`                                   |
-| Reload through the active backend       | `Navigation.reload()`                                                        |
-| Participate before or after a commit    | `Navigation.onBeforeNavigation(handler)`, `Navigation.onNavigation(handler)` |
-| Pause one pending transition            | `useBlockNavigation()`                                                       |
-
-The state members are `RefSubject` views. The commands are Effects. Reading a destination cannot
-change history; navigating cannot happen merely because a view rendered.
-
-## Navigate from ordinary Effect code
-
-`Navigation.navigate` returns the committed `Destination`. Its typed result includes the stable
-entry `key`, its unique commit `id`, decoded `URL`, and whatever `state` you stored with it.
+Opening another issue normally creates a history stop. Updating a tab in the same visit may replace
+that stop. This complete memory-history journey expresses that behavior directly:
 
 ```ts
-import { Effect } from "effect";
-import { Navigation } from "@typed/navigation";
+import { Effect } from "effect"
+import { Navigation } from "@typed/navigation"
+import { TestRouter } from "@typed/router/RouterTest"
 
-const openIssue = Effect.fn("openIssue")(function* (issueId: string) {
-  const destination = yield* Navigation.navigate(`/issues/${issueId}`, {
+const visitIssue = Effect.gen(function* () {
+  yield* Navigation.navigate("/issues/42", { history: "push" })
+  // Changing tabs should not add another Back stop inside this issue visit.
+  yield* Navigation.navigate("/issues/42?tab=activity", { history: "replace" })
+  const detail = yield* Navigation.currentEntry
+  yield* Navigation.back()
+  const returned = yield* Navigation.currentEntry
+  return {
+    detail: detail.url.pathname + detail.url.search,
+    returned: returned.url.pathname + returned.url.search,
+  }
+}).pipe(Effect.provide(TestRouter({ url: "https://test.local/issues?status=open" })))
+
+const result = await Effect.runPromise(visitIssue)
+// detail: "/issues/42?tab=activity"; returned: "/issues?status=open"
+```
+
+The same commands run with BrowserRouter in a browser. Its provider integrates with the platform's
+History API and `popstate`; memory providers make the application contract testable without DOM
+clicks. The platform distinguishes pushing/replacing entries and traversal in its
+[History API guide](https://developer.mozilla.org/en-US/docs/Web/API/History_API/Working_with_the_History_API).
+
+`history: "auto"` is the low-level navigate default: a same-origin destination with the same pathname
+replaces the current entry, including query/hash changes. Link uses push by default instead. Choose
+explicit push or replace when the interaction depends on it. Search-as-you-type often replaces;
+submitting a meaningful saved filter may intentionally push despite having the same pathname.
+
+## Keep destinations as real links when users expect link behavior
+
+An ordinary issue link should retain an href, modified clicks, and browser context-menu behavior.
+Use Link instead of making a clickable span that only calls a command.
+
+```ts
+import { Link } from "@typed/ui/Link"
+import { html } from "@typed/template"
+
+const issueLink = Link({ href: "/issues/42", content: "Review issue 42" })
+const activityLink = Link({ href: "/issues/42?tab=activity", replace: true, content: "Activity" })
+const actions = html`<nav aria-label="Issue navigation">${issueLink} ${activityLink}</nav>`
+```
+
+Link intercepts eligible same-origin primary clicks. Modified clicks, external HTTP destinations,
+downloads, and non-self targets retain native behavior. The href remains present in server HTML.
+For commands such as “open next unreviewed issue” or “navigate after successful save,” call
+Navigation.navigate from the Effect workflow. Build parameterized hrefs with the
+[Route encoding contract](/explore/route-typed-url-inputs).
+
+## Put shareable input in the URL and visit metadata in entry state
+
+Navigation.navigate returns the committed Destination with its URL, stable entry key, unique commit
+ID, and stored state. `state` belongs to the history entry; `info` is metadata for that transition's
+before/after handlers.
+
+```ts
+import { Effect } from "effect"
+import { Navigation } from "@typed/navigation"
+
+const openFromQueue = Effect.fn("openFromQueue")(function* (issueId: string) {
+  const destination = yield* Navigation.navigate(`/issues/${encodeURIComponent(issueId)}`, {
     history: "push",
-    state: { openedFrom: "inbox" },
-    info: { focus: "title" },
-  });
-
-  return destination.url.pathname;
-});
+    state: { returnTo: "/issues?status=open" },
+    info: { source: "queue-keyboard" },
+  })
+  return destination.url.pathname
+})
 ```
 
-`state` is retained on the committed history entry. `info` is transition-only metadata for
-before/after handlers. `history: "auto"` is the default: same-origin navigation with the same
-pathname replaces the entry, so query and hash changes do not grow history. Choose `"push"` or
-`"replace"` when the product behavior should be explicit.
+A return position or draft ID can fit entry state. A filter that must survive copying the URL
+belongs in path/query instead. Entry state is unknown at the service boundary; decode it before
+using application fields. TypeScript inference in the writing command does not validate state
+restored or supplied elsewhere.
 
-### Use an anchor for ordinary navigation
+`updateCurrentEntry({ state })` replaces state without changing the current slot's URL. `entries`
+exposes retained entries; `canGoBack` and `canGoForward` are derived views. Back/forward at a retained
+edge return the current destination without backend work. `traverseTo(key)` selects a retained
+entry, while a push after going back discards its forward branch. `reload` is a separate command;
+a browser reload can end the JavaScript lifetime rather than merely refresh one resource.
 
-`Navigation.navigate` fits commands and workflows. Use `@typed/ui/Link` when the user should see an
-actual link with an href, browser context menu, and modified-click behavior:
+## Observe pending intent separately from the committed location
+
+`currentEntry` is committed history. `transition` is a Filtered view of a proposed in-progress
+transition. `CurrentPath` is pathname plus search, the source Matcher uses; it omits hash and origin.
 
 ```ts
-import { Link } from "@typed/ui/Link";
+import { RefSubject } from "@typed/fx"
+import { CurrentPath, Navigation } from "@typed/navigation"
 
-const projectLink = Link({
-  href: "/projects/typed",
-  content: "Open Typed project",
-});
-
-const filterLink = Link({
-  href: "/issues?status=open",
-  replace: true,
-  content: "Open issues",
-});
+const pathname = RefSubject.map(Navigation.currentEntry, (entry) => entry.url.pathname)
+const matchedPath = CurrentPath
+// Keep absence visible so pending UI can clear after commit or cancellation.
+const pending = Navigation.transition.asComputed()
+const canGoBack = Navigation.canGoBack
 ```
 
-Link intercepts an eligible same-origin primary click and runs Navigation. Modified clicks,
-external HTTP destinations, downloads, and non-self targets retain their native paths. The href
-remains real in server-rendered HTML. Link uses push by default, while the lower-level
-`navigate` command defaults to `auto`; choose `replace` deliberately for filter/history behavior.
-Use the [Route encoding pattern](/explore/route-typed-url-inputs) when an href contains domain values.
+Using `asComputed()` keeps Option absence visible so pending UI can disappear when the transition
+settles. Observing only a Filtered's present values skips the disappearance. Do not optimistically
+label the current page as the proposed destination before it commits; a blocker may still cancel
+or redirect it.
 
-## Observe committed and pending navigation separately
+A successful navigate command says the destination committed. It does not say every page request,
+image, or DOM update completed. Matcher owns selection; the resource owns data readiness; an element
+reference owns availability for focus/scroll work. Keep those completion conditions separate.
 
-`currentEntry` publishes only committed history. `transition` exists only while a proposed
-destination is being processed, so pending UI never needs to guess whether the current URL has
-already changed.
+## Let an editor block a transition within its own Scope
+
+An editor should block while its draft is dirty and stop blocking when the editor disappears.
+`useBlockNavigation` registers scoped before-navigation behavior and exposes a Filtered Blocking
+value with `confirm`, `cancel`, and `redirect` Effects. The application chooses how to present that
+decision; observing the blocker does not settle it.
 
 ```ts
-import { RefSubject } from "@typed/fx";
-import { CurrentPath, Navigation } from "@typed/navigation";
+import { Option } from "effect"
+import { Fx, RefSubject } from "@typed/fx"
+import { useBlockNavigation } from "@typed/navigation/Blocking"
+import { html } from "@typed/template"
+import { component } from "@typed/ui/Component"
 
-const pathname = RefSubject.map(Navigation.currentEntry, (entry) => entry.url.pathname);
-const pathAndSearch = CurrentPath;
-const pending = Navigation.transition;
-
-const canGoBack = Navigation.canGoBack;
-const canGoForward = Navigation.canGoForward;
-const history = Navigation.entries;
+const DraftEditor = component(function* () {
+  const dirty = yield* RefSubject.make(false)
+  // Register with the editor's Scope so the blocker cannot outlive the draft editor.
+  const blocker = yield* useBlockNavigation({ shouldBlock: () => dirty })
+  const confirmation = Fx.switchMap(blocker.asComputed(), Option.match({
+    // Emit empty output to remove the previous confirmation when the decision settles.
+    onNone: () => Fx.null,
+    onSome: (decision) => html`<section aria-label="Unsaved changes">
+      <p>Leave this draft without saving?</p>
+      <button onclick=${decision.confirm}>Leave draft</button>
+      <button onclick=${decision.cancel}>Keep editing</button>
+    </section>`,
+  }))
+  return html`<section aria-label="Draft editor">
+    <label>Comment<textarea oninput=${RefSubject.set(dirty, true)}></textarea></label>
+    ${confirmation}
+  </section>`
+})
 ```
 
-`CurrentPath` is the reactive `pathname + search` used by Matcher. Read `currentEntry` when code
-also needs `hash`, entry identity, persisted state, or the normalized `URL`.
+The component needs a generator because it allocates state and registers the blocker. The draft
+persistence/save operation is intentionally separate: a real successful save sets dirty false after
+the server accepts the draft. A confirmation interaction may instead use a properly managed dialog,
+but the navigation decision contract remains the same.
 
-## Traverse history or update only its state
+`Fx.switchMap` runs the selected template's producer. `Fx.null` emits empty output when the blocker
+clears, removing the confirmation from its existing position.
 
-History movement and entry-state changes are different operations. Traversal preserves the target
-entry's URL, key, and state; `updateCurrentEntry` keeps the current slot and URL while replacing its
-state.
+Closing the owner unregisters the blocker and cancels unsettled work. The blocker coordinates
+transitions that pass through Navigation; it is not durable draft storage or a guarantee against tab
+closure, process exit, and external navigation. Persist recoverable drafts according to their actual
+lifetime. Settling a Blocking value releases its pending decision; await the original navigate
+Effect when you need to know the final destination has committed.
+
+## Verify confirmation without clicking a modal
 
 ```ts
-import { Effect } from "effect";
-import { Navigation } from "@typed/navigation";
+import { Effect, Fiber } from "effect"
+import { RefSubject } from "@typed/fx"
+import { Navigation } from "@typed/navigation"
+import { useBlockNavigation } from "@typed/navigation/Blocking"
+import { TestRouter } from "@typed/router/RouterTest"
 
-const reopenPrevious = Effect.fn("reopenPrevious")(function* () {
-  const entries = yield* Navigation.entries;
-  const current = yield* Navigation.currentEntry;
-  const index = entries.findIndex((entry) => entry.key === current.key);
-  const previous = index > 0 ? entries[index - 1] : undefined;
+const confirmJourney = Effect.scoped(Effect.gen(function* () {
+  const dirty = yield* RefSubject.make(true)
+  const blocker = yield* useBlockNavigation({ shouldBlock: () => dirty })
+  const initiallyBlocking = yield* blocker.isBlocking
+  // Navigation cannot finish until this test settles the blocker, so run it concurrently.
+  const navigation = yield* Effect.forkScoped(Navigation.navigate("/issues", { history: "push" }))
+  while (!(yield* blocker.isBlocking)) yield* Effect.yieldNow
+  const before = yield* Navigation.currentEntry
+  const decision = yield* blocker
+  yield* decision.confirm
+  // Confirming releases the decision; joining observes the actual destination commit.
+  const after = yield* Fiber.join(navigation)
+  return { initiallyBlocking, before: before.url.pathname, after: after.url.pathname }
+})).pipe(Effect.provide(TestRouter({ url: "https://test.local/issues/42" })))
 
-  return previous === undefined
-    ? yield* Navigation.currentEntry
-    : yield* Navigation.traverseTo(previous.key);
-});
-
-const rememberDraft = Navigation.updateCurrentEntry({
-  state: { draftId: "draft-42" },
-});
-
-const refresh = Navigation.reload({ info: { reason: "retry" } });
+const result = await Effect.runPromise(confirmJourney)
+// initiallyBlocking: false; before: "/issues/42"; after: "/issues"
 ```
 
-`back` and `forward` are bounded: at either edge they return the current destination without starting
-backend work. A push after going back discards the forward branch. `reload` is deliberately separate
-because a browser provider may leave the current JavaScript lifetime once the reload commits.
+Repeat this test for cancel, redirect, and owner teardown. Observe that currentEntry remains the old
+page while blocked and that pending state clears afterward. A test timeout catches a decision that
+never settles. Those tests exercise the navigation protocol; separate browser tests should verify
+Link interception, native modified clicks, and the confirmation UI's focus behavior.
 
-## Register route behavior with Effect
+## Register pre-commit policy and post-commit observation
 
-Pre-commit handlers may let a transition continue, redirect it, or cancel it. Post-commit handlers
-run only after history and `currentEntry` agree. Both registrations are scoped Effects: register
-them in the application or component lifetime that owns the behavior.
+Before handlers can continue, fail with CancelNavigation, or redirect with RedirectError. After
+handlers see a committed destination and cannot undo that commit. Both registrations are scoped.
+The Option result selects whether the handler contributes follow-up work for the event.
 
 ```ts
-import { Effect, Option } from "effect";
-import { Navigation, RedirectError } from "@typed/navigation";
+import { Effect, Option } from "effect"
+import { Navigation, RedirectError } from "@typed/navigation"
 
-const redirectLegacyAccount = Navigation.onBeforeNavigation((event) =>
+const legacyAccount = Navigation.onBeforeNavigation((event) =>
   event.to.url.pathname === "/account"
     ? Effect.fail(new RedirectError({ url: "/settings" }))
     : Effect.succeed(Option.none()),
-);
-
-const reportCommittedNavigation = Navigation.onNavigation((event) =>
-  Effect.succeed(Option.some(Effect.log(`navigated to ${event.destination.url.pathname}`))),
-);
+)
+const reportVisit = Navigation.onNavigation((event) =>
+  Effect.succeed(Option.some(Effect.log(`visited ${event.destination.url.pathname}`))),
+)
 ```
 
-The first handler runs before a backend mutation, so its redirect never commits `/account`. A handler
-can instead fail with `CancelNavigation` to keep the current destination. The second handler cannot
-undo a successful commit; use it for work that must observe the committed URL.
+The redirect avoids committing the legacy destination. The log is about committed location, not
+“page fully ready.” Keep a page-loader error in page/resource recovery instead of reporting that
+history failed after the URL already committed.
 
-## Model unsaved work without putting it in a component
+## Provide one history at the runtime edge
 
-`useBlockNavigation` exposes a renderer-independent `BlockNavigation` state. When a transition is
-blocked, the application chooses exactly one Effect: `confirm`, `cancel`, or `redirect`.
-
-```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
-import { useBlockNavigation } from "@typed/navigation/Blocking";
-
-const makeEditorNavigation = Effect.fn("makeEditorNavigation")(function* () {
-  const isDirty = yield* RefSubject.make(false);
-  const blocker = yield* useBlockNavigation({
-    shouldBlock: () => isDirty,
-  });
-
-  return { isDirty, blocker };
-});
-```
-
-`blocker` is a filtered RefSubject: it emits a `Blocking` value while a transition is blocked.
-Observing it does not settle that transition.
-Read or render that value, then run its `confirm`, `cancel`, or `redirect("/discarded")` Effect
-to settle the pending transition. `isBlocking` is the boolean view for a busy indicator.
-Closing the owning Scope unregisters the blocker and cancels any unsettled transition.
-
-Continue with [Router: live route selection](/explore/router-navigation-live-selection) to turn
-Navigation into typed route output, or [test Typed systems](/explore/testing-typed-systems) to run the
-same transitions against memory history. See [Navigation](/reference/modules/%40typed%2Fnavigation%2FNavigation),
-[Blocking](/reference/modules/%40typed%2Fnavigation%2FBlocking), and
-[Effect v4](https://www.effect.website/docs/v4).
-
-## Provide Navigation without a router
-
-A background workflow or small embedded control may need history without route selection.
-Use the navigation provider directly and supply its UUIDv7 dependency at that boundary:
+BrowserRouter, ServerRouter, and TestRouter provide the common Router/Navigation contract. A
+standalone workflow can instead install Navigation directly, supplying its UUIDv7 dependency:
 
 ```ts
-import { Effect, Layer } from "effect";
-import { Uuid7State } from "@typed/id/Uuid7";
-import { Navigation } from "@typed/navigation/Navigation";
-import { initialMemory } from "@typed/navigation/memory";
+import { Effect, Layer } from "effect"
+import { Uuid7State } from "@typed/id/Uuid7"
+import { Navigation } from "@typed/navigation/Navigation"
+import { initialMemory } from "@typed/navigation/memory"
 
-const History = initialMemory({ url: "https://example.com/inbox" }).pipe(
+const History = initialMemory({ url: "https://test.local/issues" }).pipe(
   Layer.provide(Uuid7State.Default),
-);
-
-const destination = Navigation.navigate("/issues/42", { history: "push" }).pipe(
-  Effect.provide(History),
-);
+)
+const open = Navigation.navigate("/issues/42").pipe(Effect.provide(History))
 ```
 
-The browser equivalent is `fromWindow(window)` from `@typed/navigation/fromWindow`, with the same
-`Uuid7State` dependency. Router layers already compose it; do not acquire another history provider
-inside every page. For deterministic IDs and memory history in tests, use
-[TestRouter and IdsTest](/explore/testing-typed-systems).
-
-An in-app blocker coordinates transitions that pass through Navigation. It is not a durable draft
-store or a promise that every tab close, process exit, or external navigation can be stopped.
-Persist recoverable work according to the editor's actual lifetime.
+The browser equivalent is `fromWindow(window)` with the same UUID dependency; router layers already
+compose it. Create the provider around the feature/application or server request, not once per page.
+Nested route structure belongs to [CurrentRoute and Matcher](/explore/router-navigation-live-selection).
+Use the [Navigation reference](/reference/modules/%40typed%2Fnavigation%2FNavigation) and
+[Blocking reference](/reference/modules/%40typed%2Fnavigation%2FBlocking) for exact command and event types.

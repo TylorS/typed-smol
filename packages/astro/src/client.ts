@@ -39,7 +39,15 @@ function slotsFromAstro(element: HTMLElement, slots: Record<string, string>): Co
   );
 }
 
-/** Astro's island lifecycle owns the running fiber and all Typed subscriptions. */
+/**
+ * Creates Astro's browser renderer for one island element.
+ * Replacement waits for the previous render's interruption; astro:unmount ends
+ * its subscriptions. Setup failures reject hydration, while later failures are
+ * reported by typed:error on the island. Astro invokes this renderer entry.
+ *
+ * @since 1.0.0
+ * @category Hydration and lifecycle
+ */
 export default (element: HTMLElement) =>
   async (
     component: unknown,
@@ -48,7 +56,7 @@ export default (element: HTMLElement) =>
     { client }: { client: string } = { client: "load" },
   ): Promise<void> => {
     if (!Component.isComponent(component)) {
-      throw new TypeError("@typed/astro requires a component created with Component.make");
+      throw new TypeError("@typed/astro requires a component created with component");
     }
     const revision = (revisions.get(element) ?? 0) + 1;
     revisions.set(element, revision);
@@ -65,7 +73,7 @@ export default (element: HTMLElement) =>
 
     const fiber = Effect.runFork(
       Effect.suspend(() =>
-        render(component(props, children), element).pipe(
+        render(Component.view(component, props, children), element).pipe(
           Fx.provide(DomRenderTemplate.using(element.ownerDocument)),
           Fx.observe(() => {
             ready = true;

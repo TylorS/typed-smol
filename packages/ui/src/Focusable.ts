@@ -18,7 +18,7 @@ import type { HostResult } from "./Dom/Types.js";
  * The model is inert; rendered dynamic values live for the component Scope.
  *
  * @since 1.0.0
- * @category models
+ * @category Keyboard focus
  */
 export interface FocusableOptions extends Dom.HostOptions<HTMLDivElement> {
   /** Content rendered inside the focusable host.
@@ -28,7 +28,7 @@ export interface FocusableOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * Dynamic content follows the rendered Scope and is released with it.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /** Optional ARIA role for the focus target.
@@ -38,7 +38,7 @@ export interface FocusableOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * The reflected value retains no resources.
    * @since 1.0.0
-   * @category accessibility
+   * @category Semantic roles
    */
   readonly role?: Renderable.Any<string | null | undefined>;
   /** Tab order value; defaults to zero.
@@ -48,7 +48,7 @@ export interface FocusableOptions extends Dom.HostOptions<HTMLDivElement> {
    * ## Ownership and lifetime
    * Dynamic values are observed only for the component Scope.
    * @since 1.0.0
-   * @category accessibility
+   * @category Keyboard focus
    */
   readonly tabIndex?: Renderable.Any<number | null | undefined>;
 }
@@ -88,7 +88,7 @@ type FocusableInternalProps<Options extends FocusableOptions> = ReturnType<
  * ```
  *
  * @since 1.0.0
- * @category components
+ * @category Keyboard focus
  */
 export function Focusable<
   const Options extends FocusableOptions,

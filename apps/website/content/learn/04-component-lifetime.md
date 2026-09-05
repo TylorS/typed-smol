@@ -1,34 +1,39 @@
 ---
 id: "component-lifetime"
-title: "Extract the Counter lifetime"
-summary: "Keep state construction inside the Fx that owns it and renderer choice outside."
+title: "Derive a value without duplicating state"
+summary: "Compute a second view of the count and follow both bindings through the component's lifetime."
 order: 4
 demo: "counter-component"
 ---
 
-Counter acquires its RefSubject when a renderer subscribes. That Scope owns the state,
-the dynamic output subscription, and every event listener. Moving the launch code to main.ts keeps
-the component reusable in DOM tests, HTML rendering, and a larger application.
+Start from the [Quick Start counter](/explore/quick-start) and add a value computed from the count. Inside `Counter`, map the subject:
 
-Move the Counter definition into `src/Counter.ts`. In `src/main.ts`, replace the local definition
-with `import { Counter } from "./Counter.js"` and keep the existing render pipeline.
+```ts
+// @source examples/learn-4/src/Counter.ts#L5-L9
+// @expect const count = yield* RefSubject.make(0);
+// @expect const doubled = RefSubject.map(count, (value) => value * 2);
+```
 
-### src/Counter.ts: own the component lifetime
+`doubled` observes the count. There is no second mutable value to keep in sync, and the button handlers stay the same. Display it below the controls:
+
+```ts
+// @source examples/learn-4/src/Counter.ts#L18-L18
+// @expect <p>Twice the count: ${doubled}</p>
+```
+
+The component's running Scope owns the state, subscriptions, and event listeners. Ending that lifetime releases them together.
+
+Replace only `src/Counter.ts`. This version also spells out the button labels as **Decrease** and **Increase**. Click Increase twice: the count should be **2** and the doubled value **4**.
+
+### Complete file
+
+<details class="curriculum-file">
+<summary>src/Counter.ts</summary>
 
 ```ts file="src/Counter.ts"
-import { Fx, RefSubject } from "@typed/fx"
-import { html } from "@typed/template"
-
-export const Counter = Fx.gen(function* () {
-  const count = yield* RefSubject.make(0)
-  const doubled = RefSubject.map(count, (value) => value * 2)
-
-  return html`<section aria-labelledby="counter-title">
-    <h1 id="counter-title">Counter</h1>
-    <button onclick=${RefSubject.decrement(count)}>Decrease</button>
-    <output aria-live="polite">${count}</output>
-    <button onclick=${RefSubject.increment(count)}>Increase</button>
-    <p>Twice the count: ${doubled}</p>
-  </section>`
-})
+// @source examples/learn-4/src/Counter.ts
 ```
+
+</details>
+
+Try adding a derived sentence that distinguishes zero, one, and several clicks. Continue with [building UI components](/explore/building-ui-components) and [Fx services and lifetime](/explore/fx-services-and-lifetime) for component parameters and shared state.

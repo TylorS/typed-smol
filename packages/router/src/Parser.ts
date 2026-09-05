@@ -19,7 +19,7 @@ import type { Apply, InputOf, Pipe, TypeFunction } from "./TypeFunction.js";
  * ```
  *
  * @since 1.0.0
- * @category type-level
+ * @category Parser contracts
  */
 export type Result<Value, Rest extends string> = readonly [value: Value, rest: Rest];
 
@@ -34,7 +34,7 @@ export type Result<Value, Rest extends string> = readonly [value: Value, rest: R
  * `Parser` is an HKT protocol evaluated by TypeScript. Implementing it creates no runtime parser object or subscription.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Parser contracts
  */
 export interface Parser<Output = unknown> extends TypeFunction<string, Result<Output, string>> {}
 
@@ -49,7 +49,7 @@ export interface Parser<Output = unknown> extends TypeFunction<string, Result<Ou
  * TypeScript instantiates `Parse` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Parser contracts
  */
 export type Parse<P extends Parser<unknown>, Input extends string> = Apply<P, Input>;
 
@@ -73,7 +73,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Any` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser contracts
    */
   export type Any = Parser<unknown>;
 
@@ -88,7 +88,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Run` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser contracts
    */
   export type Run<P extends Any, Input extends string> = Apply<P, Input>;
 
@@ -103,7 +103,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Succeed` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export interface Succeed<A> extends TypeFunction<string, Result<A, string>> {
     /**
@@ -117,7 +117,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Succeed.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser primitives
      */
     readonly return: InputOf<this> extends infer Input extends string ? readonly [A, Input] : never;
   }
@@ -133,7 +133,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Fail` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export interface Fail extends TypeFunction<string, never> {
     /**
@@ -147,7 +147,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Fail.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser primitives
      */
     readonly return: never;
   }
@@ -163,7 +163,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Char` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export interface Char<C extends string> extends TypeFunction<string, Result<C, string>> {
     /**
@@ -177,7 +177,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Char.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser primitives
      */
     readonly return: InputOf<this> extends `${C}${infer Rest}` ? readonly [C, Rest] : never;
   }
@@ -194,7 +194,7 @@ export declare namespace Parser {
    * accumulator and remainder are erased after type checking.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export interface String<S extends string> extends TypeFunction<string, Result<S, string>> {
     /**
@@ -208,7 +208,7 @@ export declare namespace Parser {
      * TypeScript evaluates `String.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser primitives
      */
     readonly return: InputOf<this> extends `${S}${infer Rest}` ? readonly [S, Rest] : never;
   }
@@ -224,7 +224,7 @@ export declare namespace Parser {
    * `LowercaseAlphabet` is a string-literal union used only during compiler evaluation and is erased from emitted JavaScript.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export type LowercaseAlphabet =
     | "a"
@@ -265,7 +265,7 @@ export declare namespace Parser {
    * `UppercaseAlphabet` is a string-literal union used only during compiler evaluation and is erased from emitted JavaScript.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export type UppercaseAlphabet =
     | "A"
@@ -306,7 +306,7 @@ export declare namespace Parser {
    * `Alphabet` is a string-literal union used only during compiler evaluation and is erased from emitted JavaScript.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export type Alphabet = LowercaseAlphabet | UppercaseAlphabet;
 
@@ -321,7 +321,7 @@ export declare namespace Parser {
    * `Digit` is a string-literal union used only during compiler evaluation and is erased from emitted JavaScript.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 
@@ -336,7 +336,7 @@ export declare namespace Parser {
    * `AlphaNumeric` is a string-literal union used only during compiler evaluation and is erased from emitted JavaScript.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser primitives
    */
   export type AlphaNumeric = Alphabet | Digit;
 
@@ -352,7 +352,7 @@ export declare namespace Parser {
    * accumulator and remainder are erased after type checking.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   type TakeWhileInternal<
     Input extends string,
@@ -376,7 +376,7 @@ export declare namespace Parser {
    * it creates no runtime validation or retained prefix.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   type TakeWhile1Internal<Input extends string, Allowed extends string> =
     TakeWhileInternal<Input, Allowed> extends readonly [
@@ -399,7 +399,7 @@ export declare namespace Parser {
    * TypeScript instantiates `TakeWhile` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   export interface TakeWhile<Allowed extends string> extends TypeFunction<
     string,
@@ -416,7 +416,7 @@ export declare namespace Parser {
      * TypeScript evaluates `TakeWhile.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser repetition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? TakeWhileInternal<Input, Allowed>
@@ -434,7 +434,7 @@ export declare namespace Parser {
    * TypeScript instantiates `TakeWhile1` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   export interface TakeWhile1<Allowed extends string> extends TypeFunction<
     string,
@@ -451,7 +451,7 @@ export declare namespace Parser {
      * TypeScript evaluates `TakeWhile1.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser repetition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? TakeWhile1Internal<Input, Allowed>
@@ -469,7 +469,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Map` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface Map<P extends Any, F extends TypeFunction> extends Parser<unknown> {
     /**
@@ -483,7 +483,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Map.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? Apply<P, Input> extends infer R
@@ -507,7 +507,7 @@ export declare namespace Parser {
    * TypeScript instantiates `FlatMap` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface FlatMap<P extends Any, F extends TypeFunction> extends Parser<unknown> {
     /**
@@ -521,7 +521,7 @@ export declare namespace Parser {
      * TypeScript evaluates `FlatMap.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? Apply<P, Input> extends infer R
@@ -551,7 +551,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Zip` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface Zip<P extends Any, Q extends Any> extends Parser<unknown> {
     /**
@@ -565,7 +565,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Zip.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? Apply<P, Input> extends infer R1
@@ -595,7 +595,7 @@ export declare namespace Parser {
    * TypeScript instantiates `OrElse` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface OrElse<P extends Any, Q extends Any> extends Parser<unknown> {
     /**
@@ -609,7 +609,7 @@ export declare namespace Parser {
      * TypeScript evaluates `OrElse.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? Apply<P, Input> extends infer R
@@ -634,7 +634,7 @@ export declare namespace Parser {
    * result and unchanged failure remainder exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface Optional<P extends Any> extends Parser<unknown> {
     /**
@@ -648,7 +648,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Optional.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? Apply<P, Input> extends infer R
@@ -673,7 +673,7 @@ export declare namespace Parser {
    * branch terminates type evaluation without creating a runtime loop.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   type ManyInternal<
     P extends Any,
@@ -702,7 +702,7 @@ export declare namespace Parser {
    * to `ManyInternal`; no runtime parser value exists.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   type Many1Internal<P extends Any, Input extends string> =
     Apply<P, Input> extends infer R
@@ -726,7 +726,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Many` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   export interface Many<P extends Any> extends Parser<unknown> {
     /**
@@ -740,7 +740,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Many.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser repetition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? ManyInternal<P, Input>
@@ -758,7 +758,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Many1` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   export interface Many1<P extends Any> extends Parser<unknown> {
     /**
@@ -772,7 +772,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Many1.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser repetition
      */
     readonly return: InputOf<this> extends infer Input extends string
       ? Many1Internal<P, Input>
@@ -790,7 +790,7 @@ export declare namespace Parser {
    * TypeScript instantiates `MapTo` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface MapTo<F extends TypeFunction> extends TypeFunction {
     /**
@@ -804,7 +804,7 @@ export declare namespace Parser {
      * TypeScript evaluates `MapTo.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer P extends Any ? Map<P, F> : never;
   }
@@ -820,7 +820,7 @@ export declare namespace Parser {
    * TypeScript instantiates `FlatMapTo` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface FlatMapTo<F extends TypeFunction> extends TypeFunction {
     /**
@@ -834,7 +834,7 @@ export declare namespace Parser {
      * TypeScript evaluates `FlatMapTo.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer P extends Any ? FlatMap<P, F> : never;
   }
@@ -850,7 +850,7 @@ export declare namespace Parser {
    * TypeScript instantiates `ZipWith` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface ZipWith<Q extends Any> extends TypeFunction {
     /**
@@ -864,7 +864,7 @@ export declare namespace Parser {
      * TypeScript evaluates `ZipWith.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer P extends Any ? Zip<P, Q> : never;
   }
@@ -880,7 +880,7 @@ export declare namespace Parser {
    * TypeScript instantiates `OrElseWith` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface OrElseWith<Q extends Any> extends TypeFunction {
     /**
@@ -894,7 +894,7 @@ export declare namespace Parser {
      * TypeScript evaluates `OrElseWith.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer P extends Any ? OrElse<P, Q> : never;
   }
@@ -910,7 +910,7 @@ export declare namespace Parser {
    * TypeScript instantiates `OptionalOf` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser composition
    */
   export interface OptionalOf extends TypeFunction {
     /**
@@ -924,7 +924,7 @@ export declare namespace Parser {
      * TypeScript evaluates `OptionalOf.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser composition
      */
     readonly return: InputOf<this> extends infer P extends Any ? Optional<P> : never;
   }
@@ -940,7 +940,7 @@ export declare namespace Parser {
    * TypeScript instantiates `ManyOf` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   export interface ManyOf extends TypeFunction {
     /**
@@ -954,7 +954,7 @@ export declare namespace Parser {
      * TypeScript evaluates `ManyOf.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser repetition
      */
     readonly return: InputOf<this> extends infer P extends Any ? Many<P> : never;
   }
@@ -970,7 +970,7 @@ export declare namespace Parser {
    * TypeScript instantiates `Many1Of` while parsing a string-literal input; partial results and unconsumed text exist only in the resulting type.
    *
    * @since 1.0.0
-   * @category type-level
+   * @category Parser repetition
    */
   export interface Many1Of extends TypeFunction {
     /**
@@ -984,7 +984,7 @@ export declare namespace Parser {
      * TypeScript evaluates `Many1Of.return` when the surrounding parser is applied; the associated result is erased and retains no input at runtime.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Parser repetition
      */
     readonly return: InputOf<this> extends infer P extends Any ? Many1<P> : never;
   }

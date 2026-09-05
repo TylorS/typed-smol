@@ -83,7 +83,7 @@ import { getAllSiblingsBetween, isText, persistent, type Rendered } from "./Wire
  * ```
  *
  * @since 1.0.0
- * @category services
+ * @category DOM document selection
  */
 export const CurrentRenderDocument = Context.Reference<Document>("RenderDocument", {
   defaultValue: () => document,
@@ -123,7 +123,7 @@ const CurrentInsertionContext = Context.Reference<Element | undefined>("RenderIn
  * ```
  *
  * @since 1.0.0
- * @category services
+ * @category Render scheduling
  */
 export const CurrentRenderQueue = Context.Reference<RQ.RenderQueue>("RenderQueue", {
   defaultValue: () => new RQ.MixedRenderQueue(),
@@ -156,7 +156,7 @@ export const CurrentRenderQueue = Context.Reference<RQ.RenderQueue>("RenderQueue
  * ```
  *
  * @since 1.0.0
- * @category services
+ * @category Render scheduling
  */
 export const CurrentRenderPriority = Context.Reference<number>("CurrentRenderPriority", {
   defaultValue: () => RQ.RenderPriority.Raf(10),
@@ -224,7 +224,7 @@ export const CurrentRenderPriority = Context.Reference<number>("CurrentRenderPri
  * ```
  *
  * @since 1.0.0
- * @category layers
+ * @category DOM template interpretation
  */
 export const DomRenderTemplate = Object.assign(
   Layer.effect(
@@ -377,7 +377,7 @@ export const DomRenderTemplate = Object.assign(
  * ```
  *
  * @since 1.0.0
- * @category type-level
+ * @category DOM output inference
  */
 export type ToRendered<T extends RenderEvent | null> = Rendered | (T extends null ? null : never);
 
@@ -460,7 +460,7 @@ type ToRenderedRenderable<T> =
  * @param where - The target DOM element to render into.
  * @returns An `Fx` that emits the currently rendered DOM nodes.
  * @since 1.0.0
- * @category rendering
+ * @category DOM mounting
  */
 export const render: {
   (
@@ -622,6 +622,7 @@ function setupRenderPart<E = never, R = never>(
         ctx,
         part.index,
         makeNodeUpdater(ctx.document, endComment),
+        true,
       );
       return effect === undefined || endComment.parentElement === null
         ? effect
@@ -695,12 +696,9 @@ function setupRenderPart<E = never, R = never>(
     }
     case "sparse-class-name": {
       const updater = makeClassListUpdater(node as HTMLElement | SVGElement);
-      return renderSparsePart(
-        part.nodes,
-        ++ctx.dynamicIndex,
-        ctx,
-        (classNames) => updater(getClassList(classNames)),
-        (value) => value,
+      // Sparse segments form one attribute value; a hole may continue a class token.
+      return renderSparseTextContent(node, part.nodes, ++ctx.dynamicIndex, ctx, (classNames) =>
+        updater(getClassList(classNames)),
       );
     }
     case "sparse-comment":
@@ -800,8 +798,12 @@ function renderValue<E, R, X>(
   ctx: TemplateContext,
   index: number,
   f: (value: unknown) => X,
+  nodeContext = false,
 ): void | X | Effect.Effect<unknown, E, R> {
-  return matchRenderable(ctx.values[index], {
+  const value = ctx.values[index];
+  // Node Effects describe renderables, as at the root. Fx emissions still require explicit flattening.
+  const renderable = nodeContext && Effect.isEffect(value) ? liftNodeEffectResult(value) : value;
+  return matchRenderable(renderable, {
     Primitive: f,
     Effect: (effect) => {
       ctx.expected++;
@@ -831,6 +833,21 @@ function renderValue<E, R, X>(
         );
     },
   });
+}
+
+// An Effect may return DOM terminals or another renderable description. Preserve borrowed node
+// identity while recursively normalizing Effect/array/Option containers; Fx remains unflattened.
+function liftNodeEffectResult<E, R>(value: Renderable<unknown, E, R>): Fx.Fx<unknown, E, R> {
+  if (Fx.isFx(value)) return value;
+  if (Effect.isEffect(value)) {
+    return Fx.unwrap(Effect.map(value, liftNodeEffectResult<E, R>));
+  }
+  if (Array.isArray(value)) return Fx.tuple(...value.map(liftNodeEffectResult<E, R>));
+  if (isOption(value)) return isNone(value) ? Fx.null : liftNodeEffectResult<E, R>(value.value);
+  if (isObject(value) && "nodeType" in value && typeof value.nodeType === "number") {
+    return Fx.succeed(value);
+  }
+  return liftRenderableToFx<E, R>(value);
 }
 
 function matchRenderable<X, A, B, C>(
@@ -1132,7 +1149,7 @@ function makeSpreadPartInstance<R>(
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category Template run context
  */
 export type TemplateContext<R = never> = {
   readonly document: Document;
@@ -1236,7 +1253,7 @@ const makeTemplateContext = Effect.fn(function* <
  * @see https://effect.website/docs/stream/introduction/
  *
  * @since 1.0.0
- * @category constructors
+ * @category Renderable normalization
  */
 export function liftRenderableToFx<const T extends Renderable.Any>(
   renderable: T,
@@ -1318,7 +1335,7 @@ function makeArrayLike<A>(index: number, value: A): ArrayLike<A> {
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category DOM adoption
  */
 export function attemptHydration(
   ctx: TemplateContext,
@@ -1496,6 +1513,7 @@ function setupHydratedNodePart<E, R>(
     ctx,
     part.index,
     makeHydratedNodeUpdater(ctx.document, hole),
+    true,
   );
   if (effect === undefined) return;
   const hydrated = Effect.provideService(effect, HydrateContext, nestedCtx);

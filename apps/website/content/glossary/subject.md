@@ -7,7 +7,10 @@ related: [refsubject, fx, effect]
 links: []
 ---
 
-A Subject is useful where another producer needs to push values into an Effect-native graph. It is
-an input boundary, not a renderer or an implicit global store. [RefSubject](#refsubject) adds a
-readable current value while preserving the same pushed transition stream.
+A Subject is a push-capable input boundary. Refresh commands are events: a new subscriber does not
+necessarily need to repeat an earlier command. Selected-account state has a different need: a new
+subscriber usually needs its current value.
 
+Subject constructors offer different replay policies; a Subject is not automatically a global store.
+A RefSubject adds current-state operations. See [event publications](/explore/subject-event-publications)
+for the publication contracts and [RefSubject](#refsubject) for state.

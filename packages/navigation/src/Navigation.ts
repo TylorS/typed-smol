@@ -27,7 +27,7 @@ import type {
  * the transition; providers retain `state` only if the destination commits.
  *
  * @since 1.0.0
- * @category options
+ * @category Command options
  */
 export interface NavigationNavigateOptions {
   /**
@@ -41,7 +41,7 @@ export interface NavigationNavigateOptions {
    * The caller owns the supplied state value. A successful commit retains it on the resulting Destination; a cancelled or failed transition does not.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Command options
    */
   readonly state?: unknown;
   /**
@@ -55,7 +55,7 @@ export interface NavigationNavigateOptions {
    * The transition retains this metadata only until post-commit handlers finish; it is not stored on the Destination history entry.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Command options
    */
   readonly info?: unknown;
   /**
@@ -69,7 +69,7 @@ export interface NavigationNavigateOptions {
    * The navigation Effect reads this mode for one transition and does not retain the options object after completion.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Command options
    */
   readonly history?: "auto" | "push" | "replace";
 }
@@ -86,7 +86,7 @@ export interface NavigationNavigateOptions {
  * This immutable options object acquires no resources and is retained only for the reload Effect.
  *
  * @since 1.0.0
- * @category options
+ * @category Command options
  */
 export interface NavigationReloadOptions {
   /**
@@ -100,7 +100,7 @@ export interface NavigationReloadOptions {
    * The caller owns the supplied state value. A successful commit retains it on the resulting Destination; a cancelled or failed transition does not.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Command options
    */
   readonly state?: unknown;
   /**
@@ -114,7 +114,7 @@ export interface NavigationReloadOptions {
    * The transition retains this metadata only until post-commit handlers finish; it is not stored on the Destination history entry.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Command options
    */
   readonly info?: unknown;
 }
@@ -131,7 +131,7 @@ export interface NavigationReloadOptions {
  * This immutable options object acquires no resources and is retained only for the traversal.
  *
  * @since 1.0.0
- * @category options
+ * @category Command options
  */
 export interface NavigationInfoOptions {
   /**
@@ -145,7 +145,7 @@ export interface NavigationInfoOptions {
    * The transition retains this metadata only until post-commit handlers finish; it is not stored on the Destination history entry.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Command options
    */
   readonly info?: unknown;
 }
@@ -183,7 +183,7 @@ type DestinationState<S> = Omit<Destination, "state"> & {
  * https://effect.website/docs/resource-management/scope/.
  *
  * @since 1.0.0
- * @category services
+ * @category Navigation service
  */
 export class Navigation extends Context.Service<
   Navigation,
@@ -234,7 +234,7 @@ export class Navigation extends Context.Service<
    * `Navigation.origin` reads the active service synchronously; the provider owns the stored string for its Layer lifetime.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Current destination
    */
   static readonly origin = Navigation.useSync((n) => n.origin);
   /**
@@ -248,7 +248,7 @@ export class Navigation extends Context.Service<
    * `Navigation.base` reads the active service synchronously; the provider owns the stored string for its Layer lifetime.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Current destination
    */
   static readonly base = Navigation.useSync((n) => n.base);
 
@@ -257,13 +257,15 @@ export class Navigation extends Context.Service<
    *
    * @remarks
    * ## Why
-   * Readers observe only committed history rather than a still-pending transition.
+   * Readers observe committed history. A before-navigation decision can still cancel or redirect
+   * the separate proposed transition without changing this value. A committed destination does
+   * not imply that the selected page has finished loading data or mounting its DOM.
    *
    * ## Ownership and lifetime
    * `Navigation.currentEntry` is a provider-backed RefSubject view. The provider owns its state; each consumer Scope owns and releases its observation.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Current destination
    */
   static readonly currentEntry = RefSubject.computedFromService(
     Navigation.useSync((n) => n.currentEntry),
@@ -279,7 +281,7 @@ export class Navigation extends Context.Service<
    * `Navigation.entries` is a provider-backed RefSubject view. The provider owns its state; each consumer Scope owns and releases its observation.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category History traversal
    */
   static readonly entries = RefSubject.computedFromService(Navigation.useSync((n) => n.entries));
   /**
@@ -292,8 +294,13 @@ export class Navigation extends Context.Service<
    * ## Ownership and lifetime
    * `Navigation.transition` is a provider-backed RefSubject view. The provider owns its state; each consumer Scope owns and releases its observation.
    *
+   * Use `transition.asComputed()` when pending UI must observe `Option.none()` as the transition
+   * ends. The Filtered observation itself emits only present transitions, so it cannot signal
+   * absence by publishing another Transition. Reading it while absent has the usual Filtered
+   * `NoSuchElementError` behavior.
+   *
    * @since 1.0.0
-   * @category navigation
+   * @category Destination transitions
    */
   static readonly transition = RefSubject.filteredFromService(
     Navigation.useSync((n) => n.transition),
@@ -309,7 +316,7 @@ export class Navigation extends Context.Service<
    * `Navigation.canGoBack` is a provider-backed RefSubject view. The provider owns its state; each consumer Scope owns and releases its observation.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category History traversal
    */
   static readonly canGoBack = RefSubject.computedFromService(
     Navigation.useSync((n) => n.canGoBack),
@@ -325,7 +332,7 @@ export class Navigation extends Context.Service<
    * `Navigation.canGoForward` is a provider-backed RefSubject view. The provider owns its state; each consumer Scope owns and releases its observation.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category History traversal
    */
   static readonly canGoForward = RefSubject.computedFromService(
     Navigation.useSync((n) => n.canGoForward),
@@ -343,7 +350,7 @@ export class Navigation extends Context.Service<
    * interrupted. Once its backend mutation commits, later interruption cannot undo that mutation.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Destination transitions
    */
   static navigate<S>(
     url: string | URL,
@@ -369,7 +376,7 @@ export class Navigation extends Context.Service<
    * lower bound it returns the current Destination without creating backend work.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category History traversal
    */
   static readonly back = (options?: NavigationInfoOptions) =>
     Navigation.use((n) => n.back(options));
@@ -385,7 +392,7 @@ export class Navigation extends Context.Service<
    * upper bound it returns the current Destination without creating backend work.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category History traversal
    */
   static readonly forward = (options?: NavigationInfoOptions) =>
     Navigation.use((n) => n.forward(options));
@@ -401,7 +408,7 @@ export class Navigation extends Context.Service<
    * an unknown key fails with `NavigationError` before any backend commit.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category History traversal
    */
   static readonly traverseTo = (key: Destination["key"], options?: NavigationInfoOptions) =>
     Navigation.use((n) => n.traverseTo(key, options));
@@ -418,7 +425,7 @@ export class Navigation extends Context.Service<
    * The existing Destination key and history position remain current.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Entry state
    */
   static updateCurrentEntry<S>(options: {
     readonly state: S;
@@ -442,7 +449,7 @@ export class Navigation extends Context.Service<
    * Browser reload may leave the current JavaScript lifetime once the History API action commits.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Destination transitions
    */
   static reload<S>(
     options: NavigationReloadOptions & { readonly state: S },
@@ -465,7 +472,7 @@ export class Navigation extends Context.Service<
    * Registration captures the current Effect context and requires Scope. Closing that Scope unregisters the handler and releases retained references.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Navigation hooks
    */
   static readonly onBeforeNavigation = <R = never, R2 = never>(
     handler: BeforeNavigationHandler<R, R2>,
@@ -481,7 +488,7 @@ export class Navigation extends Context.Service<
    * Registration captures the current Effect context and requires Scope. Closing that Scope unregisters the handler and releases retained references.
    *
    * @since 1.0.0
-   * @category navigation
+   * @category Navigation hooks
    */
   static readonly onNavigation = <R = never, R2 = never>(handler: NavigationHandler<R, R2>) =>
     Navigation.use((n) => n.onNavigation(handler));
@@ -500,7 +507,7 @@ export class Navigation extends Context.Service<
  * transition runs selected effects sequentially and interruption releases normal Effect resources.
  *
  * @since 1.0.0
- * @category handlers
+ * @category Navigation hooks
  */
 export type BeforeNavigationHandler<R, R2> = (
   event: BeforeNavigationEvent,
@@ -523,7 +530,7 @@ export type BeforeNavigationHandler<R, R2> = (
  * effects run after commit and do not alter the already committed destination.
  *
  * @since 1.0.0
- * @category handlers
+ * @category Navigation hooks
  */
 export type NavigationHandler<R, R2> = (
   event: NavigationEvent,
@@ -549,7 +556,7 @@ export type NavigationHandler<R, R2> = (
  * const readPath = Effect.map(CurrentPath, (path) => path)
  * ```
  * @since 1.0.0
- * @category state
+ * @category Current destination
  */
 export const CurrentPath = RefSubject.computedFromService(
   Navigation.useSync((n) =>

@@ -31,19 +31,9 @@ describe("Template text-only contexts guide", () => {
 
     expect(guide).toMatchObject({
       slug: "template-text-only-contexts",
-      section: "Templates",
+      section: "Template bindings",
       kind: "deep-dive",
-      order: 3.28,
     });
-    expect(guide.headings).toEqual(
-      expect.arrayContaining([
-        "Text-only means text, not child markup",
-        "Choose the context deliberately",
-        "Closing tags need neutralization",
-        "Trusted HTML is a separate boundary",
-        "Hydration does not make authored code safe",
-      ]),
-    );
     for (const term of [
       "textarea",
       "title",
@@ -78,7 +68,9 @@ describe("Template text-only contexts guide", () => {
     }
 
     const fences = extractTypeScriptFenceDocuments(guide.body);
-    expect(fences.length).toBeGreaterThanOrEqual(4);
+    expect(fences.some(({ code }) => code.includes("JSON.stringify"))).toBe(true);
+    expect(fences.some(({ code }) => code.includes("<textarea"))).toBe(true);
+    expect(fences.some(({ code }) => code.includes("<style>"))).toBe(true);
     expect(validateAuthoredExampleQuality([guide])).toEqual([]);
   });
 

@@ -1,3 +1,14 @@
+/**
+ * Text clipped visually but retained for accessible names and descriptions.
+ * The clipping style has no focus-reveal behavior and must not hide interactive descendants.
+ *
+ * Read the [VisuallyHidden guide](/explore/ui-visually-hidden) for a complete example.
+ *
+ * [Platform reference](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-hidden).
+ * @since 1.0.0
+ * @category Overview
+ * @packageDocumentation
+ */
 import type * as Scope from "effect/Scope";
 import type { Fx } from "@typed/fx/Fx";
 import { html, type Renderable, type RenderEvent, type RenderTemplate } from "@typed/template";
@@ -8,26 +19,12 @@ const style =
   "border:0;clip:rect(0 0 0 0);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;white-space:nowrap;width:1px";
 
 /**
- * Options for content hidden visually but retained for assistive technology.
- * @remarks
- * ## Why
- * Some controls need an accessible name or instruction that should not alter
- * the visual layout.
- * ## Ownership and lifetime
- * The options are inert; dynamic content follows the rendered Scope.
- * @since 1.0.0
- * @category models
  */
 export interface VisuallyHiddenOptions extends Dom.HostOptions<HTMLSpanElement> {
-  /** Content retained in the document and accessibility tree.
-   * @remarks
-   * ## Why
-   * Unlike `hidden` or `display: none`, clipped content remains perceivable to
-   * screen readers.
-   * ## Ownership and lifetime
-   * Dynamic content is released when the component Scope closes.
+  /**
+   * Content retained in the document and accessibility tree.
    * @since 1.0.0
-   * @category content
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
 }
@@ -39,22 +36,39 @@ function internalProps() {
 type VisuallyHiddenInternalProps = ReturnType<typeof internalProps>;
 
 /**
- * Renders screen-reader-accessible content with standard clipping styles.
+ * Clips text visually while retaining it for accessible naming and reading.
+ *
  * @remarks
- * ## Why
- * The primitive supplies a tested visual-hiding recipe without removing the
- * node from semantic layout or the accessibility tree.
- * ## Ownership and lifetime
- * Running the Fx owns the rendered span and dynamic content in its Effect
- * Scope. A custom host must preserve the supplied clipping styles.
+ * The span uses absolute positioning and a one-pixel clipping recipe. It has no focus-reveal
+ * behavior: do not hide interactive controls or use it alone as a skip link. An aria-hidden
+ * ancestor still removes its content from accessibility exposure. Custom hosts must preserve the
+ * supplied style.
+ *
  * @example
  * ```ts
- * import { VisuallyHidden } from "@typed/ui/VisuallyHidden"
+ * import { RefSubject } from "@typed/fx";
+ * import { html } from "@typed/template";
+ * import { Button } from "@typed/ui/Button";
+ * import { component } from "@typed/ui/Component";
+ * import { VisuallyHidden } from "@typed/ui/VisuallyHidden";
  *
- * const label = VisuallyHidden({ content: "Open navigation" })
+ * export const ResetCounter = component(function* () {
+ *   const count = yield* RefSubject.make(3);
+ *   return html`<div>
+ *     <p>Selected items: ${count}</p>
+ *     ${Button({
+ *     content: html`
+ *       <span aria-hidden="true">×</span>
+ *       ${VisuallyHidden({ content: "Clear selection" })}
+ *     `,
+ *     props: { class: "icon-action" },
+ *     onclick: RefSubject.set(count, 0),
+ *     })}
+ *   </div>`;
+ * });
  * ```
  * @since 1.0.0
- * @category components
+ * @category Structure and naming
  */
 export function VisuallyHidden<
   const Options extends VisuallyHiddenOptions,

@@ -9,6 +9,7 @@
  */
 
 import * as Effect from "effect/Effect";
+import * as Effectable from "effect/Effectable";
 import type * as Cause from "effect/Cause";
 import * as Exit from "effect/Exit";
 import { dual, flow, identity } from "effect/Function";
@@ -55,7 +56,7 @@ import * as Subject from "../Subject/Subject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.0.0
- * @category models
+ * @category State protocol
  */
 export interface Versioned<out R1, out E1, out A2, out E2, out R2, out A3, out E3, out R3>
   extends Fx.Fx<A2, E2, R2>, Effect.Effect<A3, E3, R3> {
@@ -74,7 +75,7 @@ export interface Versioned<out R1, out E1, out A2, out E2, out R2, out A3, out E
    * typed failures, services, and interruption behavior.
    *
    * @since 1.0.0
-   * @category combinators
+   * @category Version reads
    */
   readonly version: Effect.Effect<number, E1, R1>;
   /**
@@ -92,7 +93,7 @@ export interface Versioned<out R1, out E1, out A2, out E2, out R2, out A3, out E
    * and does not start a read or subscription merely by being accessed.
    *
    * @since 1.0.0
-   * @category combinators
+   * @category Lifetime
    */
   readonly interrupt: Effect.Effect<void, never, R1>;
 }
@@ -112,13 +113,13 @@ export interface Versioned<out R1, out E1, out A2, out E2, out R2, out A3, out E
  * errors, services, interruption behavior, and Scope requirements.
  *
  * @since 1.0.0
- * @category combinators
+ * @category State protocol
  */
 export namespace Versioned {
   /**
    * Unifies a Versioned type.
    * @since 1.0.0
-   * @category type-level
+   * @category Type utilities
    * @remarks
    * ## Why
    *
@@ -140,7 +141,7 @@ export namespace Versioned {
   /**
    * Extracts the context required to get the version.
    * @since 1.0.0
-   * @category type-level
+   * @category Type utilities
    * @remarks
    * ## Why
    *
@@ -159,7 +160,7 @@ export namespace Versioned {
   /**
    * Extracts the error type of the version effect.
    * @since 1.0.0
-   * @category type-level
+   * @category Type utilities
    * @remarks
    * ## Why
    *
@@ -190,7 +191,7 @@ export namespace Versioned {
    * services, interruption, and Scope requirements expressed by its members.
    *
    * @since 1.0.0
-   * @category models
+   * @category Services
    */
   export interface Service<Self, Id extends string, E1, A2, E2, A3, E3> extends Versioned<
     Self,
@@ -216,7 +217,7 @@ export namespace Versioned {
      * failures, services, and interruption behavior.
      *
      * @since 1.0.0
-     * @category combinators
+     * @category Services
      */
     readonly id: Id;
     /**
@@ -233,7 +234,7 @@ export namespace Versioned {
      * typed failures, services, and interruption behavior.
      *
      * @since 1.0.0
-     * @category combinators
+     * @category Services
      */
     readonly service: Context.Service<Self, Versioned<never, E1, A2, E2, never, A3, E3, never>>;
     /**
@@ -251,7 +252,7 @@ export namespace Versioned {
      * interrupt is run; each component retains its declared errors and services.
      *
      * @since 1.0.0
-     * @category constructors
+     * @category Constructors
      */
     readonly make: <R1 = never, R2 = never, R3 = never>(
       version: Effect.Effect<number, E1, R1>,
@@ -275,7 +276,7 @@ export namespace Versioned {
    * services, interruption, and Scope requirements expressed by its members.
    *
    * @since 1.0.0
-   * @category models
+   * @category Services
    */
   export interface Class<Self, Id extends string, E1, A2, E2, A3, E3> extends Service<
     Self,
@@ -301,7 +302,7 @@ export namespace Versioned {
      * Versioned value and supplies its three channels.
      *
      * @since 1.0.0
-     * @category type-level
+     * @category Type utilities
      */
     new (): Service<Self, Id, E1, A2, E2, A3, E3>;
   }
@@ -341,7 +342,7 @@ export namespace Versioned {
  * @param effect - An effect that retrieves the current value.
  * @returns A `Versioned` value.
  * @since 1.0.0
- * @category constructors
+ * @category Constructors
  */
 export function make<R1, E1, A2, E2, R2, A3, E3, R3>(
   version: Effect.Effect<number, E1, R1>,
@@ -394,13 +395,15 @@ class VersionedImpl<R1, E1, A2, E2, R2, A3, E3, R3>
  *
  * transform does not take ownership of its inputs. Its observation and current-read channels
  * retain upstream lifetime, typed failures, services, and interruption behavior.
+ * Sampled projections and in-flight reads are cached separately for each Effect Context object.
+ * Interrupting a transformed value affects the current Context's in-flight read.
  *
  * @param input - The source Versioned value.
  * @param transformFx - A function to transform the update stream.
  * @param transformGet - A function to transform the current value effect.
  * @returns A new `Versioned` value.
  * @since 1.0.0
- * @category combinators
+ * @category Channel transformations
  */
 export function transform<R0, E0, A, E, R, B, E2, R2, C, E3, R3, D, E4, R4>(
   input: Versioned<R0, E0, A, E, R, B, E2, R2>,
@@ -428,6 +431,14 @@ export class VersionedTransform<R0, E0, A, E, R, B, E2, R2, C, E3, R3, D, E4, R4
   public _version = -1;
   public _currentValue: Option.Option<Exit.Exit<D, E0 | E4>> = Option.none();
   public _fx: Fx.Fx<C, E3, R3>;
+  private readonly contexts = new WeakMap<
+    Context.Context<never>,
+    {
+      version: number;
+      currentValue: Option.Option<Exit.Exit<D, E0 | E4>>;
+      effect?: MulticastEffect<D, E0 | E4, R0 | R4>;
+    }
+  >();
 
   readonly input: Versioned<R0, E0, A, E, R, B, E2, R2>;
   readonly _transformFx: (fx: Fx.Fx<A, E, R>) => Fx.Fx<C, E3, R3>;
@@ -446,7 +457,9 @@ export class VersionedTransform<R0, E0, A, E, R, B, E2, R2, C, E3, R3, D, E4, R4
     this._fx = _transformFx(this.input);
   }
 
-  readonly version = Effect.sync(() => this._version);
+  readonly version: Effect.Effect<number> = Effect.contextWith((context) =>
+    Effect.sync(() => this.contexts.get(context)?.version ?? -1),
+  );
 
   run<R5>(sink: Sink.Sink<C, E3, R5>): Effect.Effect<unknown, never, R3 | R5> {
     return this._fx.run(sink);
@@ -454,39 +467,34 @@ export class VersionedTransform<R0, E0, A, E, R, B, E2, R2, C, E3, R3, D, E4, R4
 
   toEffect(): Effect.Effect<D, E0 | E4, R0 | R4> {
     const transformed = this._transformEffect(this.input);
-    const update = (v: number) =>
-      Effect.tapCause(
-        Effect.tap(transformed, (value) =>
-          Effect.sync(() => {
-            this._currentValue = Option.some(Exit.succeed(value));
-            this._version = v;
-          }),
-        ),
-        (cause) =>
-          Effect.sync(() => {
-            this._currentValue = Option.some(Exit.failCause(cause));
-            this._version = v;
-          }),
-      );
-
-    const multicastEffect = new MulticastEffect(
-      Effect.flatMap(this.input.version, (version) => {
-        if (version === this._version && Option.isSome(this._currentValue)) {
-          return this._currentValue.value;
-        }
-
-        return update(version);
-      }),
-    );
-
-    return multicastEffect;
+    return Effect.contextWith((context) => {
+      let state = this.contexts.get(context);
+      if (!state) {
+        state = { version: -1, currentValue: Option.none() };
+        this.contexts.set(context, state);
+      }
+      const current = state;
+      return (current.effect ??= new MulticastEffect(
+        Effect.flatMap(this.input.version, (version) => {
+          if (version === current.version && Option.isSome(current.currentValue)) {
+            return current.currentValue.value;
+          }
+          return Effect.onExit(transformed, (exit) =>
+            Effect.sync(() => {
+              current.currentValue = Option.some(exit);
+              current.version = version;
+              this._currentValue = current.currentValue;
+              this._version = version;
+            }),
+          );
+        }),
+      ));
+    });
   }
 
-  interrupt: Effect.Effect<void, never, never> = Effect.suspend(() => {
-    if (!this._effect) return Effect.void;
-    const me = this._effect as unknown as MulticastEffect<D, E0 | E4, R0 | R4>;
-    return me.interrupt();
-  });
+  interrupt: Effect.Effect<void, never, never> = Effect.contextWith(
+    (context) => this.contexts.get(context)?.effect?.interrupt() ?? Effect.void,
+  );
 }
 
 function isVersionedTransform(
@@ -525,7 +533,7 @@ function isVersionedTransform(
  * ```
  *
  * @since 1.18.0
- * @category combinators
+ * @category Channel transformations
  */
 export const map: {
   <A, E, R, C, B, D>(options: {
@@ -569,7 +577,7 @@ export const map: {
  * channel is consumed and are interrupted with that consumer.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Channel transformations
  */
 export const mapEffect: {
   <A, C, E3, R3, B, D, E4, R4>(options: {
@@ -617,7 +625,7 @@ export const mapEffect: {
  * retain upstream lifetime, typed failures, services, and interruption behavior.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Optional channel transformations
  */
 export const filterMap: {
   <A, E, R, C, B, D>(options: {
@@ -665,7 +673,7 @@ export const filterMap: {
  * channel is consumed and are interrupted with that consumer.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Optional channel transformations
  */
 export const filterMapEffect: {
   <A, C, E3, R3, B, D, E4, R4>(options: {
@@ -713,7 +721,7 @@ export const filterMapEffect: {
  * upstream lifetime, typed failures, services, and interruption behavior.
  *
  * @since 1.0.0
- * @category combinators
+ * @category State composition
  */
 export function tuple<
   const VS extends ReadonlyArray<Versioned<any, any, any, any, any, any, any, any>>,
@@ -753,7 +761,7 @@ export function tuple<
  * upstream lifetime, typed failures, services, and interruption behavior.
  *
  * @since 1.0.0
- * @category combinators
+ * @category State composition
  */
 export function struct<
   const VS extends Readonly<Record<string, Versioned<any, any, any, any, any, any, any, any>>>,
@@ -795,7 +803,7 @@ export function struct<
  * upstream lifetime, typed failures, services, and interruption behavior.
  *
  * @since 1.0.0
- * @category combinators
+ * @category Services
  */
 export const provide = <R0, E0, A, E, R, B, E2, R2, R3 = never, S = never>(
   versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
@@ -832,7 +840,7 @@ function mapRecord<K extends string, V, R>(
  * upstream lifetime, typed failures, services, and interruption behavior.
  *
  * @since 1.0.0
- * @category constructors
+ * @category Constructors
  */
 export function of<A>(value: A): Versioned<never, never, A, never, never, A, never, never> {
   return make(Effect.succeed(1), fxSucceed(value), Effect.succeed(value));
@@ -863,7 +871,7 @@ export function of<A>(value: A): Versioned<never, never, A, never, never, A, nev
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Shared observation
  */
 export function hold<R0, E0, A, E, R, B, E2, R2>(
   versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
@@ -887,7 +895,7 @@ export function hold<R0, E0, A, E, R, B, E2, R2>(
  * retain the input's errors and services.
  *
  * @since 1.0.0
- * @category combinators
+ * @category Shared observation
  */
 export function multicast<R0, E0, A, E, R, B, E2, R2>(
   versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
@@ -909,7 +917,7 @@ export function multicast<R0, E0, A, E, R, B, E2, R2>(
  * finalized when that Scope closes. Current reads retain input errors and services.
  *
  * @since 1.0.0
- * @category combinators
+ * @category Shared observation
  */
 export function replay<R0, E0, A, E, R, B, E2, R2>(
   versioned: Versioned<R0, E0, A, E, R, B, E2, R2>,
@@ -956,7 +964,7 @@ const VARIANCE = {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Services
  */
 export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3 = never>() {
   return <const Id extends string>(id: Id): Versioned.Class<Self, Id, E1, A2, E2, A3, E3> => {
@@ -970,7 +978,12 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
       static {
         // @effect-diagnostics-next-line floatingEffect:off
         Object.assign(this, service);
-        Object.assign(this.prototype, Object.getPrototypeOf(service));
+        Object.setPrototypeOf(this, Object.getPrototypeOf(service));
+        // @effect-diagnostics-next-line floatingEffect:off
+        Object.assign(this, Effectable.Prototype<Effect.Effect<A3, E3, Self>>({
+          label: "Versioned.Service",
+          evaluate: () => Effect.flatten(service),
+        }));
       }
 
       static readonly make = <R1 = never, R2 = never, R3 = never>(
@@ -1002,7 +1015,7 @@ export function Service<Self, E1 = never, A2 = never, E2 = never, A3 = never, E3
       static readonly run = <RSink>(sink: Sink.Sink<A2, E2, RSink>) =>
         Effect.flatMap(service, (v) => v.run(sink));
 
-      static readonly override = service;
+      static readonly override = Effect.flatMap(service, identity);
       static readonly [Symbol.iterator] = function* () {
         const v = yield* service;
         return yield* v;

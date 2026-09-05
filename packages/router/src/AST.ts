@@ -18,7 +18,7 @@ import type { AnyLayer, Layout as LayoutType, MatchHandler } from "./Matcher.js"
  * `PathAst` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Path syntax
  */
 export type PathAst =
   | PathAst.Literal
@@ -39,7 +39,7 @@ export declare namespace PathAst {
    * `Literal` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Path syntax
    */
   export type Literal = {
     /**
@@ -53,7 +53,7 @@ export declare namespace PathAst {
      * The string literal is stored directly on the plain AST object for that object's lifetime.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     type: "literal";
     /**
@@ -67,7 +67,7 @@ export declare namespace PathAst {
      * The node retains the immutable string value and acquires no matcher resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     value: string;
   };
@@ -82,7 +82,7 @@ export declare namespace PathAst {
    * `Parameter` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Path syntax
    */
   export type Parameter = {
     /**
@@ -96,7 +96,7 @@ export declare namespace PathAst {
      * The literal tag remains on the plain node for its lifetime and owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     type: "parameter";
     /**
@@ -111,7 +111,7 @@ export declare namespace PathAst {
      * RefSubject, not by this AST.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     name: string;
     /**
@@ -125,7 +125,7 @@ export declare namespace PathAst {
      * The flag is immutable metadata retained with the node and creates no fallback value itself.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     optional?: boolean;
     /**
@@ -140,7 +140,7 @@ export declare namespace PathAst {
      * invalid registration syntax as `RouteDecodeError`.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     regex?: string;
   };
@@ -156,7 +156,7 @@ export declare namespace PathAst {
    * `Wildcard` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Path syntax
    */
   export type Wildcard = {
     /**
@@ -170,7 +170,7 @@ export declare namespace PathAst {
      * The literal tag is the node's only state and owns no captured path value.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     type: "wildcard";
   };
@@ -186,7 +186,7 @@ export declare namespace PathAst {
    * `Slash` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Path syntax
    */
   export type Slash = {
     /**
@@ -200,7 +200,7 @@ export declare namespace PathAst {
      * The literal tag is immutable plain data and acquires no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     type: "slash";
   };
@@ -216,7 +216,7 @@ export declare namespace PathAst {
    * `QueryParams` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Path syntax
    */
   export type QueryParams = {
     /**
@@ -230,7 +230,7 @@ export declare namespace PathAst {
      * The literal tag is retained with this plain node and owns no URL state.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     type: "query-params";
     /**
@@ -245,7 +245,7 @@ export declare namespace PathAst {
      * constructing the AST.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     value: ReadonlyArray<PathAst.QueryParam>;
   };
@@ -261,7 +261,7 @@ export declare namespace PathAst {
    * `QueryParam` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Path syntax
    */
   export type QueryParam = {
     /**
@@ -275,7 +275,7 @@ export declare namespace PathAst {
      * The literal tag is retained with the plain node and owns no request URL.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     type: "query-param";
     /**
@@ -289,7 +289,7 @@ export declare namespace PathAst {
      * The node retains this immutable string; request-specific values are created during matching.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     name: string;
     /**
@@ -303,7 +303,7 @@ export declare namespace PathAst {
      * The child AST is retained by reference and remains owned by the route tree containing it.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Path syntax
      */
     value: PathAst;
   };
@@ -320,7 +320,7 @@ export declare namespace PathAst {
  * `literal` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Path syntax
  */
 export const literal = (value: string): PathAst.Literal => ({ type: "literal", value });
 /**
@@ -334,7 +334,7 @@ export const literal = (value: string): PathAst.Literal => ({ type: "literal", v
  * `parameter` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Path syntax
  */
 export const parameter = (name: string, optional?: boolean, regex?: string): PathAst.Parameter => ({
   type: "parameter",
@@ -353,7 +353,7 @@ export const parameter = (name: string, optional?: boolean, regex?: string): Pat
  * `wildcard` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Path syntax
  */
 export const wildcard = (): PathAst.Wildcard => ({ type: "wildcard" });
 /**
@@ -367,7 +367,7 @@ export const wildcard = (): PathAst.Wildcard => ({ type: "wildcard" });
  * `slash` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Path syntax
  */
 export const slash = (): PathAst.Slash => ({ type: "slash" });
 /**
@@ -381,7 +381,7 @@ export const slash = (): PathAst.Slash => ({ type: "slash" });
  * `queryParams` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Path syntax
  */
 export const queryParams = (value: ReadonlyArray<PathAst.QueryParam>): PathAst.QueryParams => ({
   type: "query-params",
@@ -398,7 +398,7 @@ export const queryParams = (value: ReadonlyArray<PathAst.QueryParam>): PathAst.Q
  * `queryParam` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Path syntax
  */
 export const queryParam = (name: string, value: PathAst): PathAst.QueryParam => ({
   type: "query-param",
@@ -417,7 +417,7 @@ export const queryParam = (name: string, value: PathAst): PathAst.QueryParam => 
  * `RouteAst` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Path syntax
  */
 export type RouteAst = RouteAst.Path | RouteAst.Transform | RouteAst.Join;
 
@@ -433,7 +433,7 @@ export declare namespace RouteAst {
    * `Path` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Route structure
    */
   export interface Path {
     /**
@@ -447,7 +447,7 @@ export declare namespace RouteAst {
      * `Path` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Route structure
      */
     type: "path";
     /**
@@ -462,7 +462,7 @@ export declare namespace RouteAst {
      * same node without reparsing or copying it.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Route structure
      */
     path: PathAst;
   }
@@ -478,7 +478,7 @@ export declare namespace RouteAst {
    * `Transform` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Route structure
    */
   export interface Transform {
     /**
@@ -492,7 +492,7 @@ export declare namespace RouteAst {
      * `Transform` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Route structure
      */
     type: "transform";
     /**
@@ -507,7 +507,7 @@ export declare namespace RouteAst {
      * projection and decoding.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Route structure
      */
     from: RouteAst;
     /**
@@ -521,7 +521,7 @@ export declare namespace RouteAst {
      * The containing `Transform` node retains its `to` Schema by reference; services are acquired only when that Schema runs.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Route structure
      */
     to: Top;
     /**
@@ -536,7 +536,7 @@ export declare namespace RouteAst {
      * the Effect that later runs the derived Schema.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Route structure
      */
     transformation: Transformation<any, any, any, any>;
   }
@@ -552,7 +552,7 @@ export declare namespace RouteAst {
    * `Join` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Route structure
    */
   export interface Join {
     /**
@@ -566,7 +566,7 @@ export declare namespace RouteAst {
      * `Join` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Route structure
      */
     type: "join";
     /**
@@ -581,7 +581,7 @@ export declare namespace RouteAst {
      * not mutate the array after construction.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Route structure
      */
     parts: ReadonlyArray<RouteAst>;
   }
@@ -598,7 +598,7 @@ export declare namespace RouteAst {
  * `path` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Route structure
  */
 export const path = (path: PathAst): RouteAst.Path => ({ type: "path", path });
 /**
@@ -612,7 +612,7 @@ export const path = (path: PathAst): RouteAst.Path => ({ type: "path", path });
  * `transform` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Route structure
  */
 export const transform = (
   from: RouteAst,
@@ -635,7 +635,7 @@ export const transform = (
  * `join` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Route structure
  */
 export const join = (parts: ReadonlyArray<RouteAst>): RouteAst.Join => ({ type: "join", parts });
 
@@ -650,7 +650,7 @@ export const join = (parts: ReadonlyArray<RouteAst>): RouteAst.Join => ({ type: 
  * `MatchAst` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Route structure
  */
 export type MatchAst =
   | MatchAst.Route
@@ -671,7 +671,7 @@ export declare namespace MatchAst {
    * `Route` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Matcher composition syntax
    */
   export interface Route {
     /**
@@ -685,7 +685,7 @@ export declare namespace MatchAst {
      * `Route` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     type: "route";
     /**
@@ -700,7 +700,7 @@ export declare namespace MatchAst {
      * unreachable.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     route: RouteAst;
     /**
@@ -715,7 +715,7 @@ export declare namespace MatchAst {
      * only when the executor evaluates that candidate.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     guard: Guard<any, any, any, any>;
     /**
@@ -730,7 +730,7 @@ export declare namespace MatchAst {
      * and interrupts that Fx on replacement.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     handler: MatchHandler<any, any, any, any>;
   }
@@ -746,7 +746,7 @@ export declare namespace MatchAst {
    * `Layer` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Matcher composition syntax
    */
   export interface Layer {
     /**
@@ -760,7 +760,7 @@ export declare namespace MatchAst {
      * `Layer` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     type: "layer";
     /**
@@ -775,7 +775,7 @@ export declare namespace MatchAst {
      * same-path candidate fallthrough.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     matches: ReadonlyArray<MatchAst>;
     /**
@@ -790,7 +790,7 @@ export declare namespace MatchAst {
      * acquired child Scopes and rollback.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     deps: ReadonlyArray<AnyLayer>;
   }
@@ -806,7 +806,7 @@ export declare namespace MatchAst {
    * `Layout` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Matcher composition syntax
    */
   export interface Layout {
     /**
@@ -820,7 +820,7 @@ export declare namespace MatchAst {
      * `Layout` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     type: "layout";
     /**
@@ -835,7 +835,7 @@ export declare namespace MatchAst {
      * Scope until the Matcher runs.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     matches: ReadonlyArray<MatchAst>;
     /**
@@ -850,7 +850,7 @@ export declare namespace MatchAst {
      * parameter-only transitions.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     layout: LayoutType<any, any, any, any, any, any, any>;
   }
@@ -866,7 +866,7 @@ export declare namespace MatchAst {
    * `Prefixed` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Matcher composition syntax
    */
   export interface Prefixed {
     /**
@@ -880,7 +880,7 @@ export declare namespace MatchAst {
      * `Prefixed` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     type: "prefixed";
     /**
@@ -895,7 +895,7 @@ export declare namespace MatchAst {
      * during structural compilation.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     matches: ReadonlyArray<MatchAst>;
     /**
@@ -909,7 +909,7 @@ export declare namespace MatchAst {
      * The prefix Route AST is retained by reference and owns no decoded parameter state.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     prefix: RouteAst;
   }
@@ -925,7 +925,7 @@ export declare namespace MatchAst {
    * `Catch` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
    *
    * @since 1.0.0
-   * @category advanced
+   * @category Matcher composition syntax
    */
   export interface Catch {
     /**
@@ -939,7 +939,7 @@ export declare namespace MatchAst {
      * `Catch` describes plain readonly AST data. Routes and Matchers retain the concrete nodes they receive by reference; the type itself owns no resource.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     type: "catch";
     /**
@@ -954,7 +954,7 @@ export declare namespace MatchAst {
      * created only when its Matcher runs.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     matches: ReadonlyArray<MatchAst>;
     /**
@@ -969,7 +969,7 @@ export declare namespace MatchAst {
      * fallback Fx in a child Scope while the boundary remains selected.
      *
      * @since 1.0.0
-     * @category advanced
+     * @category Matcher composition syntax
      */
     f: (cause: RefSubject<Cause<any>>) => Fx<any, any, any>;
   }
@@ -986,7 +986,7 @@ export declare namespace MatchAst {
  * `route` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Matcher composition syntax
  */
 export const route = (
   route: RouteAst,
@@ -1005,7 +1005,7 @@ export const route = (
  * `layer` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Matcher composition syntax
  */
 export const layer = (
   matches: ReadonlyArray<MatchAst>,
@@ -1023,7 +1023,7 @@ export const layer = (
  * `layout` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Matcher composition syntax
  */
 export const layout = (
   matches: ReadonlyArray<MatchAst>,
@@ -1041,7 +1041,7 @@ export const layout = (
  * `prefixed` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Matcher composition syntax
  */
 export const prefixed = (
   matches: ReadonlyArray<MatchAst>,
@@ -1059,7 +1059,7 @@ export const prefixed = (
  * `catchCause` returns a fresh plain AST node immediately and retains any supplied child nodes or arrays by reference; it acquires no external resource.
  *
  * @since 1.0.0
- * @category advanced
+ * @category Matcher composition syntax
  */
 export const catchCause = (
   matches: ReadonlyArray<MatchAst>,

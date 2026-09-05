@@ -196,7 +196,7 @@ type SkipSlashesParser = Parser.Optional<Parser.Many1<Parser.Char<"/">>>;
  * TypeScript computes `PathParser` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
  *
  * @since 1.0.0
- * @category path
+ * @category Path parsing
  */
 export type PathParser = Parser.Map<Parser.Zip<SkipSlashesParser, PathAtomParser>, Second>;
 
@@ -259,7 +259,7 @@ type GetAsts<R> = [R] extends [never]
  * TypeScript computes `ParseAsts` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
  *
  * @since 1.0.0
- * @category path
+ * @category Path parsing
  */
 export type ParseAsts<Input extends string> = GetAsts<ParseAstsResult<Input>>;
 
@@ -347,7 +347,7 @@ type ToReadonlyRecord<T> = [T] extends [infer T2] ? { readonly [K in keyof T2]: 
  * TypeScript computes `PathParams` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter inference
  */
 export type PathParams<P extends string> =
   ParseAsts<P> extends infer Asts
@@ -369,7 +369,7 @@ export type PathParams<P extends string> =
  * TypeScript computes `QueryParams` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter inference
  */
 export type QueryParams<P extends string> =
   ParseAsts<P> extends infer Asts
@@ -391,7 +391,7 @@ export type QueryParams<P extends string> =
  * TypeScript computes `Params` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter inference
  */
 export type Params<P extends string> =
   ParseAsts<P> extends infer Asts
@@ -413,7 +413,7 @@ export type Params<P extends string> =
  * `RuntimeParseResult` describes the fresh AST array and remaining string returned by runtime parsing; the alias owns neither value.
  *
  * @since 1.0.0
- * @category path
+ * @category Path parsing
  */
 export type RuntimeParseResult = readonly [asts: ReadonlyArray<PathAst>, rest: string];
 
@@ -435,7 +435,7 @@ export type RuntimeParseResult = readonly [asts: ReadonlyArray<PathAst>, rest: s
  * ```
  *
  * @since 1.0.0
- * @category path
+ * @category Path parsing
  */
 export function parseWithRest(input: string): RuntimeParseResult {
   let index = 0;
@@ -476,7 +476,7 @@ export function parseWithRest(input: string): RuntimeParseResult {
  * `parse` parses immediately and returns fresh AST array state; it retains neither the input string nor parser cursor.
  *
  * @since 1.0.0
- * @category path
+ * @category Path parsing
  */
 export function parse<const P extends string>(input: P): ParseAsts<P> {
   const [asts, rest] = parseWithRest(input);
@@ -500,7 +500,7 @@ export function parse<const P extends string>(input: P): ParseAsts<P> {
  * TypeScript computes `Join` from the route literal or AST tuple supplied to it; the alias is erased and retains no runtime data.
  *
  * @since 1.0.0
- * @category path
+ * @category Path formatting
  */
 export type Join<Parts extends ReadonlyArray<PathAst>> = `/${StringJoin<
   {
@@ -554,7 +554,7 @@ type FormatQueryParamAst<T extends PathAst.QueryParam> = `${T["name"]}=${FormatA
  * `join` formats immediately into a new string and retains neither the AST array nor its nodes.
  *
  * @since 1.0.0
- * @category path
+ * @category Path formatting
  */
 export function join<const Parts extends ReadonlyArray<PathAst>>(asts: Parts): Join<Parts> {
   return `/${asts.map(formatAst).join("")}` as Join<Parts>;
@@ -773,7 +773,7 @@ function startsWithQueryParam(input: string, index: number): boolean {
  * `SchemaField` is a readonly structural contract. The concrete arrays, AST nodes, names, and Schemas remain owned by the caller that constructs them.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter schemas
  */
 export type SchemaField = readonly [string, Schema.Top];
 /**
@@ -787,7 +787,7 @@ export type SchemaField = readonly [string, Schema.Top];
  * `OptionalSchemaField` is a readonly structural contract. The concrete arrays, AST nodes, names, and Schemas remain owned by the caller that constructs them.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter schemas
  */
 export type OptionalSchemaField = readonly [Schema.Record.Key, Schema.Top];
 /**
@@ -801,7 +801,7 @@ export type OptionalSchemaField = readonly [Schema.Record.Key, Schema.Top];
  * `SchemaFields` is a readonly structural contract. The concrete arrays, AST nodes, names, and Schemas remain owned by the caller that constructs them.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter schemas
  */
 export type SchemaFields = {
   /**
@@ -816,7 +816,7 @@ export type SchemaFields = {
    * acquire services only when decoding or encoding runs.
    *
    * @since 1.0.0
-   * @category path
+   * @category Parameter schemas
    */
   readonly requiredFields: ReadonlyArray<SchemaField>;
   /**
@@ -831,7 +831,7 @@ export type SchemaFields = {
    * acquire services only when decoding or encoding runs.
    *
    * @since 1.0.0
-   * @category path
+   * @category Parameter schemas
    */
   readonly optionalFields: ReadonlyArray<OptionalSchemaField>;
 };
@@ -847,7 +847,7 @@ export type SchemaFields = {
  * `schemaFromFields` constructs and returns immutable Effect Schema values immediately. Any services are required later by the Effect that executes those Schemas.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter schemas
  */
 export function schemaFromFields({ requiredFields, optionalFields }: SchemaFields): Schema.Top {
   const required = Schema.Struct(Object.fromEntries(requiredFields));
@@ -876,7 +876,7 @@ function schemaForParameter(param: PathAst.Parameter): Schema.Top {
  * `schemaForQueryValue` constructs and returns immutable Effect Schema values immediately. Any services are required later by the Effect that executes those Schemas.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter schemas
  */
 export function schemaForQueryValue(
   ast: PathAst.Literal | PathAst.Parameter | PathAst.Wildcard,
@@ -902,7 +902,7 @@ export function schemaForQueryValue(
  * `getSchemaFields` walks the supplied ASTs immediately and returns fresh required/optional field arrays containing the discovered Schema references.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter schemas
  */
 export function getSchemaFields<const Parts extends ReadonlyArray<PathAst>>(parts: Parts) {
   const requiredFields: Array<[string, Schema.Top]> = [];
@@ -972,7 +972,7 @@ export function getSchemaFields<const Parts extends ReadonlyArray<PathAst>>(part
  * `getSchemas` constructs and returns immutable Effect Schema values immediately. Any services are required later by the Effect that executes those Schemas.
  *
  * @since 1.0.0
- * @category path
+ * @category Parameter schemas
  */
 export function getSchemas<const Parts extends ReadonlyArray<PathAst>>(parts: Parts) {
   const { optionalFields, queryParams, requiredFields } = getSchemaFields(parts);
@@ -1004,7 +1004,7 @@ export function getSchemas<const Parts extends ReadonlyArray<PathAst>>(parts: Pa
  * `flattenRouteAst` traverses the supplied AST immediately and returns a fresh array; child AST and Schema values in that array remain shared references.
  *
  * @since 1.0.0
- * @category path
+ * @category Route structure validation
  */
 export function flattenRouteAst(ast: RouteAst): ReadonlyArray<PathAst> {
   switch (ast.type) {
@@ -1037,7 +1037,7 @@ export function flattenRouteAst(ast: RouteAst): ReadonlyArray<PathAst> {
  * `getDecodedParamNames` traverses the supplied AST immediately and returns a fresh array; child AST and Schema values in that array remain shared references.
  *
  * @since 1.0.0
- * @category path
+ * @category Route structure validation
  */
 export function getDecodedParamNames(ast: PathAst): ReadonlyArray<string> {
   switch (ast.type) {
@@ -1064,7 +1064,7 @@ export function getDecodedParamNames(ast: PathAst): ReadonlyArray<string> {
  * `assertUniqueDecodedRouteParamNames` performs one synchronous traversal, retains nothing, and throws before a Route is constructed when decoded names collide.
  *
  * @since 1.0.0
- * @category path
+ * @category Route structure validation
  */
 export function assertUniqueDecodedRouteParamNames(ast: RouteAst): void {
   const names = new Set<string>();
@@ -1089,7 +1089,7 @@ export function assertUniqueDecodedRouteParamNames(ast: RouteAst): void {
  * `QueryInputParameter` is a readonly structural contract. The concrete arrays, AST nodes, names, and Schemas remain owned by the caller that constructs them.
  *
  * @since 1.0.0
- * @category path
+ * @category Query decoding
  */
 export type QueryInputParameter = {
   /**
@@ -1103,7 +1103,7 @@ export type QueryInputParameter = {
    * This immutable string is retained in the returned analysis record and reused for each match.
    *
    * @since 1.0.0
-   * @category path
+   * @category Query decoding
    */
   readonly inputName: string;
   /**
@@ -1118,7 +1118,7 @@ export type QueryInputParameter = {
    * until a candidate is evaluated.
    *
    * @since 1.0.0
-   * @category path
+   * @category Query decoding
    */
   readonly outputName?: string;
   /**
@@ -1133,7 +1133,7 @@ export type QueryInputParameter = {
    * on the AST.
    *
    * @since 1.0.0
-   * @category path
+   * @category Query decoding
    */
   readonly ast: PathAst.Literal | PathAst.Parameter | PathAst.Wildcard;
 };
@@ -1149,7 +1149,7 @@ export type QueryInputParameter = {
  * `getQueryInputParameters` traverses the supplied AST immediately and returns a fresh array; child AST and Schema values in that array remain shared references.
  *
  * @since 1.0.0
- * @category path
+ * @category Query decoding
  */
 export function getQueryInputParameters(ast: RouteAst): ReadonlyArray<QueryInputParameter> {
   const output: Array<QueryInputParameter> = [];
@@ -1194,7 +1194,7 @@ export function getQueryInputParameters(ast: RouteAst): ReadonlyArray<QueryInput
  * `getQueryInputSchema` constructs and returns immutable Effect Schema values immediately. Any services are required later by the Effect that executes those Schemas.
  *
  * @since 1.0.0
- * @category path
+ * @category Query decoding
  */
 export function getQueryInputSchema(ast: RouteAst): Schema.Top {
   const requiredFields: Array<[string, Schema.Top]> = [];

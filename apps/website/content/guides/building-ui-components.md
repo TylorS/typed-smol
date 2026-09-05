@@ -1,297 +1,192 @@
 ---
-title: "Building UI components"
-summary: "Author one lazy, stateful UI component from public Typed primitives and test its state and browser boundaries separately."
+title: "Build a save control with a complete interaction policy"
+summary: "Start with a normal template, add local state when needed, and test the same save behavior the button runs."
 section: "UI"
 kind: "guide"
 order: 4
 ---
 
-Build a component when a repeated interaction needs a small public contract. This guide develops a
-save control: it shows a live status, runs a caller-supplied save action, and uses a real native
-button. The caller supplies its label and save work; the control owns only the short-lived visual
-phase of one rendered instance.
+An account page has a Save button. While a request is running, another click should not send a duplicate. If the server rejects the change, the page should explain why and allow another attempt. A successful save should be announced without moving focus. Removing the page should release its subscriptions and interrupt work owned by that page.
 
-## 1. Start with props and a public UI part
+Those requirements give the component its shape. The account data and remote operation belong to the caller. This control owns the availability and status of one save interaction. We will keep that policy usable without a renderer, then connect it to a native button.
 
-Name inputs after what callers know, not after DOM implementation details. A label is a component
-input; `Button.Button` is the public semantic host that solves keyboard activation and native button
-behavior.
+## A template is already a view
 
-```ts
-import { component } from "@typed/ui/Component";
-import * as Button from "@typed/ui/Button";
-
-interface SaveButtonProps {
-  readonly label: string;
-}
-
-const SaveButton = component(function* (props: SaveButtonProps) {
-  return Button.Button({ content: props.label });
-});
-
-const accountSave = SaveButton({ label: "Save account" });
-```
-
-`component(function* (props) { ... })` turns the parameterized generator into a component function.
-`SaveButton(props)` returns lazy rendered output as `Fx`; it does not create an element, attach a
-listener, or run an Effect yet. The returned `Button.Button` is a Template renderable, and
-`component` lifts that result into the same Fx boundary.
-
-## 2. Add local state and name its transitions
-
-The save phase belongs to the control because it describes this particular rendered interaction, not
-the account's domain state. Keep transitions as normal named functions so they are usable in tests
-and event Effects without inspecting rendered output.
+A view that only arranges inputs needs no generator. `html` returns renderable output, and UI primitives such as `Button` do the same. Start there:
 
 ```ts
 import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
-import { component } from "@typed/ui/Component";
-import * as Button from "@typed/ui/Button";
+import { Button } from "@typed/ui/Button";
 
-type SavePhase = "idle" | "saving" | "saved";
+const SaveAction = (save: Effect.Effect<void>) => html`<div class="account-actions">
+  ${Button({ content: "Save account", onclick: save })}
+</div>`;
 
-const beginSave = <E, R>(phase: RefSubject.RefSubject<SavePhase, E, R>) =>
-  RefSubject.set(phase, "saving");
-
-const finishSave = <E, R>(phase: RefSubject.RefSubject<SavePhase, E, R>) =>
-  RefSubject.set(phase, "saved");
-
-interface SaveButtonProps {
-  readonly label: string;
-  readonly save: Effect.Effect<void>;
-}
-
-const SaveButton = component(function* (props: SaveButtonProps) {
-  const phase = yield* RefSubject.make<SavePhase>("idle");
-  const runSave = Effect.gen(function* () {
-    yield* beginSave(phase);
-    yield* props.save;
-    yield* finishSave(phase);
-  });
-
-  return html`<section>
-    <output role="status">${phase}</output>
-    ${Button.Button({ content: props.label, onclick: runSave })}
-  </section>`;
-});
+const action = SaveAction(Effect.log("Save requested"));
 ```
 
-`RefSubject.make` runs only when the component's Fx runs, so each mounted save control gets its own
-phase. `beginSave` and `finishSave` are local UI transitions; account data stays in caller-owned
-state or in the supplied `save` Effect. If failure needs a visible phase, add an explicit `failed`
-variant and a recovery policy—do not turn an expected failure into a stale “saved” label.
+This is a useful composition boundary, but it has no asynchronous interaction policy yet. Calling `SaveAction` does not run `save`; the button event runs that Effect. Introducing `component(function* ...)` around this template would add ceremony without doing any setup.
 
-## 3. Let a prop be static or live
+## Give the save operation one owner
 
-Labels often start static and later need live localization or availability text. `Renderable` already
-accepts a snapshot, an `Fx`, an Effect, and other template-supported values. Normalize once with
-`liftRenderableToFx` when the component must transform the value before rendering it.
+We need two pieces of local state: whether this control currently owns a save, and the message shown to the person using it. The function below allocates them. It accepts a caller-supplied operation with one expected failure, `SaveRejected`, and preserves whatever services that operation requires.
 
-```ts
-import { Effect } from "effect";
-import { Fx, RefSubject } from "@typed/fx";
-import { html, liftRenderableToFx, type Renderable } from "@typed/template";
-import { component } from "@typed/ui/Component";
-import * as Button from "@typed/ui/Button";
+The submit command atomically claims the busy state with `RefSubject.modify`. A read followed by a separate write would leave a gap where two callers could both see “not busy.” The disabled button communicates availability; the atomic claim also protects calls made directly by application code.
 
-type SavePhase = "idle" | "saving" | "saved";
+Save this module as `SaveAccount.ts`:
 
-const beginSave = <E, R>(phase: RefSubject.RefSubject<SavePhase, E, R>) =>
-  RefSubject.set(phase, "saving");
-const finishSave = <E, R>(phase: RefSubject.RefSubject<SavePhase, E, R>) =>
-  RefSubject.set(phase, "saved");
-
-interface SaveButtonProps<E, R> {
-  readonly label: Renderable<string, E, R>;
-  readonly save: Effect.Effect<void, E, R>;
-}
-
-const SaveButton = component(function* <E, R>(props: SaveButtonProps<E, R>) {
-  const phase = yield* RefSubject.make<SavePhase>("idle");
-  const buttonLabel = liftRenderableToFx<E, R>(props.label).pipe(
-    Fx.map((label) => (label === "Save" ? label : `Save ${label}`)),
-  );
-  const runSave = Effect.gen(function* () {
-    yield* beginSave(phase);
-    yield* props.save;
-    yield* finishSave(phase);
-  });
-
-  return html`<section>
-    <output role="status">${phase}</output>
-    ${Button.Button({ content: buttonLabel, onclick: runSave })}
-  </section>`;
-});
-
-const profileSave = SaveButton({ label: "profile", save: Effect.void });
-```
-
-The component's Fx carries the errors and service requirements of both `save` and `label`; nothing
-inside the component silently supplies or catches them. A static label emits once, while an `Fx`
-label continues to update its button content. Do not accept a writable RefSubject merely to display
-it—the component has no reason to mutate caller-owned label state.
-
-### Give an asynchronous save a complete interaction policy
-
-The earlier examples isolate construction and typing. A real save needs to prevent repeated
-activation, report a recoverable rejection, and leave its busy state when the work finishes.
-Keep that policy next to the interaction. Expected failure becomes visible content; unexpected
-failures still belong to the application's error boundary.
-
-```ts
+```ts file="SaveAccount.ts"
 import { Data, Effect } from "effect";
 import { RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
+import { Button } from "@typed/ui/Button";
 import { component } from "@typed/ui/Component";
-import * as Button from "@typed/ui/Button";
 
-class SaveRejected extends Data.TaggedError("SaveRejected")<{
+export class SaveRejected extends Data.TaggedError("SaveRejected")<{
   readonly message: string;
 }> {}
 
-const SaveAccount = component(function* (
-  save: Effect.Effect<void, SaveRejected>,
+export interface SaveState<R> {
+  readonly busy: RefSubject.Computed<boolean>;
+  readonly status: RefSubject.Computed<string>;
+  readonly submit: Effect.Effect<void, never, R>;
+}
+
+export const makeSaveState = Effect.fn("makeSaveState")(function* <R>(
+  save: Effect.Effect<void, SaveRejected, R>,
 ) {
   const busy = yield* RefSubject.make(false);
   const status = yield* RefSubject.make("Ready to save");
-
   const submit = Effect.gen(function* () {
-    if (yield* busy) return;
-    yield* RefSubject.set(busy, true);
-    yield* RefSubject.set(status, "Saving…");
-    yield* save.pipe(
-      Effect.andThen(RefSubject.set(status, "Saved")),
+    // Claim and check in one update so two callers cannot both start a save.
+    const acquired = yield* RefSubject.modify(busy, (current) => [!current, true] as const);
+    if (!acquired) return;
+
+    yield* Effect.gen(function* () {
+      yield* RefSubject.set(status, "Saving…");
+      yield* save;
+      yield* RefSubject.set(status, "Saved");
+    }).pipe(
+      // Expected rejections become UI messages; defects still reach error reporting.
       Effect.catchTag("SaveRejected", ({ message }) => RefSubject.set(status, message)),
+      // Restore availability even when the request fails or its owner interrupts it.
       Effect.ensuring(RefSubject.set(busy, false)),
     );
   });
 
-  return html`<section aria-busy=${busy}>
-    ${Button.Button({ content: "Save account", disabled: busy, onclick: submit })}
-    <p role="status">${status}</p>
-  </section>`;
+  return {
+    busy: RefSubject.map(busy, (value) => value),
+    status: RefSubject.map(status, (value) => value),
+    submit,
+  } satisfies SaveState<R>;
 });
 
-const accountSave = SaveAccount(Effect.void);
+export const SaveStatus = <R>({ busy, status, submit }: SaveState<R>) => html`<section aria-busy=${busy}>
+  ${Button({ content: "Save account", disabled: busy, onclick: submit })}
+  <p role="status">${status}</p>
+</section>`;
+
+export const SaveAccount = component(function* <R>(
+  save: Effect.Effect<void, SaveRejected, R>,
+) {
+  return SaveStatus(yield* makeSaveState(save));
+});
 ```
 
-The disabled binding communicates availability through the native button. The Effect also checks
-busy state because the command may be invoked outside a click. For shared writes invoked from
-multiple components, put serialization or deduplication in the shared service; local button state
-only coordinates this instance. If navigation removes this component, its render lifetime owns the
-handler work. A save that must outlive the screen needs an explicitly longer-lived service owner.
+`makeSaveState` is an Effect-returning function, so it uses `Effect.fn`. `SaveStatus` only arranges live values and an action, so it returns `html` directly. `SaveAccount` allocates the state when rendered, so it uses `component`. These are three different jobs with three small, ordinary contracts.
 
-### Preserve the public host contract when adding styling
+The returned state exposes Computed views. A consumer can read or observe them, but cannot set the internal busy flag to manufacture an available button. It can run `submit`, which owns the whole transition. The local state is independent for each execution of `SaveAccount`; passing the same save Effect to two controls does not serialize their writes together.
 
-Prefer `props` for classes and ordinary attributes. A custom host is useful for a design-system
-wrapper, but receives already-composed props: required semantics, events, and refs travel together.
-Spread the complete object onto the actual interactive element:
+## Decide what failure means before styling it
+
+`SaveRejected` is an expected result that this interaction knows how to present. Its message becomes visible status, and finalization releases busy state so another attempt can run. A defect is not silently relabeled as a validation message; it remains available to the application's error reporting boundary.
+
+`ensuring` runs on success, failure, and interruption. Here it restores availability. This control has no separate Cancel command: interruption normally comes from its owner ending the interaction. If a save must survive navigation, provide a longer-lived command service that owns that work and let the view observe it.
+
+A status region announces changed text without moving focus. Use a meaningful native button label and retain focus on the button through a retry. A whole form also needs validation, field errors, and submission semantics; compose [Form](/explore/ui-form) when those responsibilities enter the design.
+
+## Test the policy the button actually uses
+
+Save the following file next to `SaveAccount.ts`. It imports the implementation above. The deferred request lets the test choose exactly when work starts and ends; no network delay or fixed sleep is involved.
+
+```ts file="SaveAccount.test.ts"
+// @vitest-environment happy-dom
+import { Deferred, Effect, Fiber } from "effect";
+import { Fx } from "@typed/fx";
+import { DomRenderTemplate, render } from "@typed/template";
+import { expect, it, vi } from "vitest";
+import { makeSaveState, SaveAccount, SaveRejected } from "./SaveAccount.js";
+
+it("ignores overlapping submissions and permits retry after rejection", () =>
+  Effect.gen(function* () {
+    const started = yield* Deferred.make<void>();
+    const pending = yield* Deferred.make<void, SaveRejected>();
+    let attempts = 0;
+    const save = Effect.suspend(() => ++attempts === 1
+      ? Deferred.succeed(started, undefined).pipe(Effect.andThen(Deferred.await(pending)))
+      : Effect.void);
+    const state = yield* makeSaveState(save);
+    const running = yield* Effect.forkScoped(state.submit);
+    // Compete with a request that has actually started, independent of scheduler timing.
+    yield* Deferred.await(started);
+    expect(yield* state.busy).toBe(true);
+    expect(yield* state.status).toBe("Saving…");
+    yield* state.submit;
+    expect(attempts).toBe(1);
+
+    yield* Deferred.fail(pending, new SaveRejected({ message: "The account changed. Review and retry." }));
+    yield* Fiber.join(running);
+    expect(yield* state.busy).toBe(false);
+    expect(yield* state.status).toContain("Review and retry");
+    yield* state.submit;
+    expect(attempts).toBe(2);
+    expect(yield* state.status).toBe("Saved");
+  }).pipe(Effect.scoped, Effect.runPromise));
+
+it("connects a native button click to visible pending and saved states", async () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  try {
+    await Effect.gen(function* () {
+      const pending = yield* Deferred.make<void, SaveRejected>();
+      // The enclosing Scope keeps handlers alive after this first render emission.
+      yield* render(SaveAccount(Deferred.await(pending)), host).pipe(Fx.take(1), Fx.drain);
+      const button = host.querySelector<HTMLButtonElement>("button")!;
+      button.click();
+      yield* Effect.promise(() => vi.waitFor(() => {
+        expect(button.disabled).toBe(true);
+        expect(host.querySelector('[role="status"]')?.textContent).toBe("Saving…");
+      }));
+      yield* Deferred.succeed(pending, undefined);
+      yield* Effect.promise(() => vi.waitFor(() => {
+        expect(button.disabled).toBe(false);
+        expect(host.querySelector('[role="status"]')?.textContent).toBe("Saved");
+      }));
+    }).pipe(Effect.provide(DomRenderTemplate.using(document)), Effect.scoped, Effect.runPromise);
+  } finally {
+    host.remove();
+  }
+});
+```
+
+Run `npm install --save-dev vitest happy-dom`, then `npx vitest run SaveAccount.test.ts`. The first test proves the command policy without rendering. The second proves that a native event reaches that policy and that the live properties and status text reflect its progress. Both close their Effect Scope even if an assertion fails.
+
+A real-browser test should additionally check keyboard activation and focus retention. Happy DOM checks event wiring, not what a screen reader announces or how a browser lays out the control.
+
+## Reuse the host instead of rebuilding its behavior
+
+Add classes through the primitive's `props` option. If a design system needs different markup inside the native button, use its host function and spread the complete composed props onto that button:
 
 ```ts
 import { Effect } from "effect";
 import { html } from "@typed/template";
-import * as Button from "@typed/ui/Button";
+import { Button } from "@typed/ui/Button";
 
-const Save = Button.Button(
-  {
-    content: "Save account",
-    props: { class: "button button-primary", "data-action": "save" },
-    onclick: Effect.log("save account"),
-  },
+const action = Button(
+  { content: "Save account", onclick: Effect.void, props: { class: "btn btn-primary" } },
   (props, content) => html`<button ...${props}><span>${content}</span></button>`,
 );
 ```
 
-Do not move these props to the wrapper span, drop `ref`, or replace a native button with a `div`.
-The [Dom helpers](/reference/modules/%40typed%2Fui%2FDom) merge required internal props, compose
-events, and compose refs. A host can have only one hydration owner; two independent hydrated
-states cannot both restore themselves from the same element. Library authors defining a new
-semantic host can use `Dom.renderHost`; applications extending a family should use that family's
-host argument so its established behavior remains attached.
-
-## 4. Test the transition, then the browser event
-
-The transition test needs no renderer or document:
-
-```ts
-import { Effect } from "effect";
-import { RefSubject } from "@typed/fx";
-import { assert, it } from "vitest";
-
-type SavePhase = "idle" | "saving" | "saved";
-const beginSave = <E, R>(phase: RefSubject.RefSubject<SavePhase, E, R>) =>
-  RefSubject.set(phase, "saving");
-const finishSave = <E, R>(phase: RefSubject.RefSubject<SavePhase, E, R>) =>
-  RefSubject.set(phase, "saved");
-
-const movesThroughSavePhases = Effect.fn("movesThroughSavePhases")(function* () {
-  const phase = yield* RefSubject.make<SavePhase>("idle");
-  yield* beginSave(phase);
-  yield* finishSave(phase);
-  assert.strictEqual(yield* phase, "saved");
-});
-
-it("moves through the local save phases", () =>
-  movesThroughSavePhases().pipe(Effect.scoped, Effect.runPromise));
-```
-
-Use one focused browser test for the boundary that state cannot prove: the real button event updates
-rendered output and invokes the supplied save work.
-
-```ts
-import { Effect } from "effect";
-import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
-import { assert, it, vi } from "vitest";
-import { component } from "@typed/ui/Component";
-import * as Button from "@typed/ui/Button";
-
-type SavePhase = "idle" | "saving" | "saved";
-const beginSave = <E, R>(phase: RefSubject.RefSubject<SavePhase, E, R>) =>
-  RefSubject.set(phase, "saving");
-const finishSave = <E, R>(phase: RefSubject.RefSubject<SavePhase, E, R>) =>
-  RefSubject.set(phase, "saved");
-
-const SaveButton = component(function* (save: Effect.Effect<void>) {
-  const phase = yield* RefSubject.make<SavePhase>("idle");
-  const runSave = Effect.gen(function* () {
-    yield* beginSave(phase);
-    yield* save;
-    yield* finishSave(phase);
-  });
-  return html`<section>
-    <output role="status">${phase}</output>
-    ${Button.Button({ content: "Save", onclick: runSave })}
-  </section>`;
-});
-
-const clicksSaveButton = Effect.fn("clicksSaveButton")(function* () {
-  let saves = 0;
-  yield* render(SaveButton(Effect.sync(() => saves++)), document.body).pipe(Fx.take(1), Fx.drain);
-
-  document.querySelector<HTMLButtonElement>("button")?.click();
-  yield* Effect.promise(() => vi.waitFor(() => {
-    assert.strictEqual(saves, 1);
-    assert.strictEqual(document.querySelector("output")?.textContent, "saved");
-  }));
-});
-
-it("updates the status after a real click", () =>
-  clicksSaveButton().pipe(
-    Effect.provide(DomRenderTemplate.using(document)),
-    Effect.scoped,
-    Effect.runPromise,
-  ));
-```
-
-`Button.Button` keeps native button semantics; callers still must give it a meaningful label and
-choose the right interaction. If this grows into form submission, a dialog, or a command menu,
-compose the appropriate public Form, Dialog, or Menu family rather than adding ad-hoc roles and
-handlers to this component.
-
-Read [choosing UI components](/explore/choosing-ui-components) before inventing a new interaction,
-[Component](/reference/modules/%40typed%2Fui%2FComponent) for generator overloads, and
-[Effect v4](https://effect.website/docs/v4) for error and service composition. Use
-[testing Typed systems](/explore/testing-typed-systems) when turning the examples into application tests.
+The props include behavior and references as well as styling. Moving them onto the inner span changes the host contract. Learn [Button](/explore/ui-button) for activation and availability, [Component](/explore/ui-component) for generator ergonomics, and [Dom](/explore/ui-dom) when you need to author a new semantic host. Keep this control's contract small until a real requirement calls for something else.

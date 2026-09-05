@@ -39,7 +39,7 @@ import type { Fx } from "../Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export const repeat: {
   <X, E2, R2>(

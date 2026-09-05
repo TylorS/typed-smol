@@ -56,7 +56,7 @@ import { makePathRouter } from "./internal/PathRouter.js";
  * The executor invokes a layout only after its route is selected. Its child Scope owns the parameter/content RefSubjects and every subscription made by the returned Fx.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route layouts
  */
 export type Layout<Params, A, E, R, B, E2, R2> = (
   params: LayoutParams<Params, A, E, R>,
@@ -73,7 +73,7 @@ export type Layout<Params, A, E, R, B, E2, R2> = (
  * The executor owns both RefSubjects for the active layout child Scope. Reading them does not transfer ownership; retaining them beyond that Scope observes finalized state.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route layouts
  */
 export type LayoutParams<Params, A, E, R> = {
   /**
@@ -88,7 +88,7 @@ export type LayoutParams<Params, A, E, R> = {
    * retained layout renders the next value.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route layouts
    */
   readonly params: RefSubject.RefSubject<Params>;
   /**
@@ -103,7 +103,7 @@ export type LayoutParams<Params, A, E, R> = {
    * are acquired first, so this Fx represents the already-wrapped inner subtree.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route layouts
    */
   readonly content: Fx.Fx<A, E, R>;
 };
@@ -119,7 +119,7 @@ export type LayoutParams<Params, A, E, R> = {
  * The catch manager invokes the handler inside a child Scope. That Scope owns the cause RefSubject and returned fallback Fx until recovery is replaced or routing stops.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route recovery
  */
 export type CatchHandler<E, A, E2, R2> = (
   cause: RefSubject.RefSubject<Cause.Cause<E>>,
@@ -136,7 +136,7 @@ export type CatchHandler<E, A, E2, R2> = (
  * This alias is compile-time only. A concrete Layer is acquired only for candidate evaluation; the layer manager commits it for the selected route or rolls it back on rejection.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route services
  */
 export type AnyLayer =
   | Layer.Layer<any, any, any>
@@ -159,7 +159,7 @@ export type AnyLayer =
  * This alias is compile-time only. A supplied Context is borrowed as already-built services; Matcher does not acquire or finalize those service values.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route services
  */
 export type AnyServiceMap = Context.Context<any> | Context.Context<never>;
 /**
@@ -173,7 +173,7 @@ export type AnyServiceMap = Context.Context<any> | Context.Context<never>;
  * This union is compile-time only. Layer branches are scoped by candidate selection, while Context branches are borrowed without acquisition.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route services
  */
 export type AnyDependency = AnyLayer | AnyServiceMap;
 /**
@@ -187,7 +187,7 @@ export type AnyDependency = AnyLayer | AnyServiceMap;
  * Internal type erasure only; runtime ownership remains with the concrete layout child Scope.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route layouts
  * @internal
  */
 export type AnyLayout = Layout<any, any, any, any, any, any, any>;
@@ -202,7 +202,7 @@ export type AnyLayout = Layout<any, any, any, any, any, any, any>;
  * Internal type erasure only; runtime ownership remains with the concrete catch child Scope.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route recovery
  * @internal
  */
 export type AnyCatch = CatchHandler<any, any, any, any>;
@@ -220,7 +220,7 @@ type AnyMatchHandler = (params: RefSubject.RefSubject<any>) => Fx.Fx<any, any, a
  * Computed only by TypeScript; the actual services are owned by the Layer or borrowed Context represented by `D`.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route services
  */
 export type DependencyProvided<D> =
   D extends Layer.Layer<infer Provided, any, any>
@@ -239,7 +239,7 @@ export type DependencyProvided<D> =
  * Computed only by TypeScript; any runtime failure occurs while the represented Layer is being prepared.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route services
  */
 export type DependencyError<D> = D extends Layer.Layer<any, infer E, any> ? E : never;
 /**
@@ -253,7 +253,7 @@ export type DependencyError<D> = D extends Layer.Layer<any, infer E, any> ? E : 
  * Computed only by TypeScript; runtime service lifetimes remain those of the environment used to acquire the represented Layer.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route services
  */
 export type DependencyRequirements<D> = D extends Layer.Layer<any, any, infer R> ? R : never;
 
@@ -274,7 +274,7 @@ export type { AsGuard, GuardInput, GuardType };
  * Computed only by TypeScript. The accepted value itself is produced by one guard invocation and retained by the selected route parameter RefSubject.
  *
  * @since 1.0.0
- * @category matching
+ * @category Candidate guards
  */
 export type GuardOutput<G> = GuardType.Output<G>;
 /**
@@ -288,7 +288,7 @@ export type GuardOutput<G> = GuardType.Output<G>;
  * Computed only by TypeScript. Runtime failures belong to the guard Effect and are collected only while evaluating that transition.
  *
  * @since 1.0.0
- * @category matching
+ * @category Candidate guards
  */
 export type GuardError<G> = GuardType.Error<G>;
 /**
@@ -302,7 +302,7 @@ export type GuardError<G> = GuardType.Error<G>;
  * Computed only by TypeScript. The services are borrowed from the candidate's merged Effect Context during guard evaluation.
  *
  * @since 1.0.0
- * @category matching
+ * @category Candidate guards
  */
 export type GuardServices<G> = GuardType.Services<G>;
 
@@ -327,7 +327,7 @@ type MatchOptions<Rt extends Route.Any, B, E2, R2, D, LB, LE2, LR2, C> = {
  * This union adds no lifetime. Plain values are immediate; Effect, Stream, and Fx resources begin only when the selected handler is run in its route Scope.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route handlers
  */
 export type MatchHandlerReturnValue<A, E, R> =
   | Fx.Fx<A, E, R>
@@ -396,7 +396,7 @@ type ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, GE, GR> = ApplyCatch<
  * https://effect.website/docs/resource-management/scope/.
  *
  * @since 1.0.0
- * @category matching
+ * @category Matcher contracts
  */
 export interface Matcher<A, E = never, R = never>
   extends
@@ -414,7 +414,7 @@ export interface Matcher<A, E = never, R = never>
    * The array is retained by the Matcher value and acquires no runtime resources.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route compilation
    */
   readonly cases: ReadonlyArray<MatchAst>;
 
@@ -459,7 +459,7 @@ export interface Matcher<A, E = never, R = never>
    * ```
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route handlers
    */
   match<Rt extends Route.Any, B, E2 = never, R2 = never>(
     route: Rt,
@@ -582,7 +582,7 @@ export interface Matcher<A, E = never, R = never>
    * Composition is pure. Prefix services and schemas participate when the returned Matcher runs.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher composition
    */
   readonly prefix: <Rt extends Route.Any>(route: Rt) => Matcher<A, E, R>;
 
@@ -598,7 +598,7 @@ export interface Matcher<A, E = never, R = never>
    * Effect's memo map where possible, and finalized when no selected case retains them.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route services
    */
   readonly provide: <Layers extends readonly [AnyLayer, ...AnyLayer[]]>(
     ...layers: Layers
@@ -619,7 +619,7 @@ export interface Matcher<A, E = never, R = never>
    * The supplied service is retained by the Matcher value; no acquisition or finalizer is added.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route services
    */
   readonly provideService: <Id, S>(
     tag: Context.Service<Id, S>,
@@ -637,7 +637,7 @@ export interface Matcher<A, E = never, R = never>
    * The Context is retained by the Matcher; resource lifetime remains owned by whoever constructed it.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route services
    */
   readonly provideContext: <R2>(services: Context.Context<R2>) => Matcher<A, E, Exclude<R, R2>>;
 
@@ -652,7 +652,7 @@ export interface Matcher<A, E = never, R = never>
    * The catch Fx is mounted in the same selected route Scope and is interrupted when the route changes.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route recovery
    */
   readonly catchCause: <B, E2, R2>(f: CatchHandler<E, B, E2, R2>) => Matcher<A | B, E2, R | R2>;
 
@@ -667,7 +667,7 @@ export interface Matcher<A, E = never, R = never>
    * The replacement Fx is owned by the selected route Scope; defects and interruption are rethrown.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route recovery
    */
   readonly catch: <B, E2, R2>(f: (e: E) => Fx.Fx<B, E2, R2>) => Matcher<A | B, E2, R | R2>;
 
@@ -682,7 +682,7 @@ export interface Matcher<A, E = never, R = never>
    * The replacement Fx shares the selected route Scope. Unmatched tags rethrow the original cause.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route recovery
    */
   readonly catchTag: <const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>, B, E2, R2>(
     tag: K,
@@ -709,7 +709,7 @@ export interface Matcher<A, E = never, R = never>
    * selected route Scope.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route layouts
    */
   readonly layout: <B, E2, R2>(
     layout: Layout<any, A, E, R, B, E2, R2>,
@@ -728,7 +728,7 @@ export interface Matcher<A, E = never, R = never>
    * router chooses between distinct shapes according to its own specificity rules.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher composition
    */
   readonly merge: <const Others extends ReadonlyArray<Matcher.Any>>(
     ...others: Others
@@ -751,7 +751,7 @@ export declare namespace Matcher {
    * Compile-time widening only; the concrete Matcher value remains immutable and acquires resources only when its Fx is run.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher contracts
    */
   export type Any =
     | Matcher<any, any, any>
@@ -769,7 +769,7 @@ export declare namespace Matcher {
    * Computed only by TypeScript; it does not retain a Matcher or any emitted value.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher type inference
    */
   export type Success<T> = [T] extends [Matcher<infer A, infer _E, infer _R>] ? A : never;
   /**
@@ -783,7 +783,7 @@ export declare namespace Matcher {
    * Computed only by TypeScript; it does not retain a Matcher or any failure value.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher type inference
    */
   export type Error<T> = [T] extends [Matcher<infer _A, infer E, infer _R>] ? E : never;
   /**
@@ -797,7 +797,7 @@ export declare namespace Matcher {
    * Computed only by TypeScript; service ownership remains with the environment that runs the Matcher.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher type inference
    */
   export type Services<T> = [T] extends [Matcher<infer _A, infer _E, infer R>] ? R : never;
 
@@ -812,7 +812,7 @@ export declare namespace Matcher {
    * Computed only by TypeScript from the tuple; it allocates no merged runtime value.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher type inference
    */
   export type MergeSuccess<Matchers extends ReadonlyArray<Matcher.Any>> = Success<Matchers[number]>;
   /**
@@ -826,7 +826,7 @@ export declare namespace Matcher {
    * Computed only by TypeScript from the tuple; it allocates no merged runtime value.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher type inference
    */
   export type MergeError<Matchers extends ReadonlyArray<Matcher.Any>> = Error<Matchers[number]>;
   /**
@@ -840,7 +840,7 @@ export declare namespace Matcher {
    * Computed only by TypeScript from the tuple; the runtime environments remain those supplied when the merged Matcher runs.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher type inference
    */
   export type MergeServices<Matchers extends ReadonlyArray<Matcher.Any>> = Services<
     Matchers[number]
@@ -858,7 +858,7 @@ export declare namespace Matcher {
  * The type itself owns nothing. When selected, the executor invokes the function once for that handler identity and runs its normalized Fx in the route Scope.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route handlers
  */
 export type MatchHandler<Params, A, E, R> =
   | Fx.Fx<A, E, R>
@@ -1282,7 +1282,7 @@ function toFx<A, E, R>(
  * This singleton stores an empty immutable case array and owns no Scope. Match calls return new Matcher values without mutating it.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route handlers
  */
 export const empty: Matcher<never> = new MatcherImpl([]);
 /**
@@ -1304,7 +1304,7 @@ export const empty: Matcher<never> = new MatcherImpl([]);
  * ```
  *
  * @since 1.0.0
- * @category matching
+ * @category Route handlers
  */
 export const match: Matcher<never>["match"] = empty.match.bind(empty);
 
@@ -1319,7 +1319,7 @@ export const match: Matcher<never>["match"] = empty.match.bind(empty);
  * The function allocates a Matcher containing concatenated immutable case arrays. It does not acquire any Layer or subscribe to Navigation.
  *
  * @since 1.0.0
- * @category matching
+ * @category Matcher composition
  */
 export function merge<const Matchers extends ReadonlyArray<Matcher.Any>>(
   ...matchers: Matchers
@@ -1374,7 +1374,7 @@ export { RouteDecodeError, RouteGuardError, RouteNotFound } from "./RouteExecuto
  * Internal compiled data only. The executor borrows an entry during transitions; selected child scopes own the resources described by its layers, layouts, and handler.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route compilation
  * @internal
  */
 export type CompiledEntry = {
@@ -1390,7 +1390,7 @@ export type CompiledEntry = {
    * execution, not this property.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route compilation
    */
   readonly route: Route.Any;
   /**
@@ -1405,7 +1405,7 @@ export type CompiledEntry = {
    * if this guard selects the candidate.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Candidate guards
    */
   readonly guard: AnyGuard;
   /**
@@ -1420,7 +1420,7 @@ export type CompiledEntry = {
    * and interrupts it when another entry replaces it.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route compilation
    */
   readonly handler: AnyMatchHandler;
   /**
@@ -1435,7 +1435,7 @@ export type CompiledEntry = {
    * reuses stable identities, and closes rejected or removed Layers.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route services
    */
   readonly layers: ReadonlyArray<AnyLayer>;
   /**
@@ -1450,7 +1450,7 @@ export type CompiledEntry = {
    * replacement subtree has been prepared.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route compilation
    */
   readonly layouts: ReadonlyArray<AnyLayout>;
   /**
@@ -1465,7 +1465,7 @@ export type CompiledEntry = {
    * RefSubjects are finalized by the catch manager.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route compilation
    */
   readonly catches: ReadonlyArray<AnyCatch>;
   /**
@@ -1480,7 +1480,7 @@ export type CompiledEntry = {
    * value is retained in the active params RefSubject.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route compilation
    */
   readonly decode: (input: unknown) => Effect.Effect<any, Schema.SchemaError, any>;
 };
@@ -1500,7 +1500,7 @@ type InputServices<T> = [Matcher.Services<T> | Fx.Fx.Services<T>] extends [infer
  * Calling the combinator constructs an Fx. Running it creates a catch manager in the consumer Scope; that Scope owns the cause RefSubject and fallback subscriptions.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route recovery
  */
 export const catchCause: {
   /**
@@ -1516,7 +1516,7 @@ export const catchCause: {
    * RefSubject, input subscription, and fallback subscription.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Matcher type inference
    */
   <I extends Fx.Fx.Any | Matcher.Any, B, E2 = never, R2 = never>(
     f: (
@@ -1566,7 +1566,7 @@ export const catchCause: {
  * Calling the combinator constructs an Fx. Typed recovery runs inside the consumer Scope; defects and interruption are re-emitted without a replacement lifetime.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route recovery
  */
 export const catch_: {
   /**
@@ -1582,7 +1582,7 @@ export const catch_: {
    * complete causes are forwarded without starting a fallback subscription.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route recovery
    */
   <I extends Fx.Fx.Any | Matcher.Any, B, E2, R2>(
     f: (e: InputError<I>) => Fx.Fx<B, E2, R2>,
@@ -1625,7 +1625,7 @@ export { catch_ as catch };
  * Calling the combinator constructs an Fx. A matching fallback runs in the consumer Scope; unmatched causes are forwarded unchanged.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route recovery
  */
 export const catchTag: {
   /**
@@ -1641,7 +1641,7 @@ export const catchTag: {
    * Scope; unmatched causes reuse the original cause without acquiring fallback work.
    *
    * @since 1.0.0
-   * @category matching
+   * @category Route recovery
    */
   <
     I extends Fx.Fx.Any | Matcher.Any,
@@ -1755,7 +1755,7 @@ export const catchTag: {
  * ```
  *
  * @since 1.0.0
- * @category matching
+ * @category Route recovery
  */
 export const redirectTo =
   (path: string) =>
@@ -1859,7 +1859,7 @@ type NormalizeDeps<T extends AnyDependency | ReadonlyArray<AnyDependency>> = T e
  * The function performs synchronous normalization and acquires no services. Returned Layers acquire only when a Matcher is run inside a Scope.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route services
  */
 export function normalizeDependencyInput<Deps extends AnyDependency | ReadonlyArray<AnyDependency>>(
   input: Deps,
@@ -1894,7 +1894,7 @@ function mergeLayers(layers: ReadonlyArray<AnyLayer>): AnyLayer {
  * The function performs synchronous normalization and acquires no services. Returned Layers acquire only when a Matcher is run inside a Scope.
  *
  * @since 1.0.0
- * @category matching
+ * @category Route compilation
  * @internal
  */
 export function compile(cases: ReadonlyArray<MatchAst>): ReadonlyArray<CompiledEntry> {

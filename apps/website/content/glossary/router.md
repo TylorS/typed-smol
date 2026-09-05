@@ -7,6 +7,10 @@ related: [route, matcher, scope]
 links: []
 ---
 
-Browser, server, and test routers provide the same routing contract with different navigation
-implementations. A Router supplies the environment a [Matcher](#matcher) needs; its running
-[Scope](#scope) owns subscriptions and selected-route teardown.
+`Router` names the requirements `CurrentRoute | Navigation`. Browser, server, and test Layers supply
+those services with the appropriate navigation implementation. A Matcher uses them to select output
+and give the selected route its lifetime.
+
+Replacing the browser provider with TestRouter lets the same selection run against memory history.
+This does not change the Route’s URL contract. See [navigation services](/explore/navigation-as-an-effect-service)
+and [routing tests](/explore/testing-typed-systems).

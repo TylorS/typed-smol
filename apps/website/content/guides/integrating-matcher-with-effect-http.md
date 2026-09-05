@@ -1,144 +1,189 @@
 ---
-title: "Integrating Matcher with Effect HTTP"
-summary: "Register typed Matcher output as buffered or streaming GET HTML routes."
+title: "Serve a Matcher through Effect HTTP"
+summary: "Run typed issue pages as request-local GET HTML routes, choose buffered or streaming responses, and test the real HTTP boundary."
 section: "Integration"
 kind: "guide"
 order: 10.2
 ---
 
-A page Matcher describes which renderable belongs to each URL. `@typed/ui/HttpRouter` adapts
-that same route table to an Effect HTTP server. Template serializes output; `ssrForHttp` and `streamingSsrForHttp` own the HTTP
-registration, request-local navigation, and response shape.
+The review application already knows what `/issues/42` means in the browser. A deep link now needs
+server HTML before the browser application starts. Reimplementing the path parser in a server route
+would create two input contracts; sharing a browser history instance with requests would create the
+wrong state lifetime.
 
-## Register a buffered page matcher
+`@typed/ui/HttpRouter` adapts a renderable Matcher to Effect HTTP. It compiles the route table into
+GET registrations and supplies request-local Navigation and CurrentRoute when handling each URL.
+Template serializes the selected output. The surrounding server still owns the listening socket,
+assets, mutation endpoints, and browser entry point.
 
-Use `ssrForHttp` when the response should contain one complete HTML body before it is sent.
+Read [typed URL inputs](/explore/route-typed-url-inputs) and
+[live Matcher selection](/explore/router-navigation-live-selection) first. Here the same contracts
+are used for one request rather than a long-lived browser subscription.
+
+## Verify a deep link with a real request
+
+This complete program starts an ephemeral Node test server, requests an issue page, reads its body,
+and closes the server with the provided Layer's Scope. It uses static HTML because this particular
+response is not intended to hydrate.
 
 ```ts
-import { Layer } from "effect";
-import * as HttpRouter from "effect/unstable/http/HttpRouter";
-import { Parse, match } from "@typed/router";
-import { HtmlRenderTemplate, html } from "@typed/template";
-import { handleHttpServerError, ssrForHttp } from "@typed/ui";
+import { NodeHttpServer } from "@effect/platform-node"
+import { Effect, Layer } from "effect"
+import { HttpClient, HttpRouter } from "effect/unstable/http"
+import { Fx } from "@typed/fx"
+import * as Matcher from "@typed/router/Matcher"
+import * as Route from "@typed/router/Route"
+import { html, StaticHtmlRenderTemplate } from "@typed/template"
+import { handleHttpServerError, ssrForHttp } from "@typed/ui/HttpRouter"
 
-const pages = match(Parse("/"), html`<h1>Home</h1>`);
-
-const HttpPages = HttpRouter.use(ssrForHttp(pages)).pipe(
+const Issue = Route.Join(Route.Parse("/issues"), Route.Int("issueId"))
+const pages = Matcher.match(Issue, (params) =>
+  html`<main><h1>Issue ${Fx.map(params, ({ issueId }) => issueId)}</h1></main>`,
+)
+const Server = HttpRouter.use(ssrForHttp(pages)).pipe(
   Layer.provide(HttpRouter.use(handleHttpServerError)),
-  Layer.provide(HtmlRenderTemplate),
-);
+  Layer.provide(StaticHtmlRenderTemplate),
+  HttpRouter.serve,
+  Layer.provideMerge(NodeHttpServer.layerTest),
+)
+
+const inspect = Effect.gen(function* () {
+  const response = yield* HttpClient.get("/issues/42?issueId=999")
+  return { status: response.status, body: yield* response.text }
+}).pipe(Effect.provide(Server), Effect.scoped)
+
+const result = await Effect.runPromise(inspect)
+// { status: 200, body: "<main><h1>Issue 42</h1></main>" }
 ```
 
-The adapter registers GET routes and creates request-local memory Navigation and CurrentRoute from
-each request URL. It applies the same route decoding and guard order as the client matcher; path
-parameters win when a query repeats the same key. `handleHttpServerError` maps structured request-parse, not-found, and server failures to empty
-400, 404, or 500 responses. It leaves other application failures in the request error channel.
+The path capture wins over the same-named query input. The adapter decodes the numeric ID before
+the template sees it. `ssrForHttp` buffers the complete rendered body and sets an HTML content type;
+this is an HTTP test, not merely a call to an HTML serializer.
 
-## Choose streaming deliberately
+The adapter supplies UUIDv7 state for request-local navigation. A production server does not need
+IdsTest or TestRouter. The test server supplies an HTTP client configured for its own address, so
+the request can use a relative path and the program can finalize everything when it completes.
 
-Use `streamingSsrForHttp` when the host can stream and early HTML delivery matters:
+## Separate route registration from listening
 
-```ts
-import { Layer } from "effect";
-import * as HttpRouter from "effect/unstable/http/HttpRouter";
-import { Parse, match } from "@typed/router";
-import { HtmlRenderTemplate, html } from "@typed/template";
-import { streamingSsrForHttp } from "@typed/ui/HttpRouter";
-
-const pages = match(Parse("/"), html`<h1>Streamed home</h1>`);
-
-const StreamingPages = HttpRouter.use(streamingSsrForHttp(pages)).pipe(
-  Layer.provide(HtmlRenderTemplate),
-);
-```
-
-Streaming preserves matching behavior but sends renderer chunks before the full page completes;
-client cancellation interrupts the request stream. For the HTML conversion itself, see
-[rendering HTML on the server](/explore/rendering-html-on-the-server).
-
-See [ssrForHttp](/reference/%40typed%2Fui%23ssrForHttp), [streamingSsrForHttp](/reference/%40typed%2Fui%23streamingSsrForHttp), and [handleHttpServerError](/reference/%40typed%2Fui%23handleHttpServerError).
-
-
-## Run the route layer on Node
-
-Registration describes routes; it does not bind a port. An executable Node entry point also
-supplies the HTML renderer, serves the routes, and provides the Node server layer:
+`HttpRouter.use(ssrForHttp(pages))` is a Layer describing registrations. It does not bind a port.
+A Node entry point must supply the server and launch the resulting Layer. Here is a minimal complete
+static server; replace the page table with the application's renderable Matcher.
 
 ```ts
-import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
-import { Layer } from "effect";
-import * as HttpRouter from "effect/unstable/http/HttpRouter";
-import * as Http from "node:http";
-import { match, Parse } from "@typed/router";
-import { HtmlRenderTemplate, html } from "@typed/template";
-import { handleHttpServerError, ssrForHttp } from "@typed/ui/HttpRouter";
+import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
+import { Layer } from "effect"
+import * as HttpRouter from "effect/unstable/http/HttpRouter"
+import * as Http from "node:http"
+import * as Matcher from "@typed/router/Matcher"
+import * as Route from "@typed/router/Route"
+import { html, StaticHtmlRenderTemplate } from "@typed/template"
+import { handleHttpServerError, ssrForHttp } from "@typed/ui/HttpRouter"
 
-const pages = match(Parse("/"), html`<!doctype html>
-  <html lang="en">
-    <head><meta charset="utf-8" /><title>Typed server</title></head>
-    <body><main><h1>Hello from Typed</h1></main></body>
-  </html>`);
-
+const pages = Matcher.match(Route.Slash, html`<!doctype html><html lang="en">
+  <head><meta charset="utf-8" /><title>Review queue</title></head>
+  <body><main><h1>Review queue</h1></main></body>
+</html>`)
 const Routes = HttpRouter.use(ssrForHttp(pages)).pipe(
   Layer.provide(HttpRouter.use(handleHttpServerError)),
-  Layer.provide(HtmlRenderTemplate),
-);
+  Layer.provide(StaticHtmlRenderTemplate),
+)
 
 Routes.pipe(
   HttpRouter.serve,
   Layer.provide(NodeHttpServer.layer(Http.createServer, { port: 3000 })),
   Layer.launch,
   NodeRuntime.runMain,
-);
+)
 ```
 
-This serves the page at `/`. A real site also needs asset routes, a deployment base, and a browser
-entry point if the HTML is interactive. The adapter does not generate or inject a client bundle.
-Follow [server rendering and hydration](/explore/server-rendering-and-hydration) for that handoff.
-For HTML that will never hydrate, provide `StaticHtmlRenderTemplate` instead of `HtmlRenderTemplate`.
+This server supplies one GET HTML page. Add asset routes and deployment-base handling where the
+server is assembled. Add mutation endpoints through Effect HTTP's own request decoding and
+response APIs; a browser form still needs a real client request and server-side validation and
+authorization. The HTML adapter does not generate a client bundle or turn page handlers into an RPC
+protocol.
 
-## Keep request data inside the request lifetime
+## Carry dependencies across the boundary without sharing request state
 
-The adapter captures services when routes are registered, then combines them with the active
-request's services. Shared services such as a database pool belong in the server layer. User
-identity, cookies, and request metadata belong to request handling; do not put one request's user
-in a process-wide mutable service. Candidate dependencies, guards, layouts, and recovery still
-compose through the [Matcher contract](/explore/router-navigation-live-selection).
+A page can require an Issues service whose server implementation uses a database. The browser can
+provide a transport-backed implementation of the same domain contract. Preserve those requirements
+in the Matcher instead of closing over a runtime-specific resource or casting away `R`.
 
-Each request gets memory Navigation and CurrentRoute, with UUIDv7 state provided by the adapter.
-You do not need `IdsTest` or `TestRouter` in a production server. Sharing an application route table
-is useful; sharing one mutable history instance across HTTP requests is not.
+Registration captures its surrounding services. For each request, the adapter combines them with
+active request services and creates memory history/current-route state for that request URL. A
+shared database pool belongs in the server Layer. User identity, cookies, and request metadata belong
+to request handling. Do not install one request's mutable user or history as process-wide state.
 
-The adapter registers GET HTML routes. Add mutation endpoints through Effect HTTP's own routing
-and decoding APIs. A browser form's `onValidSubmit` still needs a real client request to such an
-endpoint, and the endpoint must validate and authorize it independently.
+Keep Route declarations and domain codecs in a module that neither imports browser globals nor a
+server database Layer. Share the contract, then provide the runtime implementation at the edge.
+Candidate dependencies, guards, layouts, and recovery retain the
+[Matcher ownership rules](/explore/router-navigation-live-selection), including rollback of rejected
+candidate resources and cleanup of selected work when the request ends.
 
-## Put failures on the correct side of the response boundary
+A useful test makes two requests with different metadata/users and asserts each sees its own values.
+Testing one request cannot reveal accidental cross-request retention.
 
-Routes with the same registered path are tried in compiled candidate order. A decode failure or a
-rejected guard can allow another candidate; a selected handler's rendering failure is not a reason
-to try an unrelated page. If selection exhausts decoding candidates, the adapter produces a
-request-parse failure; guard exhaustion becomes not-found. Decide whether application failures
-should produce a page, an API error, or a logged server failure at the relevant application boundary.
+## Choose streaming from the response requirements
 
-Buffered rendering can fail before a response body is created. Streaming can fail after headers
-and some HTML have been sent, when the server can no longer replace the entire response with a
-fresh status page. Recover expected data failures within the rendered page when appropriate, and
-test stream interruption and resource cleanup for the host that will actually serve it. HTML
-streaming alone does not define a client protocol for later reactive updates.
+Buffered rendering lets the complete body be produced before a response is returned. Streaming can
+send renderer chunks earlier, but failures may then occur after headers or content have already been
+sent. The choice changes recovery and cancellation behavior, not route syntax.
 
-## Test the adapter as an HTTP boundary
+```ts
+import { Layer } from "effect"
+import * as HttpRouter from "effect/unstable/http/HttpRouter"
+import * as Matcher from "@typed/router/Matcher"
+import * as Route from "@typed/router/Route"
+import { html, HtmlRenderTemplate } from "@typed/template"
+import { streamingSsrForHttp } from "@typed/ui/HttpRouter"
 
-Keep route-codec and guard tests renderer independent, then add focused request tests for:
+const pages = Matcher.match(Route.Slash, html`<main><h1>Review queue</h1></main>`)
+const StreamingPages = HttpRouter.use(streamingSsrForHttp(pages)).pipe(
+  Layer.provide(HtmlRenderTemplate),
+)
+```
 
-- GET status, `content-type`, and the rendered page for a valid path.
-- Malformed declared parameters, repeated declared query keys, and unmatched routes.
-- A request parameter that shares a name with a path capture; the path capture remains authoritative.
-- Request-local services across two requests, including different users or request metadata.
-- Expected application failures and interruption while consuming a streaming body.
+This registration is for a host that will supply and serve the HTTP router as above. HtmlRenderTemplate
+preserves Typed HTML information for a possible hydration handoff; StaticHtmlRenderTemplate is the
+appropriate serializer when the output will remain static. Neither renderer injects the browser's
+entry script for you.
 
-The repository uses `NodeHttpServer.layerTest` for real request/response tests. This catches
-registration and HTTP behavior that a direct call to `renderToHtmlString` cannot prove. See
-[testing Typed systems](/explore/testing-typed-systems),
-[HttpRouter](/reference/modules/%40typed%2Fui%2FHttpRouter), and
-[Effect v4](https://effect.website/docs/v4).
+A disconnected streaming client should cause the request stream's owned work to be interrupted;
+verify that through the actual host. Once bytes have been sent, a late failure cannot be handled by
+replacing the entire response with a fresh status page. Recover expected resource failures within
+the page when that is the desired interaction, and log unexpected failures with enough request
+context to diagnose them.
+
+## Put each error at its meaningful boundary
+
+Cases with the same registered path are tried in compiled candidate order. Decode or guard rejection
+can allow another candidate; a selected renderer failure does not justify serving an unrelated page.
+Exhausted decoding becomes a structured request-parse failure; exhausted selection without a usable
+candidate becomes not-found.
+
+`handleHttpServerError` maps structured request-parse, not-found, and server failures to empty 400,
+404, or 500 responses. It leaves other application errors in the typed request channel. If the
+product needs an explanatory error page, recover that domain failure explicitly rather than
+assuming the generic HTTP handler renders one.
+
+Test malformed numeric parameters, repeated declared query keys, unmatched paths, rejected guards,
+and selected-page failures. Inspect status and body as well as the error channel. A successful
+`renderToHtmlString` unit test cannot establish registration precedence or response status behavior.
+
+## Define the continuation after the first HTML
+
+A browser that receives a loading placeholder needs a client continuation or an explicit update
+transport. Streaming HTML alone does not establish a permanent connection between server
+RefSubjects and browser DOM. Decide whether the server awaits initial data, streams it, or transfers
+an AsyncData snapshot that the browser will refresh.
+
+For interactive output, include a browser entry point and hydrate a compatible state/template
+snapshot. Avoid constructing an unrelated client default that contradicts the server HTML. The
+[state hydration guide](/explore/refsubject-template-hydration) covers Schema-checked state transfer;
+[server rendering and hydration](/explore/server-rendering-and-hydration) covers the larger handoff.
+
+Finally, test a production-style deep link through the real host routing and asset base. A reverse
+proxy or static host must actually send `/issues/42` to this server for the adapter to handle it.
+A successful in-app click from `/` does not prove a reload at the deep URL works. See
+[HttpRouter](/reference/modules/%40typed%2Fui%2FHttpRouter) for adapter overloads and
+[testing Typed systems](/explore/testing-typed-systems) for focused host tests.

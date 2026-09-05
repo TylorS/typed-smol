@@ -7,7 +7,9 @@ related: [keyed-identity, dom-render-event, cooperative-ownership]
 links: []
 ---
 
-Structural reconciliation compares only the range controlled by a dynamic part. Equal head and tail
-runs can be skipped, while inserts, removals, and keyed moves stay inside that range. This local
-boundary is why an update need not traverse a virtual copy of the entire page.
+A structural part controls its represented nodes in a bounded DOM region. A changing details panel
+can insert, remove, or move output without traversing or replacing the heading and footer beside it.
+That region is the unit of [local reconciliation](#local-reconciliation).
 
+Do not let another renderer insert unmanaged siblings among those represented nodes. Give a foreign
+widget its own host inside the range. See [local DOM updates](/explore/dom-updates-and-reconciliation).

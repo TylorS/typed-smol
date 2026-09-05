@@ -16,7 +16,7 @@ import { RandomValues } from "./RandomValues.js";
  * import { Ulid } from "@typed/id/Ulid"
  * const id = Ulid.make("01ARZ3NDEKTSV4RRFFQ69G5FAV")
  * ```
- * @category Schemas
+ * @category ID schemas
  * @since 1.0.0
  */
 export const Ulid = Schema.String.pipe(
@@ -37,7 +37,7 @@ export type Ulid = typeof Ulid.Type;
  * import { isUlid } from "@typed/id/Ulid"
  * isUlid("01ARZ3NDEKTSV4RRFFQ69G5FAV")
  * ```
- * @category Refinements
+ * @category ID validation
  * @since 1.0.0
  */
 export const isUlid: (value: string) => value is Ulid = Schema.is(Ulid);
@@ -65,7 +65,7 @@ const RANDOM_LEN = 16;
  * import { Effect } from "effect"
  * const id = Effect.provide(ulid, Ids.Default)
  * ```
- * @category Generators
+ * @category ID generation
  * @since 1.0.0
  */
 export const ulid: Effect.Effect<Ulid, Cause.IllegalArgumentError, RandomValues | DateTimes> =

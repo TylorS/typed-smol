@@ -7,7 +7,10 @@ related: [ui, template, cooperative-ownership]
 links: []
 ---
 
-Accessibility is part of the rendered contract, not a post-render decoration. Prefer native elements
-and their browser behavior first; use ARIA only to express behavior the native host cannot provide.
-Typed UI composes that behavior through [UI](#ui) and [Template](#template) without replacing the
-browser's focus, keyboard, form, or announcement semantics.
+Accessibility is part of a control’s behavior: its name and meaning, keyboard interaction, focus,
+and state must work together. A native button supplies behavior that a clickable div does not gain
+merely by receiving a role. Typed UI composes those contracts with native hosts.
+
+Start with [choosing UI components](/explore/choosing-ui-components), then test the actual interaction
+in a browser. The [ARIA Authoring Practices introduction](https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/)
+explains the responsibilities that come with custom semantics.

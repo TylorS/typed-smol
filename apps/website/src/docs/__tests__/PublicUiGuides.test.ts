@@ -4,69 +4,72 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
-import { extractTypeScriptFences } from "../Recipes.js";
+import { extractTypeScriptFences, extractTypeScriptFenceDocuments } from "../RecipeValidation.js";
+
+import { NodeFileSystem } from "@effect/platform-node";
+import { Effect } from "effect";
+import { discoverPublishedPackages, resolvePublicModules } from "../Published.js";
+import { uiGuidePath } from "../../site/Guides.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
-const guides = [
-  {
-    file: "forms-as-a-browser-contract.md",
-    title: "Forms as a browser contract",
-    order: 4.3,
-    publicApis: ["@typed/ui/Form", "Form.make", "Form.Error"],
-  },
-  {
-    file: "overlays-disclosure-and-transient-ui.md",
-    title: "Overlays, disclosure, and transient UI",
-    order: 4.4,
-    publicApis: ["@typed/ui/Disclosure", "@typed/ui/Dialog", "@typed/ui/Popover"],
-  },
-  {
-    file: "selection-autocomplete-and-command-surfaces.md",
-    title: "Selection, autocomplete, and command surfaces",
-    order: 4.5,
-    publicApis: ["@typed/ui/Select", "@typed/ui/Combobox", "@typed/ui/Menu"],
-  },
-] as const;
-
-const uiGuideFiles = [
-  "building-ui-components.md",
-  "choosing-ui-components.md",
-  ...guides.map(({ file }) => file),
-] as const;
+const loadUiGuides = () => fs.readdirSync(path.join(websiteRoot, "content/guides"))
+  .filter((file) => file.endsWith(".md"))
+  .map((file) => parseGuideDocumentation(file, fs.readFileSync(path.join(websiteRoot, "content/guides", file), "utf8")))
+  .filter(({ section, slug }) => slug === "ui" || section === "UI" || section?.startsWith("UI / "));
 
 describe("public UI guides", () => {
-  it("adds hands-on guides with public APIs, standards, and explicit author obligations", () => {
-    for (const guide of guides) {
-      const file = path.join(websiteRoot, "content/guides", guide.file);
-      expect(fs.existsSync(file), guide.file).toBe(true);
-      const source = fs.readFileSync(file, "utf8");
-      const parsed = parseGuideDocumentation(guide.file, source);
+  it("provides a dedicated learning destination for every live public UI module", async () => {
+    const modules = await Effect.gen(function* () {
+      const packages = yield* discoverPublishedPackages(path.resolve(websiteRoot, "../.."));
+      const ui = packages.find(({ name }) => name === "@typed/ui");
+      if (!ui) throw new Error("Missing public @typed/ui package");
+      return yield* resolvePublicModules(ui);
+    }).pipe(Effect.provide(NodeFileSystem.layer), Effect.runPromise);
+    const guides = new Map(loadUiGuides().map((guide) => [guide.slug, guide]));
 
-      expect(parsed).toMatchObject({
-        title: guide.title,
-        section: "UI",
-        kind: "guide",
-        order: guide.order,
-      });
-      expect(source).toMatch(/Authors must provide|author must provide/u);
-      expect(source).toMatch(/Typed (?:verifies|provides)/u);
-      expect(source).toMatch(
-        /https:\/\/(?:www\.w3\.org|developer\.mozilla\.org|html\.spec\.whatwg\.org)\//u,
-      );
-      for (const api of guide.publicApis) expect(source).toContain(api);
+    expect(modules.some(({ consumerSpecifier }) => consumerSpecifier === "@typed/ui")).toBe(true);
+    for (const { consumerSpecifier } of modules) {
+      const href = uiGuidePath(consumerSpecifier);
+      expect(href, consumerSpecifier).toMatch(/^\/explore\/ui(?:-|$)/u);
+      const guide = guides.get(href!.slice("/explore/".length));
+      expect(guide, `${consumerSpecifier} needs ${href}`).toBeDefined();
+      expect(guide!.title.trim(), consumerSpecifier).not.toBe("");
+      expect(guide!.summary.trim(), consumerSpecifier).not.toBe("");
+      expect(guide!.body, consumerSpecifier).toContain("@typed/ui");
+      if (guide!.slug === "ui") {
+        expect(guide!.body).toContain("/explore/ui-");
+      } else {
+        expect(extractTypeScriptFences(guide!.body).length, `${href} needs a usable public example`).toBeGreaterThan(0);
+      }
+    }
+    expect(uiGuidePath("@typed/fx/Fx")).toBeUndefined();
+  });
+
+  it("organizes UI lessons into concrete interactions without fixed titles or order numbers", () => {
+    const guides = loadUiGuides();
+    const sections = new Set(guides.map(({ section }) => section));
+    for (const section of ["UI / Foundations", "UI / Forms", "UI / Collections", "UI / Overlays"]) {
+      expect(sections.has(section), section).toBe(true);
+    }
+    for (const guide of guides) {
+      expect(Number.isFinite(guide.order), guide.slug).toBe(true);
+      expect(guide.body.trim(), guide.slug).not.toBe("");
     }
   });
 
-  it("keeps every UI guide TypeScript fence independently compilable", () => {
+  it("compiles every UI guide example, preserving explicit multi-file boundaries", () => {
     const staging = fs.mkdtempSync(path.join(websiteRoot, ".public-ui-guide-check-"));
 
     try {
-      const files = uiGuideFiles.flatMap((file) => {
-        const source = fs.readFileSync(path.join(websiteRoot, "content/guides", file), "utf8");
-        const guide = parseGuideDocumentation(file, source);
-        return extractTypeScriptFences(guide.body).map((code, index) => {
-          const example = path.join(staging, `${file}-${index}.ts`);
+      const files = loadUiGuides().flatMap((guide) => {
+        const names = new Set<string>();
+        return extractTypeScriptFenceDocuments(guide.body).map(({ code, fileName, extension }, index) => {
+          const name = fileName ?? `${index}.${extension}`;
+          expect(names.has(name), `${guide.slug} has a duplicate example file ${name}`).toBe(false);
+          names.add(name);
+          const example = path.join(staging, guide.slug, name);
+          fs.mkdirSync(path.dirname(example), { recursive: true });
           fs.writeFileSync(example, code);
           return example;
         });

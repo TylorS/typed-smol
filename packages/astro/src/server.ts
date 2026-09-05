@@ -41,6 +41,14 @@ function escapeAttribute(value: string): string {
   });
 }
 
+/**
+ * Astro renderer protocol for branded Typed components and trusted Astro slots.
+ * Each render owns an HTML rendering scope that closes after serialization.
+ * Astro loads this entry through the integration; it is not a raw-HTML API.
+ *
+ * @since 1.0.0
+ * @category Server rendering
+ */
 const renderer = {
   name: "@typed/astro",
   supportsAstroStaticSlot: true,
@@ -54,11 +62,11 @@ const renderer = {
     metadata?: AstroComponentMetadata,
   ) {
     if (!Component.isComponent(component)) {
-      throw new TypeError("@typed/astro requires a component created with Component.make");
+      throw new TypeError("@typed/astro requires a component created with component");
     }
     const html = await Effect.runPromise(
       Effect.suspend(() =>
-        renderToHtmlString(component(props, slotsFromAstro(slots, metadata))),
+        renderToHtmlString(Component.view(component, props, slotsFromAstro(slots, metadata))),
       ).pipe(Effect.provide(HtmlRenderTemplate), Effect.scoped),
     );
     return { html };

@@ -7,7 +7,10 @@ related: [subject, fx, effect]
 links: []
 ---
 
-RefSubject keeps state renderer-independent: callers can read the current value, apply an update,
-and observe future changes without mounting a component. Derived views can be composed from the same
-[Effect](#effect) channels and tested directly before any DOM integration is chosen.
+A RefSubject combines a readable current value, update operations, and pushed changes. It can model
+an order quantity without a renderer: yield it in an Effect to read now, update it through RefSubject
+operations, or observe its changes.
 
+Passing the RefSubject into a template keeps that value live. Passing an already-read number takes
+a snapshot. Derive a total from the quantity instead of creating a second writable fact. Start with
+[renderer-independent state](/explore/refsubject-renderer-independent-state).

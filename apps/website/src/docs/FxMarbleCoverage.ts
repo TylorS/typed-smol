@@ -1,3 +1,5 @@
+import { renderFxMarble } from "./FxMarble.js";
+
 export interface FxMarbleAppearance {
   readonly guideSlug: string;
   readonly operator: string;
@@ -13,8 +15,11 @@ export interface FxMarbleCoverageReport {
 const fxMarbleFence = /^```fx-marble\s*\n([\s\S]*?)^```\s*$/gmu;
 const coversLine = /^covers:\s*(.+)$/mu;
 
-export const extractFxMarbleOperators = (markdown: string): ReadonlyArray<string> =>
+export const extractFxMarbleOperators = (
+  markdown: string,
+): ReadonlyArray<string> =>
   [...markdown.matchAll(fxMarbleFence)].flatMap(([, source]) => {
+    if (renderFxMarble(source!) === undefined) return [];
     const covers = coversLine.exec(source!)?.[1];
     return covers === undefined
       ? []
@@ -30,7 +35,10 @@ export const validateFxMarbleCoverage = (
 ): FxMarbleCoverageReport => {
   const expected = new Set(publicOperators);
   const appearances = guides.flatMap(({ body, slug }) =>
-    extractFxMarbleOperators(body).map((operator) => ({ guideSlug: slug, operator })),
+    extractFxMarbleOperators(body).map((operator) => ({
+      guideSlug: slug,
+      operator,
+    })),
   );
   const counts = Map.groupBy(appearances, ({ operator }) => operator);
 
@@ -41,6 +49,8 @@ export const validateFxMarbleCoverage = (
       .map(([operator]) => operator)
       .sort(),
     missing: publicOperators.filter((operator) => !counts.has(operator)).sort(),
-    unexpected: [...counts.keys()].filter((operator) => !expected.has(operator)).sort(),
+    unexpected: [...counts.keys()]
+      .filter((operator) => !expected.has(operator))
+      .sort(),
   };
 };

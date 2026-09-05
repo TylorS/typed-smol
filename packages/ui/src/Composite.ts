@@ -9,7 +9,7 @@
  * events and browser-owned focus.
  *
  * @since 1.0.0
- * @category modules
+ * @category Architecture overview
  * @packageDocumentation
  */
 import * as Effect from "effect/Effect";
@@ -36,7 +36,7 @@ import * as Collection from "./Collection.js";
  * [Composite.makeState runnable setup](/reference/%40typed%2Fui%2FComposite%23makeState). Choose an
  * axis policy explicitly: `const orientation: Orientation = "horizontal"`.
  * @since 1.0.0
- * @category models
+ * @category Directional movement
  */
 export type Orientation = "horizontal" | "vertical" | "both";
 /**
@@ -58,7 +58,7 @@ export type Orientation = "horizontal" | "vertical" | "both";
  * runnable setup](/reference/%40typed%2Fui%2FComposite%23makeState). Choose a supported movement
  * operation explicitly: `const direction: Move = "next"`.
  * @since 1.0.0
- * @category models
+ * @category Directional movement
  */
 export type Move = "next" | "previous" | "first" | "last";
 
@@ -82,37 +82,37 @@ export type Move = "next" | "previous" | "first" | "last";
  * `const snapshot: State = yield* state` exposes focus, orientation, looping, RTL, and
  * virtual-focus policy.
  * @since 1.0.0
- * @category models
+ * @category Active item state
  */
 export interface State {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Active item state
    */
   readonly activeId: string | null;
   /**
    * Axis used to interpret Arrow-key movement.
    * @since 1.0.0
-   * @category models
+   * @category Directional movement
    */
   readonly orientation: Orientation;
   /**
    * Whether movement wraps between the first and last enabled items.
    * @since 1.0.0
-   * @category models
+   * @category Directional movement
    */
   readonly loop: boolean;
   /**
    * Whether horizontal Arrow-key meaning is reversed for right-to-left layout.
    * @since 1.0.0
-   * @category models
+   * @category Directional movement
    */
   readonly rtl: boolean;
   /**
    * Whether DOM focus remains on the root and activeId is exposed via aria-activedescendant.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly virtualFocus: boolean;
 }
@@ -138,37 +138,37 @@ export interface State {
  * policy explicitly with
  * `const initial: InitialState = { activeId: null, orientation: "vertical", loop: false, rtl: false, virtualFocus: true }; const state = yield* Composite.makeState(initial)`.
  * @since 1.0.0
- * @category models
+ * @category Active item state
  */
 export interface InitialState {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Active item state
    */
   readonly activeId?: string | null;
   /**
    * Axis used to interpret Arrow-key movement.
    * @since 1.0.0
-   * @category models
+   * @category Directional movement
    */
   readonly orientation?: Orientation;
   /**
    * Whether movement wraps between the first and last enabled items.
    * @since 1.0.0
-   * @category models
+   * @category Directional movement
    */
   readonly loop?: boolean;
   /**
    * Whether horizontal Arrow-key meaning is reversed for right-to-left layout.
    * @since 1.0.0
-   * @category models
+   * @category Directional movement
    */
   readonly rtl?: boolean;
   /**
    * Whether DOM focus remains on the root and activeId is exposed via aria-activedescendant.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard focus
    */
   readonly virtualFocus?: boolean;
 }
@@ -193,7 +193,7 @@ export interface InitialState {
  * the only three inputs with
  * `const options: MoveOptions<string, State> = { state, collection, includeDisabled: false }`.
  * @since 1.0.0
- * @category models
+ * @category Directional movement
  */
 export interface MoveOptions<
   Value = unknown,
@@ -207,19 +207,19 @@ export interface MoveOptions<
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.RefSubject<CompositeState, E, R>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection: RefSubject.RefSubject<Collection.State<Value, Element>, E2, R2>;
   /**
    * Whether movement may land on disabled collection items.
    * @since 1.0.0
-   * @category models
+   * @category Availability
    */
   readonly includeDisabled?: boolean;
 }
@@ -243,19 +243,19 @@ export interface MoveOptions<
  * [Composite.makeState runnable setup](/reference/%40typed%2Fui%2FComposite%23makeState). A
  * compatible focus state is observable directly: `const active: ActiveIdState = yield* state`.
  * @since 1.0.0
- * @category models
+ * @category Active item state
  */
 export interface ActiveIdState {
   /**
    * Id currently active for keyboard navigation; null means no active item.
    * @since 1.0.0
-   * @category models
+   * @category Active item state
    */
   readonly activeId: string | null;
   /**
    * Whether movement wraps between the first and last enabled items.
    * @since 1.0.0
-   * @category models
+   * @category Directional movement
    */
   readonly loop: boolean;
 }
@@ -280,37 +280,37 @@ export interface ActiveIdState {
  * keyboard adapters need only the modeled surface:
  * `const event: KeyboardEventLike = { key: "ArrowDown", preventDefault() {} }`.
  * @since 1.0.0
- * @category models
+ * @category Keyboard navigation
  */
 export interface KeyboardEventLike {
   /**
    * Native KeyboardEvent key value to interpret.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly key: string;
   /**
    * Whether Alt modified the key event.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly altKey?: boolean;
   /**
    * Whether Control modified the key event.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly ctrlKey?: boolean;
   /**
    * Whether Meta modified the key event.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   readonly metaKey?: boolean;
   /**
    * Optional native-event callback invoked only for an internally handled key.
    * @since 1.0.0
-   * @category models
+   * @category Keyboard navigation
    */
   preventDefault?: () => void;
 }
@@ -335,19 +335,19 @@ export interface KeyboardEventLike {
  * the exact typed query and timestamp with
  * `const buffer: TypeaheadBuffer = { value: "Ty", updatedAt: 100 }`.
  * @since 1.0.0
- * @category models
+ * @category Typeahead
  */
 export interface TypeaheadBuffer {
   /**
    * Buffered typeahead key sequence, preserving the supplied key case.
    * @since 1.0.0
-   * @category models
+   * @category Typeahead
    */
   readonly value: string;
   /**
    * Timestamp of the last typeahead key, used to decide whether to append or restart.
    * @since 1.0.0
-   * @category models
+   * @category Typeahead
    */
   readonly updatedAt: number;
 }
@@ -373,7 +373,7 @@ export interface TypeaheadBuffer {
  * const decodeState = Schema.decodeUnknownEffect(Composite.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Active item state
  */
 export const StateSchema = Schema.Struct({
   activeId: Schema.NullOr(Schema.String),
@@ -413,7 +413,7 @@ export const StateSchema = Schema.Struct({
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Active item state
  */
 export function makeState(initial: InitialState = {}) {
   return RefSubject.hydrate(StateSchema, {
@@ -447,7 +447,7 @@ export function makeState(initial: InitialState = {}) {
  * program invoke `yield* move({ state, collection }, "next")`, then read state to observe the next
  * enabled registered id selected under the current loop policy.
  * @since 1.0.0
- * @category combinators
+ * @category Directional movement
  */
 export function move<Value, CompositeState extends State, E, R, E2, R2, Element extends object>(
   options: MoveOptions<Value, CompositeState, E, R, E2, R2, Element>,
@@ -486,7 +486,7 @@ export function move<Value, CompositeState extends State, E, R, E2, R2, Element 
  * program read `const value = yield* tabIndex(state, "item-2")`; it is `0` only while that item
  * owns roving focus and is `-1` under virtual focus.
  * @since 1.0.0
- * @category combinators
+ * @category Keyboard focus
  */
 export function tabIndex<CompositeState extends State, E, R>(
   state: RefSubject.RefSubject<CompositeState, E, R>,
@@ -518,7 +518,7 @@ export function tabIndex<CompositeState extends State, E, R>(
  * the linked Effect program read `const id = yield* activeDescendant(state)`; it is the active id
  * only under virtual focus and otherwise `undefined`.
  * @since 1.0.0
- * @category combinators
+ * @category Keyboard focus
  */
 export function activeDescendant<CompositeState extends State, E, R>(
   state: RefSubject.RefSubject<CompositeState, E, R>,
@@ -549,7 +549,7 @@ export function activeDescendant<CompositeState extends State, E, R>(
  * program read `const value = yield* rootTabIndex(state)`; it is `0` while the root owns focus and
  * `-1` after a roving-focus item becomes active.
  * @since 1.0.0
- * @category combinators
+ * @category Keyboard focus
  */
 export function rootTabIndex<CompositeState extends State, E, R>(
   state: RefSubject.RefSubject<CompositeState, E, R>,
@@ -580,7 +580,7 @@ export function rootTabIndex<CompositeState extends State, E, R>(
  * const direction = Composite.keyMove({ key: "ArrowLeft" }, { orientation: "horizontal", rtl: true });
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Keyboard navigation
  */
 export function keyMove(
   event: Pick<KeyboardEventLike, "key">,
@@ -619,7 +619,7 @@ export function keyMove(
  * program run `yield* moveByKey({ key: "ArrowDown" }, { state, collection })`, then read state to
  * observe the active id selected by the current orientation and RTL policy.
  * @since 1.0.0
- * @category combinators
+ * @category Keyboard navigation
  */
 export function moveByKey<
   Value,
@@ -665,7 +665,7 @@ export function moveByKey<
  * program run `yield* moveAndFocus({ state, collection }, "next")`; the returned state names the
  * next id and its registered element receives native focus.
  * @since 1.0.0
- * @category combinators
+ * @category DOM focus and scrolling
  */
 
 export function moveAndFocus<
@@ -707,7 +707,7 @@ export function moveAndFocus<
  * program run `yield* focusActive({ state, collection })`; the active registered element receives
  * native focus, with no state transition when no matching element exists.
  * @since 1.0.0
- * @category combinators
+ * @category DOM focus and scrolling
  */
 
 export function focusActive<
@@ -750,7 +750,7 @@ export function focusActive<
  * const focused = Composite.focusElement(document.querySelector("button") ?? undefined);
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category DOM focus and scrolling
  */
 
 export function focusElement(element: object | undefined): Effect.Effect<void> {
@@ -781,7 +781,7 @@ export function focusElement(element: object | undefined): Effect.Effect<void> {
  * program run `yield* scrollActive({ state, collection })`; the active registered element receives
  * `scrollIntoView({ block: "nearest", inline: "nearest" })` when that method is available.
  * @since 1.0.0
- * @category combinators
+ * @category DOM focus and scrolling
  */
 
 export function scrollActive<
@@ -828,7 +828,7 @@ export function scrollActive<
  * const id = Composite.typeahead([{ id: "alpha", textValue: "Alpha" }], "al");
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Typeahead
  */
 export function typeahead<Item extends Collection.Item<unknown, object>>(
   items: readonly Item[],
@@ -860,7 +860,7 @@ export function typeahead<Item extends Collection.Item<unknown, object>>(
  * const id = Composite.typeaheadFrom([{ id: "alpha", textValue: "Alpha" }], "al", null);
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Typeahead
  */
 
 export function typeaheadFrom<Item extends Collection.Item<unknown, object>>(
@@ -904,7 +904,7 @@ export function typeaheadFrom<Item extends Collection.Item<unknown, object>>(
  * const key = Composite.typeaheadKey({ key: "A" });
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Typeahead
  */
 export function typeaheadKey(event: KeyboardEventLike): string | null {
   if (event.altKey || event.ctrlKey || event.metaKey) return null;
@@ -932,7 +932,7 @@ export function typeaheadKey(event: KeyboardEventLike): string | null {
  * const buffer = Composite.updateTypeaheadBuffer({ value: "a", updatedAt: 100 }, "b", 200);
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Typeahead
  */
 export function updateTypeaheadBuffer(
   buffer: TypeaheadBuffer,
@@ -967,7 +967,7 @@ export function updateTypeaheadBuffer(
  * const items = Composite.orderedEnabledItems([{ id: "a" }, { id: "b", disabled: true }]);
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Directional movement
  */
 export function orderedEnabledItems<Item extends Collection.Item<unknown, object>>(
   items: readonly Item[],
@@ -997,7 +997,7 @@ export function orderedEnabledItems<Item extends Collection.Item<unknown, object
  * const id = Composite.moveActiveId([{ id: "a" }, { id: "b" }], { activeId: "a", loop: true }, "next");
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Directional movement
  */
 export function moveActiveId<Item extends Collection.Item<unknown, object>>(
   items: readonly Item[],
@@ -1029,7 +1029,7 @@ export function moveActiveId<Item extends Collection.Item<unknown, object>>(
  * const item = Composite.moveActiveItem([{ id: "a" }, { id: "b" }], { activeId: "a", loop: true }, "next");
  * ```
  * @since 1.0.0
- * @category combinators
+ * @category Directional movement
  */
 export function moveActiveItem<Item extends Collection.Item<unknown, object>>(
   items: readonly Item[],

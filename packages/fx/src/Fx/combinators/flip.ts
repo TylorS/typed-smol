@@ -40,7 +40,7 @@ import type { Fx } from "../Fx.js";
  * @param fx - The `Fx` stream.
  * @returns An `Fx` where errors are successes and successes are errors.
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const flip = <A, E, R>(fx: Fx<A, E, R>): Fx<E, A, R> =>
   make<E, A, R>((sink) => fx.run(sinkCore.flip(sink)));

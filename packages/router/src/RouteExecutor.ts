@@ -28,7 +28,7 @@ import type { Router } from "./Router.js";
  * retained by their dedicated scoped managers rather than by this record itself.
  *
  * @since 1.0.0
- * @category execution
+ * @category Candidate execution
  */
 export interface RouteTransition {
   /**
@@ -43,7 +43,7 @@ export interface RouteTransition {
    * the string after the transition completes.
    *
    * @since 1.0.0
-   * @category execution
+   * @category Candidate execution
    */
   readonly path: string;
   /**
@@ -58,7 +58,7 @@ export interface RouteTransition {
    * selected candidate are placed in the active `RefSubject`; the raw input is not retained.
    *
    * @since 1.0.0
-   * @category execution
+   * @category Candidate execution
    */
   readonly input: unknown;
   /**
@@ -74,7 +74,7 @@ export interface RouteTransition {
    * another route replaces it, but the executor does not copy or own the candidate array.
    *
    * @since 1.0.0
-   * @category execution
+   * @category Candidate execution
    */
   readonly candidates: ReadonlyArray<CompiledEntry>;
   /**
@@ -89,7 +89,7 @@ export interface RouteTransition {
    * remain active until a later transition removes them or the executor's root Scope closes.
    *
    * @since 1.0.0
-   * @category execution
+   * @category Candidate execution
    */
   readonly layers?: ReadonlyArray<AnyLayer>;
 }
@@ -106,7 +106,7 @@ export interface RouteTransition {
  * Layer, layout, and catch managers reused across calls to `transition`.
  *
  * @since 1.0.0
- * @category execution
+ * @category Candidate execution
  */
 export interface RouteExecutor<A, E = never, R = never> {
   /**
@@ -123,7 +123,7 @@ export interface RouteExecutor<A, E = never, R = never> {
    * rejection rolls back new Layer Scopes, while commit closes replaced handler and manager Scopes.
    *
    * @since 1.0.0
-   * @category execution
+   * @category Candidate execution
    */
   readonly transition: (
     transition: RouteTransition,
@@ -159,7 +159,7 @@ export interface RouteExecutor<A, E = never, R = never> {
  * ```
  *
  * @since 1.0.0
- * @category execution
+ * @category Candidate execution
  */
 export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
   RouteExecutor<A, E, R>,
@@ -302,7 +302,7 @@ export function makeRouteExecutor<A, E = never, R = never>(): Effect.Effect<
  * Cause array remains reachable through the error until consumers release it.
  *
  * @since 1.0.0
- * @category execution
+ * @category Selection errors
  */
 export class RouteGuardError extends Schema.Error<RouteGuardError>("@typed/router/RouteGuardError")(
   {
@@ -324,7 +324,7 @@ export class RouteGuardError extends Schema.Error<RouteGuardError>("@typed/route
  * redirect combinators may retain it only for the duration of their recovery Effect.
  *
  * @since 1.0.0
- * @category execution
+ * @category Selection errors
  */
 export class RouteNotFound extends Schema.Error<RouteNotFound>("@typed/router/RouteNotFound")({
   _tag: Schema.tag("RouteNotFound"),
@@ -343,7 +343,7 @@ export class RouteNotFound extends Schema.Error<RouteNotFound>("@typed/router/Ro
  * cause. It owns no Schema service or route Scope.
  *
  * @since 1.0.0
- * @category execution
+ * @category Selection errors
  */
 export class RouteDecodeError extends Schema.Error<RouteDecodeError>(
   "@typed/router/RouteDecodeError",
@@ -372,7 +372,7 @@ const closeScopes = (scopes: Iterable<Scope.Closeable>, fiberId: number) =>
  * the rejected preparation. `rootScope` remains their ultimate owner.
  *
  * @since 1.0.0
- * @category execution
+ * @category Route resource lifetimes
  * @internal
  */
 export function makeLayerManager(memoMap: Layer.MemoMap, rootScope: Scope.Scope, fiberId: number) {
@@ -467,7 +467,7 @@ export function makeLayerManager(memoMap: Layer.MemoMap, rootScope: Scope.Scope,
  * and closes it when the layout disappears or `rootScope` is interrupted.
  *
  * @since 1.0.0
- * @category execution
+ * @category Route resource lifetimes
  * @internal
  */
 export function makeLayoutManager(rootScope: Scope.Scope, fiberId: number) {
@@ -552,7 +552,7 @@ export function makeLayoutManager(rootScope: Scope.Scope, fiberId: number) {
  * identity controls reuse; removed boundaries are closed, and `rootScope` closes every remaining child.
  *
  * @since 1.0.0
- * @category execution
+ * @category Route resource lifetimes
  * @internal
  */
 export function makeCatchManager(rootScope: Scope.Scope, fiberId: number) {

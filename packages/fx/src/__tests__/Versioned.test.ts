@@ -15,6 +15,7 @@ describe("Versioned", () => {
 
         yield* Effect.gen(function* () {
           expect(yield* MyVersioned).toEqual(42);
+          expect(yield* Effect.map(MyVersioned, (value) => value + 1)).toEqual(43);
           expect(yield* MyVersioned.version).toEqual(1);
           expect(yield* Fx.collectAll(MyVersioned)).toEqual([42]);
         }).pipe(Effect.provide(layer));

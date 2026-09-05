@@ -27,7 +27,7 @@ import * as RefSubject from "./RefSubject.js";
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefCause<
   in out E,
@@ -62,7 +62,7 @@ export interface RefCause<
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<E = never, Err = never, R = never>(
   initial: Cause.Cause<E> | Effect.Effect<Cause.Cause<E>, Err, R> | Fx.Fx<Cause.Cause<E>, Err, R>,
@@ -85,7 +85,7 @@ export function make<E = never, Err = never, R = never>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setFail: {
   <E>(error: E): <Err, R>(ref: RefCause<E, Err, R>) => Effect.Effect<Cause.Cause<E>, Err, R>;
@@ -108,7 +108,7 @@ export const setFail: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setDie: {
   (defect: unknown): <E, Err, R>(ref: RefCause<E, Err, R>) => Effect.Effect<Cause.Cause<E>, Err, R>;
@@ -131,7 +131,7 @@ export const setDie: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setInterrupt: {
   (
@@ -160,7 +160,7 @@ export const setInterrupt: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const hasFails = <E, Err, R>(
   ref: RefCause<E, Err, R>,
@@ -180,7 +180,7 @@ export const hasFails = <E, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const hasDies = <E, Err, R>(
   ref: RefCause<E, Err, R>,
@@ -200,7 +200,7 @@ export const hasDies = <E, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const hasInterrupts = <E, Err, R>(
   ref: RefCause<E, Err, R>,
@@ -220,7 +220,7 @@ export const hasInterrupts = <E, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <E, Err, R>(
   ref: RefCause<E, Err, R>,
@@ -240,7 +240,7 @@ export const isEmpty = <E, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const size = <E, Err, R>(ref: RefCause<E, Err, R>): RefSubject.Computed<number, Err, R> =>
   RefSubject.map(ref, (self) => self.reasons.length);
@@ -259,7 +259,7 @@ export const size = <E, Err, R>(ref: RefCause<E, Err, R>): RefSubject.Computed<n
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reasons = <E, Err, R>(
   ref: RefCause<E, Err, R>,

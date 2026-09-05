@@ -1,74 +1,101 @@
 ---
 title: "Class names without className replacement"
 summary: "Understand the local token ledger that lets Typed update its classes while preserving classes added by other code."
-section: "DOM and platform"
+section: "Template bindings"
 kind: "deep-dive"
-order: 5.2
+order: 3
 ---
 
-A dynamic class part does not assign `element.className`. It normalizes its value into tokens,
-compares the previous and next tokens contributed by that part, and calls `classList.add` or
-`classList.remove` only for the difference.
+A saved-article row can be selected by the application and animated by a separate library. Both
+need classes on the same element. Replacing `className` with the application's complete string
+would erase the animation library's state. A Typed class part instead keeps track of its own tokens
+and changes only that contribution.
+
+This is a specific cooperative-DOM contract, not automatic merging of arbitrary writes. Read
+[scalar bindings](/explore/template-element-bindings) first; this page explains why class collections
+need different bookkeeping.
+
+## Describe domain state as a contribution
 
 ```ts
-import { Fx } from "@typed/fx";
+import { RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
 import { html } from "@typed/template";
 
-const tone = Fx.fromIterable(["is-idle", "is-ready"]);
+export const SelectableArticle = component(function* () {
+  const selected = yield* RefSubject.make(false);
+  const stateClass = selected.pipe(RefSubject.map((value) => value ? "is-selected" : ""));
+  const toggle = RefSubject.update(selected, (value) => !value);
 
-const status = html`
-  <output class="status ${tone}">Ready</output>
-`;
+  return html`<article class="article ${stateClass}">
+    <h2>Understanding resource scopes</h2>
+    <button type="button" aria-pressed=${selected} onclick=${toggle}>Select article</button>
+  </article>`;
+});
 ```
 
-On the first value, the class part records `status` and `is-idle` as its local token set. On the next
-value it leaves `status`, removes `is-idle`, and adds `is-ready`. It does not replace the element or
-rewrite the entire class attribute.
+The sparse expression combines `article` and the current state token into one class part. At first
+that part contributes `article`. Selecting adds `is-selected`; deselecting removes `is-selected`
+while retaining `article`. The article node and its button are unchanged.
 
-## External tokens are outside the ledger
+Now suppose an animation library adds `is-entering` after mounting. That token is absent from the
+part's contribution ledger, so selecting and deselecting leave it alone. The animation library can
+remove its own token when its animation finishes.
 
-Suppose another renderer, a custom element, or an animation library adds `is-animating` after the
-element is mounted. That token is absent from Typed's ledger. The next `tone` value therefore leaves
-`is-animating` in place.
+## See where cooperation stops
 
-The inverse boundary matters too: if other code removes a token owned by the class part, Typed does
-not continuously police the DOM. An unchanged future value will not necessarily re-add that token;
-the class part reacts to its input transitions.
+The native class list stores each token once. It has no owner ID or reference count. If both systems
+claim `is-selected`, the DOM cannot distinguish their contributions when Typed removes the token.
+Choose separate tokens for separate responsibilities, or give one system the authority to compute
+the shared token.
 
-## The same token cannot have two owners
+Likewise, a foreign writer assigning a complete `className` can erase Typed's tokens. A contribution
+ledger does not prevent that external write. If another owner removes a token and Typed's next value
+contains exactly the same local token set, no transition necessarily re-adds it. Typed responds to
+input changes; it does not continuously enforce the whole class attribute.
 
-The DOM stores a class token once, without reference counts or provenance. If Typed contributes
-`is-ready` and another system independently relies on that exact token, Typed removing its own
-`is-ready` contribution removes the shared DOM token. Cooperative ownership therefore works at the
-token boundary: separate systems should not claim the same dynamic token unless they coordinate its
-lifetime.
+These limits are useful design information. Put selection in `is-selected`, animation in
+`is-entering`, and a plugin's state in its own token. Do not ask both libraries to maintain a complete
+"correct class string" for the shared element.
 
-## Values normalize before diffing
+## Normalize before comparing
 
-Strings are split on ASCII whitespace. Arrays are flattened recursively, and nullish values produce
-no tokens. This allows a class input to express a single token, a space-separated group, or nested
-groups without changing the update contract.
+Strings split on ASCII whitespace, arrays flatten recursively, and nullish values contribute no
+tokens. This lets a projection produce a single state token or a group without changing ownership:
 
-The cost is proportional to the previous and next local token lists. It is O(1) with respect to the
-surrounding DOM tree, but not with respect to an arbitrarily large class collection.
+```ts
+import { html } from "@typed/template";
 
-## Sparse class attributes share one ledger
+const state = ["article", ["is-selected", null], "has-note"];
+export const row = html`<article class=${state}>Understanding resource scopes</article>`;
+```
 
-`class="status ${tone}"` is parsed as one sparse class expression. Its literal and dynamic pieces are
-combined before the token diff. This is why the literal `status` token and the current `tone` token
-move through one coherent update instead of competing writes to `className`.
+The cost depends on the previous and next local token collections, not on the number of descendants
+in the article or nodes elsewhere on the page. A very large generated class list still takes work
+to normalize and compare. Sparse literal segments participate in the same ledger; they are not
+independent writes to the attribute.
 
-## Hydration uses the same initial snapshot
+## Hydration doesn't claim all server classes
 
-Hydration does not create a special class policy. The updater snapshots the element's current
-`classList` when it is created, whether the element was freshly built or adopted from server HTML.
-Those initial tokens participate in the first comparison. Classes added later by another owner are
-not added to the ledger and are therefore left alone by later updates.
+The updater's ledger starts empty, including on an adopted server element. Its first input records
+what that part contributes. An unrelated server token is not silently adopted as Typed-owned state.
 
-When the rendered part is reset, it removes the tokens in its recorded set. Keep one writer for a
-token that must have an independent lifetime; the DOM stores one token and has no provenance or
-reference count.
+For example, server markup can contain `article analytics-ready`. The first class value is
+`article is-selected`. A later value of `article` removes `is-selected` and leaves `analytics-ready`.
+If the first input had itself included `analytics-ready`, later omission would remove it. The source
+of truth for contribution is the values this part receives, not every class found on the element.
 
-Continue with [DOM scalar parts and attributes](/explore/dom-parts-and-attributes) for the other
-scalar targets, or [Using DomRenderEvent](/explore/dom-render-event) when the value is structural DOM
-output rather than a scalar part.
+A spread's class entry uses the same mechanism; disposing that entry removes its recorded tokens.
+See [Spread props and data records](/explore/template-spreads-data) for the larger per-key lifetime.
+
+## Diagnose the writer, not just the final class string
+
+To investigate a disappearing animation, record three moments: Typed's initial emitted tokens, the
+animation library's mutation, and Typed's next emitted tokens. Look for either a shared token or a
+whole-attribute assignment. A DOM breakpoint on the class attribute can identify the latter.
+
+A focused test should add a foreign token after mounting, toggle selection, then clear Typed's
+state contribution. Assert the article is still the same object, the expected local token changed,
+and the foreign token survived. Add a matching hydration case if preexisting server classes matter.
+Those tests establish the actual cooperation contract without claiming all third-party class writers
+are compatible.

@@ -6,33 +6,18 @@ kind: "guide"
 order: 1.4
 ---
 
-An Fx can start another Fx. The outer Fx decides when work exists; the inner Fx can produce zero,
-one, or many values of its own. A flattening operator decides which inner subscriptions are allowed
-to run when the outer Fx produces again.
+A document editor starts several kinds of work: load previews, upload attachments, save revisions,
+and submit a final command. A new input arriving while old work is active must have an intentional
+meaning. Running everything, canceling old work, and dropping repeated commands are different user
+promises, even when all three call the same server.
 
-Start with the policy, not the operator name:
+[Composing Fx](/explore/composing-fx) combined independent producers. Here an outer value creates an
+inner Fx. The inner may emit progress and a final result, fail, or remain live. A flattening operator
+owns the relationship between those runs.
 
-| Policy | Operator | What happens to competing work | Output order |
-| --- | --- | --- | --- |
-| Run every inner | `flatMap` | starts another inner immediately | each inner stays ordered; inners may interleave |
-| Run at most *n* inners | `flatMapConcurrently` | waits for a permit | admitted inners may interleave |
-| Run one inner at a time | `concatMap` | keeps every value waiting | source order |
-| Keep only the current inner | `switchMap` | interrupts it and starts the replacement | only the latest inner continues |
-| Ignore arrivals while busy | `exhaustMap` | discards the arrival | active inner only |
-| Keep one latest arrival while busy | `exhaustLatestMap` | replaces the waiting value | active inner, then latest waiting inner |
-| Select a branch per boolean | `if` | switches to the selected branch | selected branch only |
-| First useful competitor wins | `race` | interrupts the other competitor | winner values only |
-| First useful candidate wins | `raceAll` | interrupts every other candidate | winner values only |
+## Let independent attachment work overlap
 
-The six mapping policies start with a callback of the form `(value) => Fx`. `if` selects between
-two Fx branches; `race` and `raceAll` receive competitors directly. In every case, each inner Fx
-remains a complete reactive process with its own cardinality, failures, services, and lifetime.
-
-## Run every inner with flatMap
-
-Use `flatMap` when the work started by one value is independent of the work started by every other
-value. Every inner Fx runs. An inner keeps its own order, but different inners may emit in whichever
-order their values become available.
+When one input's work does not invalidate another's, `flatMap` starts every inner immediately:
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -53,7 +38,7 @@ const results = requests.pipe(Fx.flatMap(load));
 
 ```fx-marble
 title: flatMap runs every inner and lets their values interleave
-covers: flatMap, flatMapEffect
+covers: flatMap
 input: a . b . . . . . |
 operator: flatMap(load)
 inner a: ^ a1 . . a2 | . . .
@@ -61,16 +46,11 @@ inner b: . . ^ b1 . b2 | . .
 output: . a1 . b1 a2 b2 . . |
 ```
 
-Each inner lane starts at `^` and ends at `|`: the `a` inner is still active when `b` arrives, so
-both remain subscribed. Use this only when
-unbounded overlap is acceptable. A fast or unbounded outer Fx can create an unbounded number of
-active inners.
+The `b` lane starts while `a` is still active. Both cached and fresh values survive, and the output
+interleaves them. There is no ordering between different inners. This policy can create an unbounded
+number of active jobs if input keeps arriving faster than jobs finish.
 
-## Bound overlap with flatMapConcurrently
-
-`flatMapConcurrently` keeps every source value but admits at most the requested number of inners at
-once. Waiting values are not dropped. Once an active inner completes, the next waiting inner gets a
-permit.
+For uploads, bound active jobs while retaining every selected file:
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -88,7 +68,7 @@ const uploads = attachments.pipe(Fx.flatMapConcurrently(upload, 2));
 
 ```fx-marble
 title: flatMapConcurrently waits when every permit is occupied
-covers: flatMapConcurrently, flatMapConcurrentlyEffect
+covers: flatMapConcurrently
 input: a b c . . . . . |
 operator: flatMapConcurrently(load, 2)
 inner a: ^ a1 . a2 | . . . .
@@ -97,19 +77,15 @@ inner c: . . . . . ^ c1 c2 |
 output: . a1 b1 a2 b2 . c1 c2 |
 ```
 
-Here `a` and `b` occupy the two permits. The `c` inner does not begin until one of them finishes.
-The limit bounds active work, not retained work: waiting inputs still consume memory, so this is not
-an implicit backpressure protocol.
+Two permits admit `a` and `b`; `c` waits until a permit becomes available. The tightly spaced input
+lanes depict concurrent source deliveries that can wait for admission; a sequential producer cannot
+issue its next input while its current delivery is still waiting. The bound limits active
+work, not all retained inputs. A large waiting population still consumes memory. The concurrency
+argument must be a positive safe integer; an invalid value fails with `Cause.IllegalArgumentError`.
 
-The concurrency argument must be a positive safe integer. An invalid value fails through the error
-channel with `Cause.IllegalArgumentError`. A valid limit changes admission, not ordering; concurrent
-inners may still interleave.
+## Preserve every revision in order
 
-## Preserve every inner in order with concatMap
-
-`concatMap` is the one-at-a-time policy that loses nothing. It waits for the active inner to
-complete before starting the next one, so both source order and each inner's local order are visible
-in the output.
+A protocol that must apply revision `a` before `b` needs sequential admission:
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -127,7 +103,7 @@ const auditTrail = revisions.pipe(Fx.concatMap(save));
 
 ```fx-marble
 title: concatMap finishes each inner before starting the next
-covers: concatMap, concatMapEffect
+covers: concatMap
 input: a b c . . . . . . |
 operator: concatMap(save)
 inner a: ^ a1 a2 | . . . . . .
@@ -136,15 +112,15 @@ inner c: . . . . . . ^ c1 c2 |
 output: . a1 a2 . b1 b2 . c1 c2 |
 ```
 
-Choose `concatMap` for writes, migrations, or protocol steps where starting later work early would
-violate the product rule. An infinite inner prevents every later inner from starting; that follows
-directly from the sequencing guarantee.
+`concatMap` waits for each inner to complete before starting the next. Both its progress and stored
+result arrive before the next revision starts. An infinite first inner prevents every later revision
+from starting; a rapidly growing input backlog increases latency even with only one active job.
+Use this because every command matters, not as a generic solution to concurrency.
 
-## Replace obsolete inner work with switchMap
+## Replace an obsolete preview
 
-`switchMap` keeps one current inner. When a new outer value arrives, it interrupts the previous
-inner, waits for that interruption and its finalizers, then starts the replacement. Values already
-emitted by the old inner stay emitted; only its future work is cancelled.
+A revised document makes the previous preview irrelevant. `switchMap` stops future work from that
+old input while preserving anything it already emitted:
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -165,7 +141,7 @@ const previews = drafts.pipe(Fx.switchMap(preview));
 
 ```fx-marble
 title: switchMap interrupts the old inner exactly when its replacement arrives
-covers: switchMap, switchMapEffect
+covers: switchMap
 input: a . b . . . |
 operator: switchMap(preview)
 inner a: ^ a1 x . . . .
@@ -173,16 +149,18 @@ inner b: . . ^ b1 . b2 |
 output: . a1 . b1 . b2 |
 ```
 
-The `x` in the `a` lane shares a time slot with `b`: replacement is the cause of cancellation. `a1` remains because
-it arrived before the switch; the later value from the `a` inner never arrives. This is the right
-policy for previews, live search, route-driven data, and any result that becomes irrelevant when its
-input changes.
+`b` causes the `x` in `a`'s lane. `a1` remains because it arrived before the switch; `a2` never arrives.
+Switching waits for interruption and finalizers before starting the replacement, so a slow finalizer
+can delay the next `^` beyond this idealized timeline.
 
-## Ignore busy arrivals with exhaustMap
+This is a good contract for previews and current search results. It is not a rollback mechanism:
+interrupting local work does not undo a command already accepted by a server. Connect cancellation
+to the foreign API in [the source adapter](/explore/building-fx), and handle write idempotency or
+revision checks in the server protocol.
 
-`exhaustMap` admits the first inner while idle and ignores every arrival until that inner completes.
-Ignored arrivals are not queued and never run. Once idle again, the next arrival can start a new
-inner.
+## Ignore repeated submit clicks while the command is active
+
+If an in-flight submit already represents the user's intent, ignore busy arrivals:
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -200,7 +178,7 @@ const accepted = submits.pipe(Fx.exhaustMap(submit));
 
 ```fx-marble
 title: exhaustMap ignores arrivals until the active inner completes
-covers: exhaustMap, exhaustMapEffect
+covers: exhaustMap
 input: a b . . c . . . |
 operator: exhaustMap(submit)
 inner a: ^ a1 . a2 | . . .
@@ -208,15 +186,13 @@ inner c: . . . . ^ c1 . c2 |
 output: . a1 . a2 . c1 . c2 |
 ```
 
-Use this when repetition while busy is meaningless: a double-clicked submit, repeated device
-connection requests, or another command whose active execution already represents the user's
-intent. If the latest busy arrival must eventually run, use `exhaustLatestMap` instead.
+There is no `b` inner because it never starts. `exhaustMap` does not keep it for later. When `a`
+finishes, a later `c` may start. This prevents repeated local submissions while busy, but it does not
+provide a global exactly-once guarantee across retries, devices, or server responses.
 
-## Retain one latest arrival with exhaustLatestMap
+## Finish the current save, then save only the newest snapshot
 
-`exhaustLatestMap` also runs one inner at a time, but it keeps one waiting value. Every newer busy
-arrival replaces that waiting value. When the active inner completes, only the latest retained value
-starts.
+Some autosave protocols require nonoverlapping writes but do not need every intermediate snapshot:
 
 ```ts
 import { Fx } from "@typed/fx";
@@ -234,23 +210,27 @@ const indexed = versions.pipe(Fx.exhaustLatestMap(index));
 
 ```fx-marble
 title: exhaustLatestMap keeps only the newest value waiting behind active work
-covers: exhaustLatestMap, exhaustLatestMapEffect
+covers: exhaustLatestMap
 input: a b c . . . . . |
 operator: exhaustLatestMap(index)
 inner a: ^ a1 . a2 | . . . .
 inner c: . . . . . ^ c1 c2 |
-output: . a1 . a2 . c1 c2 |
+output: . a1 . a2 . . c1 c2 |
 ```
 
-While the `a` inner runs, `b` becomes pending and then `c` replaces it. The only inner lanes are `a`
-and `c`, because `b` never runs. The active `a` inner is not
-cancelled; after it completes, the retained `c` inner runs. This is useful for saves, indexing, and
-synchronization where overlap is forbidden but the system must eventually reflect the newest state.
+`b` first becomes pending, then `c` replaces it. `exhaustLatestMap` finishes `a` and then starts `c`.
+It never cancels the active write. This is appropriate only when intermediate snapshots are
+replaceable; dropping an intermediate command that changes meaning is a different feature.
 
-## Select a branch with if
+For arrivals at 0, 5, and 10 milliseconds and 20-millisecond jobs, immediate-finalization assumptions
+give these outcomes: `concatMap` finishes all three at 60; `switchMap` locally finishes only `c` at
+30; `exhaustMap` finishes only `a` at 20; `exhaustLatestMap` finishes `a` then `c` at 40. The choice
+changes what the user ultimately saved, not just throughput.
 
-`if` turns each boolean condition value into a selected Fx branch. A newer condition switches to its
-branch, interrupting the previously selected one just as `switchMap` does.
+## Select a branch or a winning source directly
+
+Sometimes the competitors are already known. `if` switches between branches whenever its boolean
+input changes:
 
 ```fx-marble
 title: if switches from the true branch to the false branch
@@ -262,14 +242,10 @@ inner onFalse: . . ^ disabled |
 output: . enabled . disabled |
 ```
 
-The `onTrue` lane is cancelled when `false` arrives. The `onFalse` lane becomes the winner only for
-that condition value; source completion waits for its selected branch to finish.
+The true branch is interrupted when `false` arrives. The selected branch remains active until it
+ends or is replaced. Source completion waits for the selected branch to finish.
 
-## Let the first useful competitor win with race
-
-`race` starts both inputs together. Completion or failure without a value does not win; the first
-value selects its producer, interrupts the loser, and the selected producer continues to determine
-the output.
+`race` and `raceAll` instead choose the first producer that emits a value:
 
 ```fx-marble
 title: race cancels slow once fast emits first
@@ -280,14 +256,6 @@ inner slow: ^ x . .
 inner fast: ^ fast |
 output: . fast |
 ```
-
-Here `fast` emits first, so the `slow` lane receives `x`. The winner's value and completion are the
-output's value and completion.
-
-## Race a runtime-sized set with raceAll
-
-`raceAll` applies the same first-value rule to every provided Fx. It starts all candidates and
-interrupts every loser as soon as one candidate emits.
 
 ```fx-marble
 title: raceAll keeps fast and cancels the other candidates
@@ -300,23 +268,14 @@ inner mid: ^ x . .
 output: . fast |
 ```
 
-`fast` is the only producer whose value and completion reach the output; both other candidates are
-interrupted at the selection slot.
+The first `fast` value selects its lane and interrupts every loser. Completion or failure without
+a value does not select a winner. The winner can continue producing afterward. This is different
+from racing ordinary Effects for a first completion.
 
-## Effect-returning convenience variants
+## Use Effect callbacks for one-result jobs
 
-Use the Fx-returning operators above as the primary vocabulary. When a callback naturally returns
-one `Effect` result, the corresponding `*Effect` operator performs the `Fx.fromEffect` conversion
-for you without changing the admission policy.
-
-| Fx callback | Effect callback | Shared policy |
-| --- | --- | --- |
-| `flatMap` | `flatMapEffect` | run every inner concurrently |
-| `flatMapConcurrently` | `flatMapConcurrentlyEffect` | run at most *n* inners |
-| `concatMap` | `concatMapEffect` | run every inner sequentially |
-| `switchMap` | `switchMapEffect` | interrupt the old inner for the latest |
-| `exhaustMap` | `exhaustMapEffect` | ignore arrivals while busy |
-| `exhaustLatestMap` | `exhaustLatestMapEffect` | retain one latest waiting value |
+An inner Fx can emit progress and a result; an Effect callback can produce at most one success.
+The `*Effect` convenience variants lift that one result without changing admission policy:
 
 ```ts
 import { Effect } from "effect";
@@ -338,19 +297,87 @@ const explicit = revisions.pipe(
 const convenient = revisions.pipe(Fx.concatMapEffect(save));
 ```
 
-`explicit` and `convenient` have the same sequencing behavior. The cardinality is narrower than an
-arbitrary inner Fx: each admitted Effect can produce one successful value, fail, or be interrupted.
-Its typed error and service requirements still compose into the returned Fx.
+`explicit` and `convenient` preserve the same revision order. The following timelines deliberately
+have only one success token per admitted Effect; a multi-value inner-Fx timeline would misrepresent
+this cardinality.
 
-## Errors, services, and lifetime remain visible
+```fx-marble
+title: flatMapEffect emits at most one success for each admitted Effect
+covers: flatMapEffect
+input: a b . . . |
+operator: flatMapEffect(save)
+inner a: ^ . . saved-a |
+inner b: . ^ saved-b |
+output: . . saved-b saved-a . |
+```
 
-Every flattening policy unions the outer and inner error channels and service requirements. The
-returned Fx also requires `Scope`, which owns admitted inner subscriptions, waiting work, and
-interruption. Source completion waits for every inner the selected policy promises to finish.
+Unbounded admission permits `saved-b` to finish before `saved-a`.
 
-That common type behavior does not erase the policy differences above. `concatMap` promises to
-drain every waiting inner; `switchMap` promises to interrupt obsolete work; `exhaustMap` promises
-that busy arrivals will not run. Choose the behavioral contract first, then provide services and
-own the subscription at the application boundary. Continue with
-[Fx services and lifetime](/explore/fx-services-and-lifetime) for those ownership boundaries and
-[Consuming Fx](/explore/consuming-fx) for runners.
+```fx-marble
+title: flatMapConcurrentlyEffect emits at most one success for each admitted Effect
+covers: flatMapConcurrentlyEffect
+input: a b c . . . . |
+operator: flatMapConcurrentlyEffect(save)
+inner a: ^ . saved-a |
+inner b: . ^ . saved-b |
+inner c: . . . ^ . saved-c |
+output: . . saved-a saved-b . saved-c . |
+```
+
+With two permits, `c` starts only after an active job releases one.
+
+```fx-marble
+title: concatMapEffect emits at most one success for each admitted Effect
+covers: concatMapEffect
+input: a b c . . . . . |
+operator: concatMapEffect(save)
+inner a: ^ . saved-a |
+inner b: . . . ^ saved-b |
+inner c: . . . . . ^ saved-c |
+output: . . saved-a . saved-b . saved-c . |
+```
+
+Sequential admission emits one saved result before the next job starts.
+
+```fx-marble
+title: switchMapEffect emits at most one success for each admitted Effect
+covers: switchMapEffect
+input: a b . . |
+operator: switchMapEffect(save)
+inner a: ^ x
+inner b: . ^ . saved-b |
+output: . . . saved-b |
+```
+
+Switching interrupts `a`; only `b` produces a successful result.
+
+```fx-marble
+title: exhaustMapEffect emits at most one success for each admitted Effect
+covers: exhaustMapEffect
+input: a b . . c . . |
+operator: exhaustMapEffect(save)
+inner a: ^ . saved-a |
+inner c: . . . . ^ saved-c |
+output: . . saved-a . . saved-c . |
+```
+
+The busy `b` input has no inner lane and no result.
+
+```fx-marble
+title: exhaustLatestMapEffect emits at most one success for each admitted Effect
+covers: exhaustLatestMapEffect
+input: a b c . . . |
+operator: exhaustLatestMapEffect(save)
+inner a: ^ . . saved-a |
+inner c: . . . . ^ saved-c |
+output: . . . saved-a . saved-c |
+```
+
+Only the latest waiting input `c` runs after active `a` finishes.
+
+All policies combine outer and inner error/service channels and require a Scope owning admitted and
+waiting work. Put request recovery inside the mapper when later input should survive that failure;
+[errors and recovery](/explore/fx-errors-and-recovery) works through that placement. Count starts,
+completions, and finalizers separately when testing: an absent result can mean never admitted,
+interrupted, or failed. [Services and lifetime](/explore/fx-services-and-lifetime) gives these runs
+the owner that ends them when the editor closes.

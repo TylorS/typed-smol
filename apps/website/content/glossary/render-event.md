@@ -7,8 +7,10 @@ related: [dom-render-event, html-render-event, fx, render-template]
 links: []
 ---
 
-RenderEvent is the common output boundary, `Fx<RenderEvent, E, R>`. A DOM producer uses
-[DomRenderEvent](#dom-render-event) for exact node identity; a server renderer uses
-[HtmlRenderEvent](#html-render-event) for trusted ordered chunks. The event transports output and
-does not silently acquire or dispose the producer's resources.
+A RenderEvent is an output value carried by `Fx<RenderEvent, E, R>`. It is neither the stream itself
+nor a browser input event. [DomRenderEvent](#dom-render-event) carries concrete nodes;
+[HtmlRenderEvent](#html-render-event) carries trusted serialized chunks.
 
+An adapter can publish output through this boundary without adopting a component-tree protocol.
+Acquisition and disposal remain with its producing work. Compare
+[DOM output](/explore/dom-render-event) and [HTML output](/explore/html-render-event).

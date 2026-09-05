@@ -2,25 +2,23 @@
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import Article from "../../layouts/Article.astro";
 import UiCatalog from "../../components/UiCatalog.astro";
+import UiLessons from "../../components/UiLessons.astro";
+import { guideNavigation, type GuideLink } from "../../Guides.js";
 
 export async function getStaticPaths() {
-  const guides = (await getCollection("guides")).sort(
-    (a, b) => a.data.order - b.data.order,
-  );
-  return guides.map((entry, index) => ({
+  const guides = await getCollection("guides");
+  return guides.map((entry) => ({
     params: { slug: entry.id },
-    props: { entry, previous: guides[index - 1], next: guides[index + 1] },
+    props: { entry, ...guideNavigation(entry.id, guides) },
   }));
 }
 interface Props {
   entry: CollectionEntry<"guides">;
-  previous?: CollectionEntry<"guides">;
-  next?: CollectionEntry<"guides">;
+  previous?: GuideLink;
+  next?: GuideLink;
 }
 const { entry, previous, next } = Astro.props;
 const { Content, headings } = await render(entry);
-const link = (entry?: CollectionEntry<"guides">) =>
-  entry && { href: `/explore/${entry.id}`, title: entry.data.title };
 ---
 
 <Article
@@ -28,7 +26,9 @@ const link = (entry?: CollectionEntry<"guides">) =>
   current={entry.id}
   headings={headings}
   source={`content/guides/${entry.id}.md`}
-  previous={link(previous)}
-  next={link(next)}
-  ><Content />{entry.id === "choosing-ui-components" && <UiCatalog />}</Article
+  previous={previous}
+  next={next}
+  ><Content />{entry.id === "ui" && <UiLessons />}{
+    entry.id === "choosing-ui-components" && <UiCatalog />
+  }</Article
 >

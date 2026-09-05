@@ -26,9 +26,9 @@ const packages = [
     "Parse paths and queries, select views, and connect routing to your application.",
   ],
   [
-    "astro",
-    "Typed islands in Astro",
-    "Render on the server. Hydrate when you need to. Write your content in Markdown.",
+    "guard",
+    "Decisions with typed inputs",
+    "Validate inputs, compose matching rules, and preserve errors and dependencies.",
   ],
   [
     "async-data",
@@ -36,11 +36,12 @@ const packages = [
     "Represent loading, refreshing, success, failure, and optimistic data explicitly.",
   ],
 ];
-const source = `import { Fx, RefSubject } from "@typed/fx";
+const source = `import { RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
 import { Button } from "@typed/ui/Button";
+import { component } from "@typed/ui/Component";
 
-export const Quantity = Fx.gen(function* () {
+export const Quantity = component(function* () {
   const quantity = yield* RefSubject.make(1);
   const total = RefSubject.map(quantity, n => n * 24);
 
@@ -70,8 +71,9 @@ export const Quantity = Fx.gen(function* () {
               >Start building <span aria-hidden="true">↗</span></a
             ><a
               class="btn btn-outline"
-              href={siteHref("/explore/application-developers")}
-              >Meet the toolkit</a>
+              href={siteHref("/explore/cooperative-by-design")}
+              >Why cooperative?</a
+            >
           </div>
           <p class="hero-footnote">
             TypeScript + Effect · Open source · Adopt one piece at a time
@@ -117,10 +119,11 @@ export const Quantity = Fx.gen(function* () {
             From state to something people use.
           </h3><p>
             Start with a running view. Add forms, requests, navigation, and
-            tests as the product grows. Use Typed in an Astro page or alongside
-            your existing stack.
+            tests as the product grows. Bring the same model to your existing
+            stack or build an application from the ground up.
           </p><a href={siteHref("/explore/application-developers")}
-            >Follow the application path →</a>
+            >Follow the application path →</a
+          >
         </article>
         <article class="path-card">
           <p class="eyebrow">FOR LIBRARY DEVELOPERS</p><h3>
@@ -130,7 +133,8 @@ export const Quantity = Fx.gen(function* () {
             templates. Preserve error and service channels. Build a component
             library, renderer, or framework.
           </p><a href={siteHref("/explore/library-developers")}
-            >Follow the library path →</a>
+            >Follow the library path →</a
+          >
         </article>
       </div>
     </section>
@@ -145,7 +149,8 @@ export const Quantity = Fx.gen(function* () {
         </p><a
           class="text-link"
           href={siteHref("/explore/render-your-first-template")}
-          >Understand the example →</a>
+          >Understand the example →</a
+        >
       </div>
       <Code
         code={source}

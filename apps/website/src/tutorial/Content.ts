@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { readFileSync, readdirSync } from "node:fs";
 import { parseFrontmatter } from "../docs/Frontmatter.js";
 import { parseCurriculumFiles, type CurriculumFile } from "./Files.js";
+import { counterLessonPath, isQuickStartSection } from "./Routes.js";
 export type { CurriculumFile } from "./Files.js";
 
 export interface QuickStartSection {
@@ -88,9 +89,21 @@ export const curriculumSearchEntries = [
     id: "curriculum:quick-start",
     title: "Quick Start",
     kind: "guide" as const,
-    text: quickStartSections.flatMap(({ title, summary }) => [title, summary]).join(" "),
+    text: quickStartSections
+      .filter(({ id }) => isQuickStartSection(id))
+      .flatMap(({ title, summary }) => [title, summary])
+      .join(" "),
     href: "/explore/quick-start",
   },
+  ...quickStartSections
+    .filter(({ id }) => !isQuickStartSection(id))
+    .map((section) => ({
+      id: `curriculum:counter:${section.id}`,
+      title: section.title,
+      kind: "guide" as const,
+      text: `${section.title} ${section.summary} ${section.body}`,
+      href: counterLessonPath(section.id),
+    })),
   {
     id: "curriculum:tutorial",
     title: "TodoMVC tutorial",

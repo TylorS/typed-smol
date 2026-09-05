@@ -7,6 +7,8 @@
  * the state and pure operations without mounting UI, or supply custom hosts without replacing native
  * events and browser-owned focus.
  *
+ * Learn the interaction in the [Toolbar guide](/explore/ui-toolbar).
+ *
  * @since 1.0.0
  * @category modules
  * @packageDocumentation
@@ -29,63 +31,24 @@ import * as Dom from "./Dom.js";
 import type { HostResult } from "./Dom/Types.js";
 
 /**
- * Complete renderer-independent state for Toolbar.
+ * The active command and arrow-navigation policy.
+ * Formatting preferences such as bold or italic are separate application state.
  *
- * @remarks
- * ## Why
- *
- * Applications can inspect, update, and test Toolbar behavior without mounting or coupling the
- * state to a renderer.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { State } from "@typed/ui/Toolbar";` Extend the [Toolbar.makeState
- * runnable setup](/reference/%40typed%2Fui%2FToolbar%23makeState). Inside the linked program,
- * `const snapshot: State = yield* state` exposes toolbar focus policy.
  * @since 1.0.0
- * @category models
+ * @category Command focus
  */
 export interface State extends Composite.State {}
 /**
  * Initial Toolbar values. Uses Composite defaults unless overridden.
  *
- * @remarks
- * ## Why
- *
- * Making initialization explicit documents hydration-sensitive defaults and lets servers and
- * clients construct matching state.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { InitialState } from "@typed/ui/Toolbar";` Extend the
- * [Toolbar.makeState runnable setup](/reference/%40typed%2Fui%2FToolbar%23makeState). Construct a
- * vertical toolbar with
- * `const initial: InitialState = { orientation: "vertical" }; const state = yield* Toolbar.makeState(initial)`.
  * @since 1.0.0
- * @category models
+ * @category Command focus
  */
 export type InitialState = Composite.InitialState;
 /**
  * Effect Schema used by makeState to encode, decode, and hydrate Toolbar state.
  *
  * @remarks
- * ## Why
- *
- * A public schema makes hydration and serialized state use the same runtime validation as direct
- * construction.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
  * @example
  * ```ts
  * import * as Schema from "effect/Schema";
@@ -94,7 +57,7 @@ export type InitialState = Composite.InitialState;
  * const decodeState = Schema.decodeUnknownEffect(Toolbar.StateSchema);
  * ```
  * @since 1.0.0
- * @category schemas
+ * @category Command focus
  */
 export const StateSchema = Composite.StateSchema;
 
@@ -102,12 +65,6 @@ export const StateSchema = Composite.StateSchema;
  * Creates hydrated Toolbar state. Uses Composite defaults unless overridden.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect creates the RefSubject when run. That state is renderer-independent;
  * collection registrations belong to the separate Scope that runs register or ref, not to state
  * creation.
@@ -126,7 +83,7 @@ export const StateSchema = Composite.StateSchema;
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Command focus
  */
 export function makeState(initial: InitialState = {}) {
   return Composite.makeState(initial);
@@ -136,12 +93,6 @@ export function makeState(initial: InitialState = {}) {
  * Creates a scoped Collection for Toolbar items.
  *
  * @remarks
- * ## Why
- *
- * State and collection ownership can be composed and tested independently from any renderer.
- *
- * ## Ownership and lifetime
- *
  * The returned Effect allocates the RefSubject in the caller's Scope. Each later registration is
  * owned by the Scope that runs register, independently of this construction Effect.
  *
@@ -158,54 +109,39 @@ export function makeState(initial: InitialState = {}) {
  * );
  * ```
  * @since 1.0.0
- * @category constructors
+ * @category Command registration
  */
 export const makeCollection = Collection.makeState<string>;
 
 /**
  * Inputs accepted by Toolbar.Root in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { RootOptions } from "@typed/ui/Toolbar";` Extend the [Toolbar.makeState
- * runnable setup](/reference/%40typed%2Fui%2FToolbar%23makeState). Enable toolbar movement with
- * `const options: RootOptions = { state, collection, label: "Formatting", content: "Buttons" }`.
  * @since 1.0.0
- * @category models
+ * @category Toolbar surface
  */
 export interface RootOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Accessible label rendered through aria-label.
    * @since 1.0.0
-   * @category models
+   * @category Accessible naming
    */
   readonly label?: Renderable.Any<string | null | undefined>;
 }
@@ -266,25 +202,12 @@ type RootProps<Options extends RootOptions> = ReturnType<ReturnType<typeof rootP
  * Renders the toolbar root and moves roving focus through registered items in DOM order.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Root } from "@typed/ui/Toolbar";` Extend the [Toolbar.makeState runnable
- * setup](/reference/%40typed%2Fui%2FToolbar%23makeState). Replace the linked program's final
- * snapshot read with `Root({ state, label: "Formatting", content: "Buttons" })`; render that Fx
- * before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Toolbar surface
  */
 export function Root<const Options extends RootOptions, const Host extends HostResult = never>(
   options: Options,
@@ -313,83 +236,55 @@ export function Root<const Options extends RootOptions, const Host extends HostR
  * Consumer-facing alias of the canonical Toolbar component with identical behavior and lifetime.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The alias acquires nothing. Rendering it has exactly the canonical component's Scope and DOM
  * ownership contract.
  *
- * ## Example
- *
- * Import with `import { Toolbar } from "@typed/ui/Toolbar";` Extend the [Toolbar.makeState runnable
- * setup](/reference/%40typed%2Fui%2FToolbar%23makeState). Replace the linked program's final
- * snapshot read with `Toolbar({ state, label: "Formatting", content: "Buttons" })`; render that Fx
- * before the same Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Toolbar surface
  */
 export const Toolbar = Root;
 
 /**
  * Inputs accepted by Toolbar.Item in addition to the shared DOM host options.
  *
- * @remarks
- * ## Why
- *
- * The options type makes required state, content, accessible relationships, and custom-host inputs
- * visible before rendering.
- *
- * ## Ownership and lifetime
- *
- * This declaration is data or schema metadata and acquires no resources.
- *
- * ## Example
- *
- * Import with `import type { ItemOptions } from "@typed/ui/Toolbar";` Extend the [Toolbar.makeState
- * runnable setup](/reference/%40typed%2Fui%2FToolbar%23makeState). A toolbar control is
- * `const options: ItemOptions = { state, collection, id: "bold", content: "Bold" }`.
  * @since 1.0.0
- * @category models
+ * @category Toolbar commands
  */
 export interface ItemOptions extends Dom.HostOptions<HTMLDivElement> {
   /**
    * Renderer-independent RefSubject state consumed by this component or operation.
    * @since 1.0.0
-   * @category models
+   * @category State connection
    */
   readonly state: RefSubject.HydratedRefSubject<State, Schema.SchemaError>;
   /**
    * Item registry used for collection-driven keyboard behavior and mounted ordering.
    * @since 1.0.0
-   * @category models
+   * @category Item registration
    */
   readonly collection?: RefSubject.RefSubject<Collection.State<string>>;
   /**
    * Stable id used for collection identity and ARIA relationships.
    * @since 1.0.0
-   * @category models
+   * @category Identity and relationships
    */
   readonly id: string;
   /**
    * Renderable child content for the component host.
    * @since 1.0.0
-   * @category models
+   * @category Rendered content
    */
   readonly content: Renderable.Any;
   /**
    * Search text used by typeahead independently of rendered markup.
    * @since 1.0.0
-   * @category models
+   * @category Text matching
    */
   readonly textValue?: string;
   /**
    * Flag used by collection movement and widget handlers to skip activation by default.
    * @since 1.0.0
-   * @category models
+   * @category Availability
    */
   readonly disabled?: boolean;
 }
@@ -424,25 +319,12 @@ type ItemProps<Options extends ItemOptions> = ReturnType<ReturnType<typeof itemP
  * Renders and optionally registers a toolbar button; focus activates it unless disabled.
  *
  * @remarks
- * ## Why
- *
- * The component applies the family behavior while leaving callers free to supply a custom host
- * through the shared DOM boundary.
- *
- * ## Ownership and lifetime
- *
  * The returned Fx installs DOM refs, native listeners, state subscriptions, and optional
  * collection registrations only when rendered. The rendering Scope removes those resources;
  * unrelated nodes and attributes remain caller-owned.
  *
- * ## Example
- *
- * Import with `import { Item } from "@typed/ui/Toolbar";` Extend the [Toolbar.makeState runnable
- * setup](/reference/%40typed%2Fui%2FToolbar%23makeState). Replace the linked program's final
- * snapshot read with `Item({ state, id: "bold", content: "Bold" })`; render that Fx before the same
- * Scope closes.
  * @since 1.0.0
- * @category components
+ * @category Toolbar commands
  */
 export function Item<const Options extends ItemOptions, const Host extends HostResult = never>(
   options: Options,

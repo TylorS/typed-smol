@@ -2,7 +2,7 @@
  * A unary function evaluated by TypeScript rather than JavaScript.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Type function contracts
  */
 export interface TypeFunction<in Input = any, out Output = any> {
   readonly signature: (input: Input) => Output;
@@ -12,7 +12,7 @@ export interface TypeFunction<in Input = any, out Output = any> {
  * Extracts the input supplied to a type function.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Type function application
  */
 export type InputOf<F extends TypeFunction<never, unknown>> = F extends {
   readonly argument: (_: infer Input) => void;
@@ -24,7 +24,7 @@ export type InputOf<F extends TypeFunction<never, unknown>> = F extends {
  * Applies a unary type function to an input.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Type function application
  */
 export type Apply<F extends TypeFunction<never, unknown>, Input> = F & {
   readonly argument: (_: Input extends Parameters<F["signature"]>[0] ? Input : never) => void;
@@ -36,7 +36,7 @@ export type Apply<F extends TypeFunction<never, unknown>, Input> = F & {
  * The identity type function.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Type function application
  */
 export interface Identity extends TypeFunction {
   readonly return: InputOf<this>;
@@ -46,7 +46,7 @@ export interface Identity extends TypeFunction {
  * Applies up to five unary type functions from left to right.
  *
  * @since 1.0.0
- * @category type-level
+ * @category Type function application
  */
 export type Pipe<
   Input,

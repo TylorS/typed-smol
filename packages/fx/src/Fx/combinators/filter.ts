@@ -25,7 +25,7 @@ import type { Fx } from "../Fx.js";
  * @param f - A predicate function.
  * @returns An `Fx` that emits only the elements for which `f` returns `true`.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const filter: {
   <A>(f: (a: A) => boolean): <E, R>(self: Fx<A, E, R>) => Fx<A, E, R>;

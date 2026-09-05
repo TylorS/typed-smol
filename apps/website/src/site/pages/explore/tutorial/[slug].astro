@@ -3,6 +3,7 @@ import { getCollection, render, type CollectionEntry } from "astro:content";
 import Article from "../../../layouts/Article.astro";
 import Demo from "../../../components/CurriculumDemo.js";
 import CurriculumDiff from "../../../components/CurriculumDiff.astro";
+import "../../../components/CurriculumFiles.css";
 import {
   parseCurriculumFiles,
   type CurriculumFile,
@@ -54,7 +55,19 @@ const link = (step?: CollectionEntry<"tutorial">) =>
   previous={link(previous)}
   next={link(next)}
 >
-  <p class="eyebrow">Working in: {entry.data.architecture.join(" → ")}</p>
+  {
+    entry.data.demo && (
+      <section
+        class="tutorial-preview"
+        aria-label="Live application at this step"
+      >
+        <Demo id={entry.data.demo} client:only="@typed/astro">
+          <p slot="fallback">The interactive example loads in the browser.</p>
+        </Demo>
+      </section>
+    )
+  }
+  <Content />
   {
     previous && (
       <CurriculumDiff
@@ -64,17 +77,15 @@ const link = (step?: CollectionEntry<"tutorial">) =>
       />
     )
   }
-  <Content />
-  {
-    entry.data.demo && (
-      <>
-        <>
-          <h2>Try this step</h2>
-          <Demo id={entry.data.demo} client:only="@typed/astro">
-            <p slot="fallback">The interactive example loads in the browser.</p>
-          </Demo>
-        </>
-      </>
-    )
-  }
 </Article>
+
+<style>
+  .tutorial-preview {
+    max-block-size: 26rem;
+    overflow: auto;
+    margin-block: 0 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    background: var(--color-base-200);
+  }
+</style>

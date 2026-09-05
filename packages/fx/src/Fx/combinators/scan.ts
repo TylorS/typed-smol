@@ -31,7 +31,7 @@ import { Sink } from "../../Sink.js";
  * @param f - Reducer `(state, value) => nextState`.
  * @returns An `Fx` that emits the accumulated state at each step.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const scan: {
   <S, A>(initial: S, f: (s: S, a: A) => S): <E, R>(fx: Fx<A, E, R>) => Fx<S, E, R>;
@@ -81,7 +81,7 @@ export const scan: {
  * @param f - Effectful reducer `(state, value) => Effect<nextState>`.
  * @returns An `Fx` that emits the accumulated state at each step.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const scanEffect: {
   <S, A, E2, R2>(

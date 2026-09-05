@@ -22,7 +22,7 @@ import { Uuid7State } from "@typed/id/Uuid7";
  * This union is type-only. The selected provider Layer owns both services and their scopes.
  *
  * @since 1.0.0
- * @category layers
+ * @category Router requirements
  */
 export type Router = CurrentRoute | Navigation;
 
@@ -50,7 +50,7 @@ export type Router = CurrentRoute | Navigation;
  * ```
  *
  * @since 1.0.0
- * @category layers
+ * @category Runtime providers
  */
 export const BrowserRouter = (window?: Window): Layer.Layer<Router, NavigationError> =>
   CurrentRoute.Default.pipe(
@@ -77,7 +77,7 @@ export const BrowserRouter = (window?: Window): Layer.Layer<Router, NavigationEr
  * ```
  *
  * @since 1.0.0
- * @category layers
+ * @category Runtime providers
  */
 export const ServerRouter = (
   options: MemoryOptions | InitialMemoryOptions,

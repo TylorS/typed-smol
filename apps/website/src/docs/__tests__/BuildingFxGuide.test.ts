@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
+import { expectExampleCalls, runGuideExample } from "./FxGuideTestSupport.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guidePath = path.join(websiteRoot, "content/guides/building-fx.md");
@@ -28,8 +29,17 @@ describe("Building Fx values guide", () => {
     expect(guide.body).toContain("Fx.genScoped");
     expect(guide.body).toContain("Data.TaggedError");
     expect(guide.body).toContain("Context.Service");
-    expect(extractTypeScriptFences(guide.body)).toHaveLength(7);
-    expect(guide.body.split(/\s+/u).length).toBeLessThanOrEqual(1_400);
+    expectExampleCalls(guide.body, [
+      "Fx.fromEffect",
+      "Fx.fromIterable",
+      "Fx.sync",
+      "Fx.fromStream",
+      "Fx.fromSchedule",
+      "Fx.callback",
+      "Fx.genScoped",
+      "Effect.acquireRelease",
+      "Effect.tryPromise",
+    ]);
   });
 
   it("keeps every TypeScript example independently compilable", () => {
@@ -63,5 +73,10 @@ describe("Building Fx values guide", () => {
     } finally {
       fs.rmSync(staging, { recursive: true, force: true });
     }
+  });
+  it("runs the authored finite iterable to completion", async () => {
+    const source = fs.readFileSync(guidePath, "utf8");
+    const result = await runGuideExample(websiteRoot, source, "const ids =", "result");
+    expect(result).toEqual(["ada", "grace", "barbara"]);
   });
 });

@@ -26,7 +26,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefResult<
   in out A,
@@ -62,7 +62,7 @@ export interface RefResult<
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<A, ResultE, Err = never, R = never>(
   initial:
@@ -89,7 +89,7 @@ export function make<A, ResultE, Err = never, R = never>(
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setSuccess: {
   <A>(
@@ -119,7 +119,7 @@ export const setSuccess: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setFailure: {
   <ResultE>(
@@ -158,7 +158,7 @@ export const setFailure: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const map: {
   <A, B>(
@@ -194,7 +194,7 @@ export const map: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapError: {
   <ResultE, ResultE2>(
@@ -230,7 +230,7 @@ export const mapError: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const flatMap: {
   <A, B, ResultE2>(
@@ -267,7 +267,7 @@ export const flatMap: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isSuccess = <A, ResultE, Err, R>(
   ref: RefResult<A, ResultE, Err, R>,
@@ -287,7 +287,7 @@ export const isSuccess = <A, ResultE, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isFailure = <A, ResultE, Err, R>(
   ref: RefResult<A, ResultE, Err, R>,
@@ -307,7 +307,7 @@ export const isFailure = <A, ResultE, Err, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const match: {
   <A, ResultE, B>(options: {
@@ -352,7 +352,7 @@ export const match: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const getSuccess = <A, ResultE, Err, R>(
   ref: RefResult<A, ResultE, Err, R>,
@@ -372,7 +372,7 @@ export const getSuccess = <A, ResultE, Err, R>(
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const getFailure = <A, ResultE, Err, R>(
   ref: RefResult<A, ResultE, Err, R>,

@@ -7,7 +7,10 @@ related: [ssr, dynamic-range, keyed-identity]
 links: []
 ---
 
-Hydration reconnects behavior to nodes that already came from [SSR](#ssr). Stable markers identify
-dynamic parts, so the client does not need to replace readable server output. Existing browser state,
-external classes, and unowned siblings remain part of the document being shared.
+Hydration reconnects client behavior to server-rendered nodes using compatible template markers and
+state metadata. It should adopt the original output rather than construct a similar-looking tree.
+An input may already contain browser or user state before the client starts.
 
+Test adoption by retaining the original element reference, then checking restored state and a later
+update. Matching markup alone proves less. Follow [Quick Start](/explore/quick-start) and
+[hydration tests](/explore/testing-typed-systems).

@@ -34,14 +34,14 @@ test("every built page link, local anchor, and asset resolves under the deployme
   const ids = new Map(
     [...pages].map(([file, html]) => [
       file,
-      new Set([...html.matchAll(/\bid="([^"]+)"/gu)].map((match) => decode(match[1]))),
+      new Set([...html.matchAll(/<[a-z][^>]*?\sid="([^"]+)"/giu)].map((match) => decode(match[1]))),
     ]),
   );
   const broken = new Set();
   for (const [file, html] of pages) {
     const relative = path.relative(siteRoot, file).replace(/index\.html$/u, "");
     const seen = new Set();
-    for (const [, id] of html.matchAll(/\bid="([^"]+)"/gu)) {
+    for (const [, id] of html.matchAll(/<[a-z][^>]*?\sid="([^"]+)"/giu)) {
       if (seen.has(id)) broken.add(`${relative}: duplicate id ${id}`);
       seen.add(id);
     }

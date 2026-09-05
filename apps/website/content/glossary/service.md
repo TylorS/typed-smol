@@ -7,6 +7,10 @@ related: [effect, effect-channels, scope]
 links: [https://www.effect.website/docs/v4/requirements-management/services/]
 ---
 
-Services make dependencies such as a renderer, router, repository, or configuration visible in `R`.
-Providing one satisfies that requirement; it does not erase expected errors or decide the lifetime of
-resources acquired to construct it. That lifetime belongs to the relevant [Scope](#scope).
+A service is a named dependency visible in an Effect or Fx requirement channel. An account repository
+can use HTTP in the application and controlled results in a test; the consuming program asks for
+the same service in either case.
+
+Providing it satisfies that requirement without erasing expected failures. Resources used to build
+it still need an owning Scope. See [Fx services](/explore/fx-services-and-lifetime) and
+[testing with providers](/explore/testing-typed-systems).

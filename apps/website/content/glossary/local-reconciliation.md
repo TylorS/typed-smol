@@ -7,6 +7,9 @@ related: [dynamic-part, dynamic-range, many]
 links: []
 ---
 
-Local reconciliation compares and moves nodes only between a [dynamic part](#dynamic-part)'s range
-markers. It is not a document-wide or virtual-tree pass. A keyed [many](#many) collection gives that
-local process stable logical identity for retained items.
+Structural updates compare and move concrete nodes within one dynamic range. Adding or reordering
+rows needs that local diff; changing a price text part can write its target directly. A keyed
+[many](#many) collection adds stable item identity to the structural operation.
+
+Locality limits the region that changes. It does not make arbitrarily large list updates free, nor
+imply a document-wide virtual-tree pass. See [the reconciliation cost model](/explore/dom-updates-and-reconciliation).

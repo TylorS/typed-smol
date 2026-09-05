@@ -4,168 +4,107 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
-import { extractTypeScriptFences } from "../Recipes.js";
+import { extractTypeScriptFenceDocuments, extractTypeScriptFences } from "../RecipeValidation.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
-const guidesDirectory = path.join(websiteRoot, "content/guides");
-
-const readGuide = (fileName: string) => {
-  const source = fs.readFileSync(path.join(guidesDirectory, fileName), "utf8");
-  return { source, guide: parseGuideDocumentation(fileName, source) };
+const routingFiles = [
+  "routing-routes-matchers-and-navigation.md", "route-typed-url-inputs.md",
+  "router-navigation-live-selection.md", "navigation-as-an-effect-service.md",
+  "integrating-matcher-with-effect-http.md",
+] as const;
+const readGuide = (fileName: string) => parseGuideDocumentation(fileName,
+  fs.readFileSync(path.join(websiteRoot, "content/guides", fileName), "utf8"));
+const examples = (fileName: string) => extractTypeScriptFences(readGuide(fileName).body).join("\n");
+const moduleLinks = (body: string) => [...body.matchAll(/\/reference\/modules\/([^\s)"#]+)/gu)]
+  .map(([, specifier]) => decodeURIComponent(specifier!));
+const importedNames = (code: string, specifier: string): ReadonlyArray<string> => {
+  const source = ts.createSourceFile("example.ts", code, ts.ScriptTarget.Latest, true);
+  return source.statements.flatMap((statement) => {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)
+      || statement.moduleSpecifier.text !== specifier) return [];
+    const bindings = statement.importClause?.namedBindings;
+    return bindings && ts.isNamedImports(bindings)
+      ? bindings.elements.map((element) => element.propertyName?.text ?? element.name.text)
+      : [];
+  });
 };
 
 describe("application and platform guides", () => {
-  it("separates URL contracts, live routing, renderer targets, hydration, and HTTP adaptation", () => {
-    const route = readGuide("route-typed-url-inputs.md");
-    const router = readGuide("router-navigation-live-selection.md");
-    const navigation = readGuide("navigation-as-an-effect-service.md");
-    const dom = readGuide("mounting-dom-output.md");
-    const html = readGuide("rendering-html-on-the-server.md");
-    const hydration = readGuide("hydrating-typed-html.md");
-    const http = readGuide("integrating-matcher-with-effect-http.md");
-
-    for (const { guide } of [route, router, navigation, dom, html, hydration, http]) {
-      expect(guide.kind).toBe("guide");
+  it("links routing lessons to public contracts without duplicating the reference in every example", () => {
+    const lessons = routingFiles.map(readGuide);
+    const linked = new Set(lessons.flatMap(({ body }) => moduleLinks(body)));
+    for (const specifier of ["@typed/router/Route", "@typed/router/AST", "@typed/router/Matcher",
+      "@typed/navigation/Navigation", "@typed/navigation/Blocking", "@typed/ui/HttpRouter"]) {
+      expect(linked.has(specifier), `Missing public reference for ${specifier}`).toBe(true);
     }
-
-    expect(route.source).toContain('from "@typed/router/Route"');
-    expect(route.source).toContain("Route.Type");
-    expect(route.source).toContain("RouteDecodeError");
-    expect(route.source).toContain("constrained parameters");
-    expect(route.source).not.toContain("## Matching performs the decode");
-    const routeCode = extractTypeScriptFences(route.guide.body).join("\n");
-    for (const routeApi of [
-      "Route.Parse",
-      "Route.Slash",
-      "Route.Wildcard",
-      "Route.Param",
-      "Route.ParamWithSchema",
-      "Route.Number",
-      "Route.Int",
-      "Route.Join",
-      "Route.make",
-      ".pathSchema",
-      ".querySchema",
-      ".paramsSchema",
-    ]) {
-      expect(routeCode).toContain(routeApi);
+    for (const guide of lessons) {
+      expect(guide.title.trim(), guide.slug).not.toBe("");
+      expect(guide.summary.trim(), guide.slug).not.toBe("");
+      expect(["concept", "guide", "deep-dive"], guide.slug).toContain(guide.kind);
+      expect(extractTypeScriptFences(guide.body).length, guide.slug).toBeGreaterThan(0);
     }
-
-    expect(router.source).toContain("BrowserRouter");
-    expect(router.source).toContain("ServerRouter");
-    expect(router.source).toContain("TestRouter");
-    expect(router.source).toContain("Navigation.currentEntry");
-    expect(router.source).toContain("compact application matcher");
-    expect(router.source).toMatch(/Effect.*Stream.*Fx/s);
-    expect(router.source).toContain("Guard");
-    expect(router.source).toContain("dependencies");
-    expect(router.source).toContain("layout");
-    expect(router.source).toContain("catchTag");
-    expect(router.source).toContain("prefix");
-    expect(router.source).toContain("merge");
-    for (const matcherApi of [
-      "Matcher.match",
-      "Matcher.empty.match",
-      "Matcher.merge",
-      "Matcher.catch",
-      "Matcher.catchTag",
-      "Matcher.catchCause",
-      "Matcher.redirectTo",
-      "CurrentRoute.extend",
-      "Fx.provide(CurrentRoute.extend",
-      ".provide(",
-      ".provideService(",
-      ".provideContext(",
-      ".layout(",
-      "layout:",
-    ]) {
-      expect(router.source).toContain(matcherApi);
+    for (const file of routingFiles.slice(1)) {
+      expect(lessons[0]!.body).toContain(`/explore/${file.slice(0, -3)}`);
     }
-    expect(router.source).toContain("Guard.fromSchemaDecode");
-
-    for (const navigationApi of [
-      "Navigation.currentEntry",
-      "Navigation.entries",
-      "Navigation.transition",
-      "Navigation.canGoBack",
-      "Navigation.canGoForward",
-      "Navigation.navigate",
-      "Navigation.back",
-      "Navigation.forward",
-      "Navigation.traverseTo",
-      "Navigation.updateCurrentEntry",
-      "Navigation.reload",
-      "Navigation.onBeforeNavigation",
-      "Navigation.onNavigation",
-      "CurrentPath",
-      "useBlockNavigation",
-    ]) {
-      expect(navigation.source).toContain(navigationApi);
-    }
-
-    expect(dom.source).toContain("DomRenderTemplate");
-    expect(dom.source).toContain("render(host)");
-    expect(dom.source).not.toContain("ssrForHttp");
-
-    expect(html.source).toContain("renderToHtml");
-    expect(html.source).toContain("renderToHtmlString");
-    expect(html.source).toContain("StaticHtmlRenderTemplate");
-    expect(html.source).not.toContain("HttpRouter");
-
-    expect(hydration.source).toContain("makeHydrateContext");
-    expect(hydration.source).toContain("compatible");
-
-    expect(http.source).toContain("ssrForHttp");
-    expect(http.source).toContain("streamingSsrForHttp");
-    expect(http.source).toContain("handleHttpServerError");
-    expect(http.source).toContain("HttpRouter.serve");
-    expect(http.guide.order).toBe(10.2);
   });
 
-  it("uses Effect's Vitest integration for Typed application tests", () => {
-    const testing = readGuide("testing-typed-systems.md");
-
-    expect(testing.source).toContain('from "@effect/vitest"');
-    expect(testing.source).toContain("it.effect(");
-    expect(testing.source).toContain("layer(");
-    expect(extractTypeScriptFences(testing.guide.body).join("\n")).not.toContain(
-      "Effect.runPromise",
-    );
+  it("demonstrates typed inputs, live selection, history, and HTTP at their own boundaries", () => {
+    const route = examples("route-typed-url-inputs.md");
+    for (const api of ["Route.Parse", "Route.Int", "Route.ParamWithSchema", "Route.Type", "Schema.decodeEffect", "Schema.encodeEffect", ".paramsSchema"]) {
+      expect(route, `URL contract example: ${api}`).toContain(api);
+    }
+    const router = examples("router-navigation-live-selection.md");
+    for (const api of ["Matcher.match", "Fx.switchMapEffect", ".layout(", ".catchTag(", "CurrentRoute.extend"]) {
+      expect(router, `Live selection example: ${api}`).toContain(api);
+    }
+    const navigation = examples("navigation-as-an-effect-service.md");
+    for (const api of ["Navigation.navigate", "Navigation.currentEntry", "Navigation.transition", "useBlockNavigation", "Uuid7State", "initialMemory"]) {
+      expect(navigation, `History example: ${api}`).toContain(api);
+    }
+    const http = examples("integrating-matcher-with-effect-http.md");
+    for (const api of ["ssrForHttp", "streamingSsrForHttp", "handleHttpServerError", "HttpRouter.serve", "HttpClient.get"]) {
+      expect(http, `HTTP example: ${api}`).toContain(api);
+    }
+    const all = routingFiles.map(examples).join("\n");
+    expect(importedNames(all, "@typed/router/RouterTest")).toContain("TestRouter");
+    expect(importedNames(all, "@typed/router/Router")).not.toContain("TestRouter");
+    expect(all).not.toContain("FindMyWay");
+    expect(all).not.toContain("Ids.Test(");
   });
 
-  it("keeps the Route and Router examples independently compilable", () => {
+  it("uses Effect's Vitest harness without prescribing every test's execution style", () => {
+    const code = examples("testing-typed-systems.md");
+    expect(importedNames(code, "@effect/vitest")).toContain("it");
+    expect(code).toContain("it.effect(");
+    expect(code).toMatch(/expect\(/u);
+  });
+
+  it("compiles every routing and testing example, preserving explicit multi-file boundaries", () => {
     const staging = fs.mkdtempSync(path.join(websiteRoot, ".routing-guides-check-"));
-
     try {
-      const files = [
-        "route-typed-url-inputs.md",
-        "router-navigation-live-selection.md",
-        "navigation-as-an-effect-service.md",
-      ].flatMap((fileName) =>
-        extractTypeScriptFences(readGuide(fileName).guide.body).map((code, index) => {
-          const file = path.join(staging, `${fileName}-${index}.ts`);
+      const files = [...routingFiles, "testing-typed-systems.md"].flatMap((fileName) => {
+        const guide = readGuide(fileName);
+        const names = new Set<string>();
+        return extractTypeScriptFenceDocuments(guide.body).map(({ code, extension, fileName }, index) => {
+          const name = fileName ?? `${index}.${extension}`;
+          expect(names.has(name), `${guide.slug}: duplicate example file ${name}`).toBe(false);
+          names.add(name);
+          const file = path.join(staging, guide.slug, name);
+          fs.mkdirSync(path.dirname(file), { recursive: true });
           fs.writeFileSync(file, code);
           return file;
-        }),
-      );
-      const program = ts.createProgram(files, {
-        esModuleInterop: true,
-        module: ts.ModuleKind.NodeNext,
-        moduleResolution: ts.ModuleResolutionKind.NodeNext,
-        noEmit: true,
-        skipLibCheck: true,
-        strict: true,
-        target: ts.ScriptTarget.ES2022,
+        });
       });
-      const diagnostics = ts.getPreEmitDiagnostics(program);
-
-      expect(
-        ts.formatDiagnosticsWithColorAndContext(diagnostics, {
-          getCanonicalFileName: (fileName) => fileName,
-          getCurrentDirectory: () => websiteRoot,
-          getNewLine: () => "\n",
-        }),
-      ).toBe("");
+      const program = ts.createProgram(files, {
+        esModuleInterop: true, module: ts.ModuleKind.NodeNext,
+        moduleResolution: ts.ModuleResolutionKind.NodeNext, noEmit: true,
+        skipLibCheck: true, strict: true, target: ts.ScriptTarget.ES2022,
+      });
+      expect(ts.formatDiagnosticsWithColorAndContext(ts.getPreEmitDiagnostics(program), {
+        getCanonicalFileName: (fileName) => fileName,
+        getCurrentDirectory: () => websiteRoot,
+        getNewLine: () => "\n",
+      })).toBe("");
     } finally {
       fs.rmSync(staging, { recursive: true, force: true });
     }

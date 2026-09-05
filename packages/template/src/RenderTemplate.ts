@@ -53,7 +53,7 @@ import type { RenderEvent } from "./RenderEvent.ts";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Template interpretation
  */
 export class RenderTemplate extends Context.Service<
   RenderTemplate,
@@ -134,7 +134,7 @@ export class RenderTemplate extends Context.Service<
  * @param values - The interpolated values.
  * @returns An `Fx` that emits `RenderEvent`s.
  * @since 1.0.0
- * @category constructors
+ * @category Template authoring
  */
 export function html<const Values extends ReadonlyArray<Renderable.Any>>(
   template: TemplateStringsArray,

@@ -4,16 +4,52 @@ import { Fx, RefSubject } from "@typed/fx";
 import type { RenderEvent } from "./RenderEvent.js";
 import type { RenderTemplate } from "./RenderTemplate.js";
 
+/**
+ * Identifies a keyed collection descriptor without starting its source.
+ *
+ * @since 1.0.0
+ * @category Keyed collection protocol
+ */
 export const ManyTypeId = Symbol.for("@typed/template/Many");
+/**
+ * Nominal key carried by descriptors consumed by the DOM and HTML targets.
+ *
+ * @since 1.0.0
+ * @category Keyed collection protocol
+ */
 export type ManyTypeId = typeof ManyTypeId;
 
+/**
+ * A collection source, stable key function, and per-item view supplied to a
+ * renderer. Describing the collection acquires nothing; the active target owns
+ * subscription and child lifetimes.
+ *
+ * The DOM target retains each key's subject and scope across moves. The HTML
+ * target consumes an initial collection for finite response output. Construct
+ * descriptors with `many` rather than assembling this protocol by hand.
+ *
+ * @since 1.0.0
+ * @category Keyed collection rendering
+ */
 export interface Many<A, E, R> {
+  /** Descriptor recognition. @since 1.0.0 @category Keyed collection protocol */
   readonly [ManyTypeId]: ManyTypeId;
+  /** Current ordered records and later collection changes. @since 1.0.0 @category Collection input */
   readonly values: Fx.Fx<ReadonlyArray<A>, E, R>;
+  /** Identity independent of array position. @since 1.0.0 @category Collection identity */
   readonly getKey: (value: A) => PropertyKey;
+  /** Renders a retained item through its live subject. @since 1.0.0 @category Item rendering */
   readonly render: (value: RefSubject.RefSubject<A>, key: PropertyKey) => Fx.Fx<RenderEvent, E, R>;
 }
 
+/**
+ * Recognizes a descriptor before a target chooses its keyed rendering path.
+ * This guard does not subscribe to the collection or validate its current keys;
+ * key uniqueness is checked when the target receives an array.
+ *
+ * @since 1.0.0
+ * @category Keyed collection protocol
+ */
 export function isMany(value: unknown): value is Many<any, any, any> {
   return typeof value === "object" && value !== null && ManyTypeId in value;
 }
@@ -97,7 +133,7 @@ export function isMany(value: unknown): value is Many<any, any, any> {
  * ```
  *
  * @since 1.0.0
- * @category rendering
+ * @category Keyed collection rendering
  */
 export function many<A, E, R, B extends PropertyKey, R2, E2>(
   values: Fx.Fx<ReadonlyArray<A>, E, R>,
@@ -134,6 +170,6 @@ export function many<A, E, R, B extends PropertyKey, R2, E2>(
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category Keyed hydration markers
  */
 export const MANY_HOLE = (key: PropertyKey): string => `<!--/m_${key.toString()}-->`;

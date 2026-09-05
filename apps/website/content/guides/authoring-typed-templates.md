@@ -1,125 +1,168 @@
 ---
 title: "Authoring Typed templates"
-summary: "Write renderer-neutral structure with html, then choose the exact dynamic part and browser behavior you mean."
-section: "Templates"
+summary: "Build a reusable search field by separating its fixed markup, live values, native events, and component lifetime."
+section: "Template authoring"
 kind: "concept"
-order: 3.1
+order: 2
 ---
 
-`html` is a template tag, not a DOM constructor. It records authored static markup and the positions
-of dynamic values, then returns an inert `Fx<RenderEvent, E, R>`. A later
-[`RenderTemplate`](/reference/modules/%40typed%2Ftemplate%2FRenderTemplate) service decides
-whether that program becomes browser DOM or HTML for a response. Use a template whenever you can say
-which markup is fixed and which exact platform field changes over time.
+A search field has several kinds of change. Someone types, the application records the query, the
+input displays that query, and an output describes what is being searched. Its label and surrounding
+structure usually stay put. Typed lets you describe those stable elements once and connect changing
+values to the particular browser fields they affect.
 
-Static template strings are author-owned markup. Ordinary interpolated values are data: they are
-not a raw HTML escape hatch. That distinction gives templates a stable security and composition
-boundary without requiring a virtual-node representation.
+Read [Render your first template](/explore/render-your-first-template) first if you have not yet
+mounted a view. This article develops the view itself; mounting belongs to the application that owns
+its lifetime. By the end, the field will be a reusable component with a real input event and a live
+state source.
 
-## Author markup, interpolate values
+## Begin with the HTML you want the browser to have
 
-Start with ordinary HTML and put values where the browser already has a named behavior. This works
-for a static snapshot, an Effect, an Fx, a Stream, or another template; the next guide explains how
-those values normalize.
+Start with an ordinary labeled input. The label, input type, name, and explanatory text are authored
+structure. Only the heading changes between uses:
 
 ```ts
 import { html } from "@typed/template";
 
-const title = "Workspace preferences";
-const timezone = "America/New_York";
+const heading = "Search saved articles";
 
-export const preferences = html`<section aria-labelledby="preferences-title">
-  <h1 id="preferences-title">${title}</h1>
-  <p>Timezone: ${timezone}</p>
+export const search = html`<section>
+  <h2>${heading}</h2>
+  <label>
+    Search terms
+    <input type="search" name="query" />
+  </label>
+  <p>Search article titles and descriptions.</p>
 </section>`;
 ```
 
-The literal section and headings are static template structure. Each interpolation is a separately
-addressable template part. The renderer can therefore update one part without re-reading the whole
-template or replacing the section that contains it.
+The `${heading}` interpolation is data in a text position. If a heading contains `<` or `&`, it
+remains text; it does not become additional authored markup. Do not assemble an HTML string from
+user data and expect it to behave like a nested template.
 
-## Choose the part you mean
+Calling `html` returns a lazy Fx that describes rendered output. It has not created the section,
+subscribed to anything, or looked for a document. A [`RenderTemplate` service](/reference/modules/%40typed%2Ftemplate%2FRenderTemplate) interprets that
+program later: the DOM implementation creates browser nodes, while the HTML implementation
+serializes a response. This distinction is what lets the view stay separate from its destination.
 
-The character before an interpolation is meaningful. It names the browser surface Typed owns.
+## Choose where the changing value lives
 
-| Syntax | Use it for | Browser operation |
+Typing changes the input's **current value property**. It does not continuously rewrite the input's
+`value` attribute. Consequently, a field controlled by application state needs `.value=${query}`.
+An `input` event must also write the browser's edit back into that state; a property binding alone
+is only one direction.
+
+Here is the complete loop:
+
+```ts
+import { RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
+import * as EventHandler from "@typed/template/EventHandler";
+import { component } from "@typed/ui/Component";
+
+export const Search = component(function* () {
+  const query = yield* RefSubject.make("");
+  const readQuery = EventHandler.make((event: Event) =>
+    RefSubject.set(query, (event.currentTarget as HTMLInputElement).value),
+  );
+
+  return html`<section>
+    <h2>Search saved articles</h2>
+    <label>
+      Search terms
+      <input type="search" name="query" .value=${query} oninput=${readQuery} />
+    </label>
+    <output>Current query: ${query}</output>
+  </section>`;
+});
+```
+
+`RefSubject` supplies a current value and subsequent changes. The component creates it when its
+lazy program runs. The returned template subscribes to it in two places: the input property and
+the output's text position. When someone types `scope`, the event reads the native property,
+`RefSubject.set` publishes `scope`, and those two retained parts receive it.
+
+The section and input remain the same elements. The generator is setup for this running view; it
+is not called again for each keystroke. This matters for selection, focus, listeners, and resources
+that belong to the field's lifetime.
+
+The callback receives the element on which the handler was registered as `currentTarget`. Choosing
+`target` instead would ask which descendant originated the event. Those coincide for this input,
+but need not coincide for a button containing an icon. [Native events with Effect](/explore/native-events-with-effect)
+develops that distinction and the lifetime of handler work.
+
+## Make the state boundary match the reusable component
+
+The first `Search` owns its query. That is convenient in isolation, but a page that loads results
+also needs that state. Move creation to the page and pass the subject to the field. The field still
+owns its markup and event binding; it no longer decides where the query is stored.
+
+```ts
+import { RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
+import * as EventHandler from "@typed/template/EventHandler";
+import { component } from "@typed/ui/Component";
+
+const SearchField = (query: RefSubject.RefSubject<string>) => {
+  const readQuery = EventHandler.make((event: Event) =>
+    RefSubject.set(query, (event.currentTarget as HTMLInputElement).value),
+  );
+  return html`<label>
+    Search terms
+    <input type="search" .value=${query} oninput=${readQuery} />
+  </label>`;
+};
+
+export const SearchPage = component(function* () {
+  const query = yield* RefSubject.make("");
+  return html`<main>
+    <h1>Saved articles</h1>
+    ${SearchField(query)}
+    <output>Current query: ${query}</output>
+  </main>`;
+});
+```
+
+The field needs no yielded setup, so a direct template function is sufficient. The parent needs
+scoped state and uses `component`; its zero-argument generator produces an Fx value such as
+`SearchPage`. A component with generator parameters would produce a function accepting those
+parameters. Neither approach inserts a wrapper element around the child's label.
+
+The running scope owns the yielded state creation and returned subscriptions. Calling the template
+function or constructing the component does not start a fiber. The browser entry remains responsible
+for running and stopping
+the page; see [Mounting DOM output](/explore/mounting-dom-output). Use `Fx.fn` for a generator-backed
+producer that is not a view, and `component` for setup whose result is rendered output.
+
+## Name the browser surface you intend to change
+
+The same state can drive different native operations. Choose syntax by the operation, rather than
+using one generic property record for everything:
+
+| Desired change | Template form | What Typed owns |
 | --- | --- | --- |
-| `${value}` | text or a structural node position | text update or a local dynamic range |
-| `name=${value}` | serialized metadata such as `aria-label` | set/remove one attribute |
-| `?disabled=${value}` | boolean HTML attributes | toggle attribute presence |
-| `.value=${value}` | live element state | assign one DOM property |
-| `class=${value}` | class tokens Typed contributes | reconcile Typed's local token set |
-| `.data=${record}` | `data-*` keys Typed contributes | reconcile those local keys |
-| `...${record}` | a group of supported properties | reconcile that record's local keys |
-| `onclick=${handler}` | a native listener | attach one scoped event handler |
-| `ref=${ref}` | a DOM reference lifecycle | invoke the ref when the node is available |
+| Display the query as text | `${query}` | one text position or dynamic range |
+| Set a control's current edit buffer | `.value=${query}` | the live `value` property |
+| Describe expansion to assistive technology | `aria-expanded=${expanded}` | one serialized attribute |
+| Enable or disable a control | `?disabled=${disabled}` | the boolean attribute's presence |
+| Contribute visual state | `class=${classes}` | this part's class tokens |
+| Group related metadata | `.data=${record}` | the contributed `data-*` keys |
+| Run work from an input event | `oninput=${handler}` | a scoped native registration |
+| Integrate an element-based API | `ref=${callback}` | setup attached to that exact element |
 
-Use this table as a map, then follow the contract you need. [Attributes, properties, and boolean
-state](/explore/template-element-bindings) defines the scalar forms. [Spread props and data
-records](/explore/template-spreads-data) covers record ownership and the spread allowlist.
-[Reference the native element](/explore/template-references-and-element-access) covers `ref`
-timing, cleanup, and hydration.
+An attribute containing `"false"` and an absent boolean attribute mean different things. Likewise,
+`class` contributes tokens rather than replacing every class another library added. The detailed
+set, clear, and cooperation rules belong in [Attributes, properties, and boolean state](/explore/template-element-bindings),
+[Class contributions](/explore/dom-class-names), and [Spread props and data records](/explore/template-spreads-data).
 
-The following template uses three different browser contracts on purpose. `aria-label` is an
-attribute, `.value` is the current input value, and `?disabled` is attribute presence rather than
-the string `"false"`.
+## Decide what to connect next
 
-```ts
-import { Fx } from "@typed/fx";
-import { html } from "@typed/template";
+The reusable field is intentionally only an editing loop. Searching a remote source adds request
+ordering, pending state, and errors; those policies belong to the application producer, not the
+HTML tag. A live result list adds stable item identity; it belongs in
+[Change a keyed template collection](/explore/keyed-template-collections).
 
-const query = Fx.fromIterable(["", "typed"]);
-const locked = Fx.fromIterable([false, true]);
-
-export const searchField = html`<input
-  aria-label="Search documentation"
-  .value=${query}
-  ?disabled=${locked}
-/>`;
-```
-
-Use an attribute for serialized markup and a property for live browser state. For example,
-`value=${"draft"}` describes the initial attribute while `.value=${"draft"}` controls the input's
-current value. Choosing the smaller part also makes ownership clear: Typed does not claim every
-property or attribute on the element.
-
-## Compose templates, not HTML strings
-
-A nested template is normal rendered output, so keep reusable structure as a template rather than
-assembling markup in a string. The HTML renderer escapes ordinary dynamic strings; if a value is
-already renderer-owned serialized HTML, that is the explicit advanced `HtmlRenderEvent` integration
-boundary—not an application-level raw HTML shortcut.
-
-```ts
-import { html } from "@typed/template";
-
-const field = (label: string, value: string) => html`<label>
-  <span>${label}</span>
-  <input .value=${value} />
-</label>`;
-
-export const profileForm = html`<form>
-  ${field("Display name", "Ada")}
-  ${field("Timezone", "America/New_York")}
-</form>`;
-```
-
-This is composition through the same output contract used by larger views. The parent template does
-not need a special component protocol to include the child; each nested template keeps its own
-dynamic parts and typed error/requirement channels.
-
-## Static structure, dynamic behavior
-
-Calling `html` is lazy. It does not create a node, subscribe to `query`, attach an event listener,
-or start an Effect. A DOM or HTML renderer does that later inside its running Scope. This lets the
-same description serve a browser mount, server response, test document, or reusable library primitive.
-
-The DOM renderer caches parsed static structure by template-literal identity and clones it when a
-view mounts. A mount is therefore proportional to the template's static nodes and parts; later
-scalar updates are direct only because the renderer retained the exact target during that mount.
-Read [Attributes, properties, and boolean state](/explore/template-element-bindings) for authoring
-semantics, then [DOM scalar parts and attributes](/explore/dom-parts-and-attributes) for the
-renderer-level ownership and cost model.
-
-Next, [What a template can render](/explore/renderable-normalization) explains precisely how each
-interpolated value reaches its part and how its errors and service requirements remain visible.
+Before adding either, read [What a template can render](/explore/renderable-normalization). It
+explains how a returned value, Effect, stream, array, or nested view becomes output and keeps its
+error and service requirements visible. You can then choose the producer your UI needs without
+changing the native structure that already works.

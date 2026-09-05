@@ -25,7 +25,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefDateTime<in out E = never, out R = never> extends RefSubject.RefSubject<
   DateTime.DateTime,
@@ -60,7 +60,7 @@ export interface RefDateTime<in out E = never, out R = never> extends RefSubject
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<E = never, R = never>(
   initial:
@@ -89,7 +89,7 @@ export function make<E = never, R = never>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Date arithmetic
  */
 export const add: {
   (
@@ -150,7 +150,7 @@ export const add: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Date arithmetic
  */
 export const addDuration: {
   (
@@ -178,7 +178,7 @@ export const addDuration: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Date arithmetic
  */
 export const subtract: {
   (
@@ -239,7 +239,7 @@ export const subtract: {
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Date arithmetic
  */
 export const subtractDuration: {
   (
@@ -267,7 +267,7 @@ export const subtractDuration: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Date formatting
  */
 export const epochMillis = <E, R>(ref: RefDateTime<E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, (self) => DateTime.toEpochMillis(self));
@@ -286,7 +286,7 @@ export const epochMillis = <E, R>(ref: RefDateTime<E, R>): RefSubject.Computed<n
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Date formatting
  */
 export const format: {
   (
@@ -326,7 +326,7 @@ export const format: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isBefore: {
   (that: DateTime.DateTime): <E, R>(ref: RefDateTime<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -349,7 +349,7 @@ export const isBefore: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isAfter: {
   (that: DateTime.DateTime): <E, R>(ref: RefDateTime<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -372,7 +372,7 @@ export const isAfter: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEqual: {
   (that: DateTime.DateTime): <E, R>(ref: RefDateTime<E, R>) => RefSubject.Computed<boolean, E, R>;

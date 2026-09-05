@@ -33,7 +33,7 @@ import type { Fx } from "../Fx.js";
  * @param f - The effectful loop function for causes.
  * @returns An `Fx` with transformed errors.
  * @since 1.0.0
- * @category combinators
+ * @category Stateful transforms
  */
 export const filterMapLoopCauseEffect: {
   <B, A, E2, R2, C>(

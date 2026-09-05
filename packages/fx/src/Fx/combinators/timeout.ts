@@ -84,7 +84,7 @@ const runTimed = <A, E, R, B, E2, R2>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export const timeout: {
   (duration: Duration.Input): <A, E, R>(self: Fx<A, E, R>) => Fx<A, E, R | Scope.Scope>;
@@ -125,7 +125,7 @@ export const timeout: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Time and rate
  */
 export const timeoutTo: {
   <B, E2, R2>(

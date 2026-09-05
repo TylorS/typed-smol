@@ -2,10 +2,8 @@
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import { siteHref } from "../../../SiteHref.js";
-const guides = (await getCollection("guides")).sort(
-  (a, b) => a.data.order - b.data.order,
-);
-const groups = Map.groupBy(guides, (entry) => entry.data.section);
+import { groupGuides } from "../../Guides.js";
+const groups = groupGuides(await getCollection("guides"));
 ---
 
 <Base
@@ -23,21 +21,63 @@ const groups = Map.groupBy(guides, (entry) => entry.data.section);
         guide connects a practical problem to the public APIs that solve it.
       </p>
     </header>
+    <article class="path-card mb-6">
+      <p class="eyebrow">THE IDEAS THAT CONNECT THE TOOLKIT</p>
+      <h2>Cooperative by design</h2>
+      <p>
+        Effectful work, state that models a real interface, and rendering that
+        includes everyone. Understand how Effect, Fx, Template, and UI work
+        together—and where your application's choices belong.
+      </p>
+      <a href={siteHref("/explore/cooperative-by-design")}
+        >Read the leading article →</a
+      >
+    </article>
     <div class="path-grid">
       <article class="path-card">
         <p class="eyebrow">START HERE</p><h3>Quick Start</h3><p>
-          Build a counter, derive state, and take the same template from the
-          browser to server rendering and hydration.
+          Install Typed, render a counter, and click its buttons. Two files give
+          you a working application.
         </p><a href={siteHref("/explore/quick-start")}
-          >Render your first view →</a>
+          >Render your first view →</a
+        >
       </article>
       <article class="path-card">
         <p class="eyebrow">BUILD SOMETHING COMPLETE</p><h3>
           The TodoMVC tutorial
         </h3><p>
-          Grow a client application from domain rules to persistence. See the
-          files and try the running example at each step.
+          Make one engineering decision at a time: model a task, give commands a
+          home, preserve editing state, and persist only valid data. Run the
+          exact source you are reading.
         </p><a href={siteHref("/explore/tutorial")}>Build the application →</a>
+      </article>
+    </div>
+    <div class="path-grid mt-6">
+      <article class="path-card">
+        <p class="eyebrow">BEHAVIOR BEFORE APPEARANCE</p>
+        <h3>Learn the UI primitives</h3>
+        <p>
+          Build forms, menus, dialogs, and collections. Understand keyboard
+          interaction, focus, state, and the browser contracts behind every
+          component.
+        </p>
+        <a href={siteHref("/explore/ui")}>Build an interface people can use →</a
+        >
+        <a href={siteHref("/explore/storybook")}
+          >Try the components in Storybook →</a
+        >
+      </article>
+      <article class="path-card">
+        <p class="eyebrow">WATCH THE WORK</p>
+        <h3>The Fx marble atlas</h3>
+        <p>
+          Trace values, failures, completion, and cancellation through every Fx
+          constructor and combinator. Compare the consequences before choosing
+          an operator.
+        </p>
+        <a href={siteHref("/explore/fx-operator-atlas")}
+          >Follow the timeline →</a
+        >
       </article>
     </div>
     {

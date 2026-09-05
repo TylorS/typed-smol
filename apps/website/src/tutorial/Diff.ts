@@ -9,7 +9,10 @@ export type CurriculumDiffLine =
     }
   | { readonly kind: "skip"; readonly text: string };
 
-const rawDiff = (before: string, after: string): ReadonlyArray<CurriculumDiffLine> => {
+const rawDiff = (
+  before: string,
+  after: string,
+): ReadonlyArray<CurriculumDiffLine> => {
   const oldLines = before.split("\n");
   const newLines = after.split("\n");
   const lengths = Array.from({ length: oldLines.length + 1 }, () =>
@@ -21,7 +24,10 @@ const rawDiff = (before: string, after: string): ReadonlyArray<CurriculumDiffLin
       lengths[oldIndex]![newIndex] =
         oldLines[oldIndex] === newLines[newIndex]
           ? lengths[oldIndex + 1]![newIndex + 1]! + 1
-          : Math.max(lengths[oldIndex + 1]![newIndex]!, lengths[oldIndex]![newIndex + 1]!);
+          : Math.max(
+              lengths[oldIndex + 1]![newIndex]!,
+              lengths[oldIndex]![newIndex + 1]!,
+            );
     }
   }
 
@@ -47,10 +53,18 @@ const rawDiff = (before: string, after: string): ReadonlyArray<CurriculumDiffLin
       (oldIndex === oldLines.length ||
         lengths[oldIndex]![newIndex + 1]! > lengths[oldIndex + 1]![newIndex]!)
     ) {
-      lines.push({ kind: "add", text: newLines[newIndex]!, newLine: newIndex + 1 });
+      lines.push({
+        kind: "add",
+        text: newLines[newIndex]!,
+        newLine: newIndex + 1,
+      });
       newIndex += 1;
     } else {
-      lines.push({ kind: "remove", text: oldLines[oldIndex]!, oldLine: oldIndex + 1 });
+      lines.push({
+        kind: "remove",
+        text: oldLines[oldIndex]!,
+        oldLine: oldIndex + 1,
+      });
       oldIndex += 1;
     }
   }
@@ -65,7 +79,9 @@ export const curriculumDiff = (
 ): ReadonlyArray<CurriculumDiffLine> => {
   if (before === after) return [];
   const lines = rawDiff(before, after);
-  const changed = lines.flatMap((line, index) => (line.kind === "context" ? [] : [index]));
+  const changed = lines.flatMap((line, index) =>
+    line.kind === "context" ? [] : [index],
+  );
   const visible = new Set<number>();
   for (const index of changed) {
     for (
@@ -87,7 +103,10 @@ export const curriculumDiff = (
     }
     const start = index;
     while (index < lines.length && !visible.has(index)) index += 1;
-    compact.push({ kind: "skip", text: `… ${index - start} unchanged lines …` });
+    compact.push({
+      kind: "skip",
+      text: `… ${index - start} unchanged lines …`,
+    });
   }
   return compact;
 };
@@ -97,7 +116,9 @@ export const curriculumFileDiffs = (
   previous: ReadonlyArray<CurriculumFile>,
   current: ReadonlyArray<CurriculumFile>,
 ) => {
-  const previousSources = new Map(previous.map(({ name, source }) => [name, source]));
+  const previousSources = new Map(
+    previous.map(({ name, source }) => [name, source]),
+  );
   return current.flatMap(({ name, source }) => {
     const before = previousSources.get(name);
     if (before === undefined) return [];

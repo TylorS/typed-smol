@@ -30,7 +30,7 @@ type HydrationProtocol<Ref> =
  * on the composed callback.
  *
  * @since 1.0.0
- * @category refs
+ * @category Ref composition
  */
 export type ComposedRef<First, Second> = ((
   element: RefTarget<First> & RefTarget<Second>,
@@ -69,7 +69,7 @@ export type ComposedRef<First, Second> = ((
  * ```
  *
  * @since 1.0.0
- * @category refs
+ * @category Ref composition
  */
 export function composeRefs<
   const First extends RefInput | null | undefined,

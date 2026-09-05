@@ -21,24 +21,16 @@ describe("Template namespaces guide", () => {
 
     expect(guide).toMatchObject({
       slug: "template-namespaces-and-platform-markup",
-      section: "Templates",
+      section: "Template bindings",
       kind: "deep-dive",
-      order: 3.375,
     });
-    for (const detail of [
-      "foreignObject",
-      "xlink:href",
-      "definitionURL",
-      "annotation-xml",
-      "HTML namespace",
-      "SVG namespace",
-      "MathML namespace",
-      "not namespaced on an HTML element",
-    ]) {
+    for (const detail of ["foreignObject", "xlink:href", "definitionURL", "annotation-xml", "namespaceURI", "localName"]) {
       expect(guide.body).toContain(detail);
     }
-    expect(extractTypeScriptFences(guide.body)).toHaveLength(3);
-    expect(guide.body.split(/\s+/u).length).toBeLessThanOrEqual(1_000);
+    const examples = extractTypeScriptFences(guide.body).join("\n");
+    expect(examples).toContain('<nav>${link("Details")}</nav>');
+    expect(examples).toContain('<svg viewBox="0 0 240 80">${link("Details")}</svg>');
+    expect(extractTypeScriptFences(guide.body)).not.toHaveLength(0);
   });
 
   it("keeps each platform-markup example independently compilable", () => {

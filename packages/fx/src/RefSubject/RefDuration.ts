@@ -24,7 +24,7 @@ import * as RefSubject from "./RefSubject.js";
  * services, interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefDuration<in out E = never, out R = never> extends RefSubject.RefSubject<
   Duration.Duration,
@@ -59,7 +59,7 @@ export interface RefDuration<in out E = never, out R = never> extends RefSubject
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<E = never, R = never>(
   initial:
@@ -88,7 +88,7 @@ export function make<E = never, R = never>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const add: {
   (
@@ -116,7 +116,7 @@ export const add: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const subtract: {
   (
@@ -144,7 +144,7 @@ export const subtract: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const multiply: {
   (that: number): <E, R>(ref: RefDuration<E, R>) => RefSubject.Computed<Duration.Duration, E, R>;
@@ -167,7 +167,7 @@ export const multiply: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Arithmetic queries
  */
 export const divide: {
   (
@@ -195,7 +195,7 @@ export const divide: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isZero = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, Duration.isZero);
@@ -214,7 +214,7 @@ export const isZero = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<boolea
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isLessThan: {
   (that: Duration.Duration): <E, R>(ref: RefDuration<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -237,7 +237,7 @@ export const isLessThan: {
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isGreaterThan: {
   (that: Duration.Duration): <E, R>(ref: RefDuration<E, R>) => RefSubject.Computed<boolean, E, R>;
@@ -260,7 +260,7 @@ export const isGreaterThan: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Unit conversions
  */
 export const millis = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, Duration.toMillis);
@@ -279,7 +279,7 @@ export const millis = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Unit conversions
  */
 export const seconds = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, Duration.toSeconds);
@@ -298,7 +298,7 @@ export const seconds = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<numbe
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Unit conversions
  */
 export const minutes = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, Duration.toMinutes);
@@ -317,7 +317,7 @@ export const minutes = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<numbe
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Unit conversions
  */
 export const hours = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, Duration.toHours);
@@ -336,7 +336,7 @@ export const hours = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number,
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Unit conversions
  */
 export const days = <E, R>(ref: RefDuration<E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, Duration.toDays);

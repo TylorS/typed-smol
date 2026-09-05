@@ -48,7 +48,7 @@ import { FxTypeId } from "../TypeId.js";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Operator options
  */
 export interface KeyedOptions<A, B, C, E2, R2> {
   /**
@@ -166,7 +166,7 @@ export interface KeyedOptions<A, B, C, E2, R2> {
  * @param options - Configuration options.
  * @returns An `Fx` emitting an array of results.
  * @since 1.0.0
- * @category combinators
+ * @category Keyed work
  */
 export const keyed: {
   <A, B extends PropertyKey, C, E2, R2>(

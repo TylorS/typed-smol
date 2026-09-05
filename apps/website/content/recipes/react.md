@@ -4,9 +4,7 @@ title: "Use React and Typed together"
 summary: "Stream React HTML through Typed, hydrate its range, and render Typed inside React."
 ---
 
-React and Typed can share a page as long as each renderer owns a distinct range. On the server,
-React already produces an HTML stream; preserve that stream instead of collapsing it into one
-string. In the browser, give the same host back to React for hydration.
+Keep a mature React account panel while moving its surrounding navigation to Typed. The boundary is the account panel's host, not every button inside it. Keep React context providers and React state inside that root; pass application data across as serializable props on the server and explicit values or callbacks in the browser. A React element is not a Typed renderable—run it through the React renderer first.
 
 ## React HTML output inside Typed
 
@@ -28,7 +26,7 @@ class ReactRenderError extends Data.TaggedError("ReactRenderError")<{
 
 const renderReact = Effect.fn("renderReact")((view: ReactNode) =>
   Effect.tryPromise({
-    try: () => renderToReadableStream(view),
+    try: (signal) => renderToReadableStream(view, { signal }),
     catch: (cause) => new ReactRenderError({ cause }),
   }),
 );
@@ -49,7 +47,8 @@ const ReactHtml = component(function* (view: ReactNode) {
 
 const Profile = () => (
   <section>
-    <h2>React profile</h2>
+    <h2>Ada’s account</h2>
+    <label>Display name <input defaultValue="Ada" /></label>
   </section>
 );
 
@@ -69,7 +68,7 @@ covers shell readiness, Suspense, abort signals, and recoverable server errors. 
 servers, React recommends `renderToPipeableStream`; adapt that Node stream into an Effect `Stream`
 at the same boundary.
 
-## Hydrate the React range
+## Reconnect the account panel in the browser
 
 Typed owns the `#react-profile` host. React owns its descendants. Hydrate that host with the same
 component tree and props used by the server render.
@@ -79,15 +78,68 @@ import { hydrateRoot } from "react-dom/client";
 
 const Profile = () => (
   <section>
-    <h2>React profile</h2>
+    <h2>Ada’s account</h2>
+    <label>Display name <input defaultValue="Ada" /></label>
   </section>
 );
 
 const host = document.getElementById("react-profile");
-if (host !== null) hydrateRoot(host, <Profile />);
+const root = host === null ? undefined : hydrateRoot(host, <Profile />, {
+  onRecoverableError: (error) => console.error("Account hydration failed", error),
+});
+export const removeAccountPanel = () => root?.unmount();
 ```
 
+## Mount browser-only React output inside Typed
+
+If the panel has no server markup, use `createRoot` instead of `hydrateRoot`. Acquire one root for the component lifetime, update it with each incoming React tree, and return the same host each time. This preserves React's local input state across prop changes. The Typed button below marks the account as reviewed while React keeps the editable display name mounted. This is local review state; persistence belongs to your application workflow.
+
+```tsx
+import { Effect } from "effect";
+import * as Fx from "@typed/fx/Fx";
+import { RefSubject } from "@typed/fx";
+import { html, type Renderable } from "@typed/template";
+import { liftRenderableToFx } from "@typed/template/Render";
+import { DomRenderEvent } from "@typed/template/RenderEvent";
+import { component } from "@typed/ui/Component";
+import { Button } from "@typed/ui/Button";
+import type { ReactNode } from "react";
+import { createRoot } from "react-dom/client";
+
+const ReactPanel = component(function* <E, R>(views: Renderable<ReactNode, E, R>) {
+  const host = document.createElement("div");
+  const root = yield* Effect.acquireRelease(
+    Effect.sync(() => createRoot(host)),
+    (root) => Effect.sync(() => root.unmount()),
+  );
+  return Fx.concat(
+    liftRenderableToFx<E, R>(views).pipe(Fx.mapEffect((view) => Effect.sync(() => {
+      root.render(view);
+      return DomRenderEvent(host);
+    }))),
+    Fx.never,
+  );
+});
+
+const Account = ({ reviewed }: { readonly reviewed: boolean }) => <section>
+  <label>Display name <input defaultValue="Ada" /></label>
+  <p>{reviewed ? "Reviewed" : "Needs review"}</p>
+</section>;
+export const accountPage = component(function* () {
+  const reviewed = yield* RefSubject.make(false);
+  const views = RefSubject.map(reviewed, (value) => <Account reviewed={value} />);
+  return html`<main>
+    ${ReactPanel(views)}
+    ${Button({ content: "Mark reviewed", onclick: RefSubject.set(reviewed, true) })}
+  </main>`;
+});
+```
+
+A finite props source need not mean the panel should disappear. `Fx.never` keeps the acquired root alive until the parent ends its Scope. The adapter keeps input errors and service requirements; React render errors are a separate React error-boundary concern. `root.render` schedules React work, so await React's test/rendering boundary before asserting committed DOM. See [React createRoot](https://react.dev/reference/react-dom/client/createRoot).
+
 ## Typed output inside React
+
+The reverse boundary is useful when a React application wants one Typed feature, such as a live save-status display. React owns the empty host; Typed owns the status subscription and descendants. The `TypedSlot` below intentionally replaces its subscription when `value` identity changes. Pass a stable live renderable for ordinary updates so that a React render does not recreate Typed-local state.
 
 Create one application-owned `ManagedRuntime` from `DomRenderTemplate`. A React slot starts one
 scoped Typed render and interrupts that fiber when the slot unmounts. Dispose the runtime only when
@@ -112,23 +164,39 @@ export const TypedSlot = ({
   readonly value: Renderable<unknown, never, RenderTemplate | Scope.Scope>;
 }) => {
   const host = useRef<HTMLDivElement>(null);
+  const pending = useRef(Promise.resolve());
 
   useEffect(() => {
-    if (host.current === null) return;
-
-    const fiber = runtime.runFork(Effect.scoped(Fx.drain(render(value, host.current))));
+    const element = host.current;
+    if (element === null) return;
+    let cancelled = false;
+    let fiber: Fiber.Fiber<void, never> | undefined;
+    const started = pending.current.then(() => {
+      if (!cancelled) fiber = runtime.runFork(Effect.scoped(Fx.drain(render(value, element))));
+    });
+    pending.current = started;
     return () => {
-      void runtime.runPromise(Fiber.interrupt(fiber));
+      cancelled = true;
+      pending.current = started.then(async () => {
+        if (fiber !== undefined) await runtime.runPromise(Fiber.interrupt(fiber));
+      });
     };
   }, [value]);
 
   return <div ref={host} />;
 };
 
-const latest = Fx.fromIterable([42, 43]);
-const liveProfile = html`<output>TYPED: ${latest}</output>`;
+const latest = Fx.fromIterable(["Saving account…", "Account saved"]);
+const liveProfile = html`<output aria-live="polite">${latest}</output>`;
 const page = <TypedSlot value={liveProfile} />;
 ```
 
-React owns the outer `div`; Typed owns its children for the lifetime of the slot. Do not render
-React children into that same host.
+React owns the outer `div`; Typed owns its children for the lifetime of the slot. Do not render React children into that same host. The promise chain serializes lifetime transitions only; it does not wrap each status update or force React to render each Typed value.
+
+## Prove updates preserve the edited account
+
+React runs an extra setup/cleanup cycle in development Strict Mode. Test mounting, unmounting, and mounting the slot again; there should be one active Typed subscription and no callbacks from the removed slot. React does not await effect cleanup. The slot therefore chains replacement through `pending`, waits for the previous fiber interruption, and skips a queued mount if its effect was already cleaned up. This matters when asynchronous Typed finalizers still touch the host. See [React effect cleanup](https://react.dev/reference/react/useEffect).
+
+For SSR, use identical initial props in `hydrateRoot` and the server renderer. Pass React's `onRecoverableError` option to your reporting boundary, and test a deliberately mismatched server/client prop so that diagnostics are observable. Keep React's returned root and unmount it before permanently discarding its host. A server error before the shell and a recoverable Suspense error after the shell are different reporting cases; review [React streaming errors and cancellation](https://react.dev/reference/react-dom/server/renderToReadableStream).
+
+A useful browser regression edits an input in the React panel, updates Typed navigation, and checks that the same input retains its value and selection. Then remove the panel and assert that its subscriptions stop. For prerequisites, read [components](/explore/building-ui-components) and [server rendering and hydration](/explore/server-rendering-and-hydration).

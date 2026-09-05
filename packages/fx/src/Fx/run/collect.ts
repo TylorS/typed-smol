@@ -34,7 +34,7 @@ import { observe } from "./observe.js";
  * @param fx - The `Fx` to collect values from.
  * @returns An `Effect` that produces an array of all values when the `Fx` completes.
  * @since 1.0.0
- * @category runners
+ * @category Collecting values
  */
 export const collectAll = <A, E = never, R = never>(
   fx: Fx<A, E, R>,
@@ -77,7 +77,7 @@ export const collectAll = <A, E = never, R = never>(
  * @param fx - The `Fx` to collect values from.
  * @returns An `Effect` that produces a `Fiber` which computes the array of values.
  * @since 1.0.0
- * @category runners
+ * @category Collecting values
  */
 export const collectAllFork = <A, E = never, R = never>(
   fx: Fx<A, E, R>,
@@ -114,7 +114,7 @@ export const collectAllFork = <A, E = never, R = never>(
  * @param upTo - The maximum number of values to collect.
  * @returns An `Effect` that produces an array of up to `n` values.
  * @since 1.0.0
- * @category runners
+ * @category Collecting values
  */
 export const collectUpTo: {
   (upTo: number): <A, E, R>(fx: Fx<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -156,7 +156,7 @@ export const collectUpTo: {
  * @param upTo - The maximum number of values to collect.
  * @returns An `Effect` that produces a `Fiber` which computes the array of values.
  * @since 1.0.0
- * @category runners
+ * @category Collecting values
  */
 export const collectUpToFork = <A, E = never, R = never>(
   fx: Fx<A, E, R>,

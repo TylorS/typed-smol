@@ -1,45 +1,77 @@
 ---
 title: "Testing Typed systems"
-summary: "Test each Typed contract at the smallest boundary that owns its behavior."
+summary: "Turn state, request ordering, DOM identity, and cleanup promises into tests that can actually disprove them."
 section: "Applications"
 kind: "guide"
 order: 9
 ---
 
-Test the boundary that owns the claim. An `Fx` test should not need a browser; a state test should
-not need markup; a DOM test should assert native behavior and identity; a route test should not
-depend on the browser's history. This keeps failures local for application developers and protects
-the public contracts that library authors maintain.
+An account picker can display the right HTML and still be wrong. Selecting the same account twice
+might double its count; an obsolete search might overwrite newer results; sorting might lose focus;
+closing the panel might leave a listener active. These failures belong to different boundaries, so
+they need different observations.
 
-Use [`@effect/vitest`](https://www.npmjs.com/package/@effect/vitest) as the harness. Its
-`it.effect` runs an Effect test with the Scope it owns, so examples can acquire a `RefSubject`, run
-an Fx, or mount a renderer without manually calling `Effect.runPromise` or wrapping the test in
-`Effect.scoped`. `layer` shares an application layer across a related group of tests.
+This guide builds a test strategy around those promises. Follow the
+[application path](/explore/application-developers) for feature development or the
+[library path](/explore/library-developers) for the public contracts behind a reusable picker.
+Use the repository’s `@effect/vitest` harness for Effect tests: `it.effect` supplies a test Scope,
+so scoped state and services can be acquired without a manual `Effect.runPromise` wrapper.
 
-## 1. Prove finite and live `Fx` behavior
+## Establish the state invariant without a view
 
-For a finite producer, collect values and assert the result. `Fx.collectAll` starts the source when
-the test runs, preserves order, and completes when the source completes:
+The picker allows a set of selected IDs. Selecting an already selected ID should not increase the
+count. That rule does not concern HTML, so exercise the state and its derived value directly:
 
 ```ts
 import { Effect } from "effect"
 import { expect, it } from "@effect/vitest"
-import * as Fx from "@typed/fx/Fx"
+import { RefSubject } from "@typed/fx"
 
-it.effect("maps and filters a finite producer", Effect.fn("mapsAndFilters")(function* () {
-    const values = yield* Fx.collectAll(
-      Fx.fromIterable([1, 2, 3, 4]).pipe(
-        Fx.filter((n) => n % 2 === 0),
-        Fx.map((n) => n * 2),
-      ),
-    )
-    expect(values).toEqual([4, 8])
+it.effect("preserves a state invariant", Effect.fn("preservesStateInvariant")(function* () {
+    const selected = yield* RefSubject.make<ReadonlySet<string>>(new Set<string>())
+    const count = RefSubject.map(selected, (ids) => ids.size)
+
+    yield* RefSubject.update(selected, (ids) => new Set([...ids, "invoice-42"]))
+    yield* RefSubject.update(selected, (ids) => new Set([...ids, "invoice-42"]))
+
+    expect([...(yield* selected)]).toEqual(["invoice-42"])
+    expect(yield* count).toBe(1)
   }))
 ```
 
-Use `Fx.collectUpTo` or `Fx.take` for an open source; collecting an infinite source never finishes.
-For a callback source, test the owner as well as delivery. A returned cleanup is registered in the
-subscription Scope, so interruption must release it:
+This test can fail if the update creates duplicate logical selections or if the derived count stops
+reflecting the source. It does not prove that the button is wired correctly; that is a later browser
+assertion. Keeping this distinction lets a failing count tell you where to investigate.
+
+A current read and a pushed observation also prove different things. If the contract promises a
+particular sequence of emissions, observe the source before updating it. Wait for a known subscriber
+count or a Deferred signaled by observation. A fixed sleep merely assumes the subscription has started.
+For derived and transactional behavior, see [state composition](/explore/composing-refsubject-state)
+and [transactions](/explore/state-transactions-and-bidirectional-views).
+
+## Control the order that asynchronous work completes
+
+A search race requires an adversarial completion order. Start query A, then query B, resolve B, and
+only then attempt to resolve A. Assert that the displayed or collected result remains B if newer
+queries replace older work. A test where A always finishes first would also pass an implementation
+that merges both results incorrectly.
+
+Provide a test repository whose requests wait on Deferred values owned by the test. Signal a second
+Deferred when each request starts, so the test knows which work has actually been acquired. This makes
+request start and completion explicit rather than depending on elapsed wall-clock time. If the
+contract includes cancellation, observe the replaced request’s finalizer as well as the final value.
+[Concurrency policies](/explore/fx-higher-order-and-concurrency) explains the behavior you are selecting.
+
+Choose the consumer to match the source’s lifetime. `Fx.collectAll` is useful for a finite sequence;
+it cannot return while a live input source remains open. Use `Fx.collectUpTo` for a bounded result,
+or keep `Fx.observe` running in a scoped fiber when the test needs to issue later commands.
+For debounce and other time policies, advance the Effect test clock. Browser layout and native input
+remain browser concerns; the Effect clock is not a substitute for their harness.
+
+## Make cancellation observable at the input boundary
+
+A callback adapter can deliver the right value and still leak its listener or timer. Count active
+acquisitions, wait for the first observed value, then interrupt the subscription:
 
 ```ts
 import { Deferred, Effect, Fiber } from "effect"
@@ -66,40 +98,20 @@ it.effect("cleans up a live callback source", Effect.fn("cleansUpCallback")(func
   }))
 ```
 
-The same shape catches leaked timers, sockets, observers, and subscriptions. Use `Effect.exit` when
-the claim is a typed failure, rather than asserting on an untyped rejected Promise.
+The ready signal prevents the interruption from racing ahead of setup. The first assertion proves
+that the resource was acquired; the final assertion proves that interruption released it. A test
+that times out after receiving a value proves neither release nor ownership.
 
-## 2. Test `RefSubject` state without a DOM
+Use the same arrangement for a socket or foreign renderer, with its real unsubscribe or destroy
+operation in place of the counter. When the expected outcome is failure, use `Effect.exit` and assert
+the typed failure or Cause rather than relying on an untyped rejected Promise. Keep interruption and
+expected failure separate: cancelling an obsolete query is not the same event as a repository error.
 
-`RefSubject.make` gives a current value and an update stream. Test transitions and derived views
-directly; reserve browser tests for interaction, focus, ARIA, and other platform behavior:
+## Test retained rows as objects, not strings
 
-```ts
-import { Effect } from "effect"
-import { expect, it } from "@effect/vitest"
-import { RefSubject } from "@typed/fx"
-
-it.effect("preserves a state invariant", Effect.fn("preservesStateInvariant")(function* () {
-    const selected = yield* RefSubject.make<ReadonlySet<string>>(new Set<string>())
-    const count = RefSubject.map(selected, (ids) => ids.size)
-
-    yield* RefSubject.update(selected, (ids) => new Set([...ids, "invoice-42"]))
-    yield* RefSubject.update(selected, (ids) => new Set([...ids, "invoice-42"]))
-
-    expect([...(yield* selected)]).toEqual(["invoice-42"])
-    expect(yield* count).toBe(1)
-  }))
-```
-
-This proves the domain invariant without a renderer or event simulation. If the assertion is about
-observations, start `Fx.observe` in `Effect.forkScoped`, wait for `subscriberCount` to reach the
-expected value, then call `RefSubject.set`; a fixed sleep can hide a scheduling race.
-
-## 3. Assert DOM identity and cleanup
-
-Use a real `Document` with `DomRenderTemplate.using`; test rendered semantics rather than internal
-part markers. For keyed collections, keep an element reference, reorder the source, and assert that
-the same element remains:
+The picker’s results can reorder. Its retained IDs should keep their rendered rows while each live
+item updates the content. Rendering the same final text into new elements would hide an identity
+regression, so retain an element reference:
 
 ```ts
 import { Effect } from "effect"
@@ -119,7 +131,15 @@ const keepsKeyedIdentity = Effect.fn("keepsKeyedIdentity")(function* () {
     (item) => item.id,
     (item) => html`<li>${RefSubject.map(item, (value) => value.label)}</li>`,
   )}</ul>`
-  const [rendered] = yield* render(view, document.body).pipe(
+  const host = yield* Effect.acquireRelease(
+    Effect.sync(() => {
+      const host = document.createElement("div");
+      document.body.append(host);
+      return host;
+    }),
+    (host) => Effect.sync(() => host.remove()),
+  );
+  const [rendered] = yield* render(view, host).pipe(
     Fx.provide(DomRenderTemplate.using(document)),
     Fx.take(1),
     Fx.collectUpTo(1),
@@ -137,17 +157,34 @@ const keepsKeyedIdentity = Effect.fn("keepsKeyedIdentity")(function* () {
 it.effect("keeps keyed DOM identity across a reorder", keepsKeyedIdentity)
 ```
 
-Assert `textContent`, attributes, native properties, events, and identity. The repository's browser
-identity tests also preserve input value, selection, dialog state, and custom-element lifecycle
-across keyed moves. For cleanup, keep a render running in a scoped fiber with
-`Fx.drain(render(view, host).pipe(Fx.provide(layer)))`; interrupt it, dispatch another native event,
-and assert that the handler is no longer called. That proves listener ownership instead of merely
-proving that one click worked.
+The dedicated host prevents the test from replacing unrelated document content. Its finalizer removes
+the fixture after the test. The reorder assertion checks both the expected row and the exact node
+object, so simply rebuilding the list cannot satisfy it.
 
-## 4. Exercise memory routing and the SSR boundary
+This example takes the first render emission while leaving the owning test Scope open. Template
+listeners and dynamic work remain attached to that ambient Scope; `take(1)` is not an unmount signal.
+For an explicit render teardown test, run
+`Fx.drain(render(view, host).pipe(Fx.provide(layer))).pipe(Effect.scoped, Effect.forkScoped)`.
+Interrupting the fiber closes that inner render Scope. Assert that acquired finalizers run and that
+subsequent input no longer invokes the released handlers. Merely removing the host cannot prove this.
+[Cooperative ownership](/explore/cooperative-by-design) explains why placement and disposal are separate.
 
-`TestRouter` is the deterministic, in-memory router layer. It lets a matcher test decode and select
-routes without global history:
+Run this identity test with a browser Document. DOM emulators can cover text, attributes, and many
+listener contracts, but focus, selection, dialog behavior, and state-preserving moves need real browser
+checks. For an editable row, add assertions for the current input value and selection after sorting.
+Stable JavaScript identity and preservation of browser-managed state are separate claims.
+
+A component’s accessibility contract also needs actions. For a dialog, test its name, the opening
+action, focus destination, Escape behavior, and focus return. A role attribute cannot establish that
+sequence. The [ARIA Authoring Practices introduction](https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/)
+explains the interaction responsibilities attached to custom semantics. Use [the UI guides](/explore/ui)
+to identify the primitive’s behavior and test your wrapper’s labels, state policy, and prop forwarding.
+
+## Replace history with a provider when testing route selection
+
+Opening an account from a URL adds another boundary: URL decoding and selected output. Those tests
+should not depend on the browser’s global history. `TestRouter` provides memory navigation for the
+same matcher contract:
 
 ```ts
 import { Effect } from "effect"
@@ -171,10 +208,23 @@ layer(TestRouter({ url: "http://localhost/users/1" }))("memory routing", (it) =>
 })
 ```
 
-Use a `Latch` or `Deferred` when observing matcher output across multiple navigations; a sleep is
-not a synchronization contract. Keep browser-history tests small and separate from route decoding.
+This example checks initial selection and the navigation result. It does not prove that a continuously
+observed matcher emitted the second page: that requires an active observation and a ready signal across
+the navigation. Keep a separate small browser suite for back/forward behavior and platform history.
 
-SSR and hydration are separate claims. The server test checks serialized state:
+`layer` intentionally shares its acquisition across the suite. If tests mutate history and need the
+same starting state independently, provide a fresh `TestRouter` inside each test instead. Shared
+service lifetime is part of the fixture design, not a harmless test-speed setting.
+
+Import test services through `@typed/router/RouterTest` and `@typed/id/IdsTest`. `IdsTest` gives each
+acquired provider its own deterministic sequence; two successive ID calls should still produce
+distinct IDs. These providers belong in test imports rather than production Router or ID entry points.
+
+## Test server output and browser adoption as two stages
+
+SSR proves that a useful document and hydration metadata were serialized. Hydration proves that the
+client adopts that document and reconnects its behavior. Rendering a fresh client tree that happens
+to look the same is not a hydration test.
 
 ```ts
 import { Effect, Schema } from "effect"
@@ -188,65 +238,26 @@ it.effect("serializes state for hydration", Effect.fn("serializesHydrationState"
       Effect.provide(HtmlRenderTemplate),
     )
     expect(output).toContain("data-typed-refsubject=")
-    expect(output).toContain("<!--n_1-->7<!--/n_1-->")
+    expect(output).toContain("7")
   }))
 ```
 
-The browser half places that string in a test document, renders the same template with
-`DomRenderTemplate`, and asserts adoption of the original element, restoration of `7`, removal of
-the hydration attribute, and a later update after `RefSubject.set`. Test static SSR separately:
-`StaticHtmlRenderTemplate` intentionally omits interactive hydration metadata.
+The hydration attribute checks that this server path includes state metadata; finding `7` alone only
+checks visible output. Exact comment-marker assertions belong in renderer protocol tests, where a
+marker change is the behavior under test. An application should usually assert its meaningful output
+without encoding the renderer’s internal part indexes.
 
-### Keep deterministic ID providers in test imports
+For the browser half, retain the original server-rendered button, hydrate the same template, and
+assert that the original node was adopted, the value `7` was restored, the hydration attribute was
+consumed, and a later `RefSubject.set` updates the button. Test static HTML separately:
+`StaticHtmlRenderTemplate` intentionally omits interactive hydration metadata. The
+[Quick Start](/explore/quick-start) gives the server-to-client progression these tests follow.
 
-Use `IdsTest` from its dedicated test entry point for programs that require ID services without a
-router. Each acquired layer owns its own sequence; do not compare two sequential calls as if they
-were expected to produce the same ID.
+## Make the type-level promises executable too
 
-```ts
-import { Effect } from "effect";
-import { expect, it } from "@effect/vitest";
-import { Ids } from "@typed/id/Ids";
-import { IdsTest } from "@typed/id/IdsTest";
-
-it.effect("creates distinct IDs from a deterministic provider", Effect.fn(function* () {
-  const ids = yield* Effect.gen(function* () {
-    return [yield* Ids.uuid7, yield* Ids.uuid7];
-  }).pipe(Effect.provide(IdsTest({ currentTime: 0 })));
-
-  expect(ids[0]).not.toBe(ids[1]);
-}));
-```
-
-Use `@typed/router/RouterTest` for `TestRouter` and `@typed/id/IdsTest` for `IdsTest`.
-Production Router and ID imports do not need the testing runtime. For tests that must start from
-the same history on every run, provide a new layer in each test rather than sharing mutable history
-with a suite-level `layer`. Shared layers are appropriate when that shared lifetime is intentional.
-
-## Choose assertions that survive implementation changes
-
-| Claim | Observe | Avoid |
-| --- | --- | --- |
-| A state transition preserves an invariant | The resulting decoded state | Markup for a state-only rule |
-| A producer releases resources | Cleanup after completion/interruption | A timeout that merely ends the test |
-| A keyed reorder retains the control | The same element reference, focus, and selection | Only the final HTML string |
-| A component is keyboard usable | Actual key dispatch and focused element | A role attribute alone |
-| A route handles a URL contract | Decoded output and typed failure | Coupling every test to browser history |
-| SSR and hydration agree | Serialized state, original node adoption, later updates | Two separately rendered trees that happen to look alike |
-
-Give tests an explicit ready point: a Deferred signaled by observation, a known subscriber count,
-or a DOM condition checked by `vi.waitFor`. For timing operators, advance the Effect test clock;
-for native browser events and layout, use the browser harness. Do not mix a fixed sleep with an
-assumption that a listener or render has already been installed.
-
-A component library should additionally test custom-host prop/ref forwarding and negative type
-contracts. An application should concentrate on its labels, state policy, request results, and
-integration boundaries rather than reproducing every primitive's own tests.
-
-## Keep public type contracts executable
-
-Runtime tests cannot detect an erased error or service channel. Repository `.type-test.ts` files use
-exact equality and intentional negative checks:
+A reusable wrapper can keep passing runtime tests while accidentally erasing an expected failure
+or a service requirement. Protect those contracts with exact type assertions and intentional
+negative assignments:
 
 ```ts
 import * as Context from "effect/Context";
@@ -269,11 +280,12 @@ type _Services = Assert<Equal<Fx.Services<typeof view>, Service | Scope.Scope | 
 const _erased: Fx.Fx<unknown, never, Fx.Services<typeof view>> = view;
 ```
 
-An unused `@ts-expect-error` fails the type test. Add the same style of check for `many` keys,
-hydration codecs, and router registration requirements.
+An unused `@ts-expect-error` fails the check, so erasing the error channel cannot silently turn this
+into a passing assignment. Apply the same method to key restrictions, hydration codecs, and required
+services in a public wrapper. Runtime tests then prove the complementary behaviors: selection
+transitions, request replacement, retained DOM identity, and finalization.
 
-Continue with [building UI components](/explore/building-ui-components),
-[route contracts](/explore/route-typed-url-inputs), and
-[Effect v4](https://effect.website/docs/v4) for the underlying Effect model.
-Public testing seams: [RouterTest](/reference/modules/%40typed%2Frouter%2FRouterTest),
-[IdsTest](/reference/modules/%40typed%2Fid%2FIdsTest).
+When adding a test, ask which plausible broken implementation would pass it. If replacing every row
+still passes, add identity. If every request finishes in order, reverse completion. If cleanup was
+never observed, close its actual Scope. That keeps the suite tied to user-visible and public-library
+promises instead of mirroring the implementation.

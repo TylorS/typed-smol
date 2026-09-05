@@ -62,7 +62,7 @@ import { type Rendered, toHtml } from "./Wire.js";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Renderer output protocol
  */
 export type RenderEvent = DomRenderEvent | HtmlRenderEvent;
 
@@ -86,7 +86,7 @@ export type RenderEvent = DomRenderEvent | HtmlRenderEvent;
  * ```
  *
  * @since 1.0.0
- * @category symbols
+ * @category Renderer output protocol
  */
 export const RenderEventTypeId = Symbol.for("@typed/template/RenderEvent");
 
@@ -110,7 +110,7 @@ export const RenderEventTypeId = Symbol.for("@typed/template/RenderEvent");
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Renderer output protocol
  */
 export type RenderEventTypeId = typeof RenderEventTypeId;
 
@@ -136,7 +136,7 @@ export type RenderEventTypeId = typeof RenderEventTypeId;
  * ```
  *
  * @since 1.0.0
- * @category advanced
+ * @category HTML transport trust
  * @stability internal-but-published
  */
 export const HtmlRenderTransportBrand = Symbol.for("@typed/template/HtmlRenderTransportBrand");
@@ -182,7 +182,7 @@ export const HtmlRenderTransportBrand = Symbol.for("@typed/template/HtmlRenderTr
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Native DOM output
  */
 export interface DomRenderEvent {
   /** Native-output discriminant stored at the public RenderEvent key.
@@ -195,7 +195,7 @@ export interface DomRenderEvent {
    * Immutable metadata owned by the event record.
    *
    * @since 1.0.0
-   * @category discriminants
+   * @category Native DOM output
    */
   readonly [RenderEventTypeId]: "dom";
   /**
@@ -209,7 +209,7 @@ export interface DomRenderEvent {
    * The event retains these nodes; producer and receiving range define teardown.
    *
    * @since 1.0.0
-   * @category data
+   * @category Native DOM output
    */
   readonly content: Rendered;
   /** Serializes the current nodes for diagnostics or non-streaming integration.
@@ -222,7 +222,7 @@ export interface DomRenderEvent {
    * Reads the nodes and performs no mutation.
    *
    * @since 1.0.0
-   * @category conversions
+   * @category DOM serialization
    */
   readonly toString: () => string;
   /** Returns the exact DOM value carried by the event.
@@ -235,7 +235,7 @@ export interface DomRenderEvent {
    * Returns a borrowed identity; it does not clone or transfer ownership.
    *
    * @since 1.0.0
-   * @category conversions
+   * @category Native DOM output
    */
   readonly valueOf: () => Rendered;
 }
@@ -266,7 +266,7 @@ export interface DomRenderEvent {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Native DOM output
  */
 export const DomRenderEvent = (content: Rendered): DomRenderEvent => ({
   [RenderEventTypeId]: "dom",
@@ -314,7 +314,7 @@ export const DomRenderEvent = (content: Rendered): DomRenderEvent => ({
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Serialized HTML output
  */
 export interface HtmlRenderEvent {
   /** HTML-output discriminant stored at the public RenderEvent key.
@@ -327,7 +327,7 @@ export interface HtmlRenderEvent {
    * Immutable metadata owned by the event.
    *
    * @since 1.0.0
-   * @category discriminants
+   * @category Serialized HTML output
    */
   readonly [RenderEventTypeId]: "html";
   /** Evidence that the string came from a renderer-owned serialization path.
@@ -340,7 +340,7 @@ export interface HtmlRenderEvent {
    * Immutable metadata; it does not sanitize or retain another value.
    *
    * @since 1.0.0
-   * @category symbols
+   * @category Serialized HTML output
    */
   readonly [HtmlRenderTransportBrand]: true;
   /**
@@ -354,7 +354,7 @@ export interface HtmlRenderEvent {
    * The event owns the string; the producer owns stream ordering and cleanup.
    *
    * @since 1.0.0
-   * @category data
+   * @category Serialized HTML output
    */
   readonly html: string;
   /**
@@ -368,7 +368,7 @@ export interface HtmlRenderEvent {
    * Immutable producer-supplied metadata.
    *
    * @since 1.0.0
-   * @category data
+   * @category HTML chunk completion
    */
   readonly last: boolean;
   /** Returns the HTML chunk for string-oriented consumers.
@@ -381,7 +381,7 @@ export interface HtmlRenderEvent {
    * Returns the event-owned immutable string.
    *
    * @since 1.0.0
-   * @category conversions
+   * @category Serialized HTML output
    */
   readonly toString: () => string;
   /** Returns the HTML chunk as the event's primitive value.
@@ -394,7 +394,7 @@ export interface HtmlRenderEvent {
    * Returns the event-owned immutable string.
    *
    * @since 1.0.0
-   * @category conversions
+   * @category Serialized HTML output
    */
   readonly valueOf: () => string;
 }
@@ -435,7 +435,7 @@ export interface HtmlRenderEvent {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Serialized HTML output
  */
 export const HtmlRenderEvent = (html: string, last: boolean): HtmlRenderEvent => ({
   [RenderEventTypeId]: "html",
@@ -468,7 +468,7 @@ export const HtmlRenderEvent = (html: string, last: boolean): HtmlRenderEvent =>
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Renderer output recognition
  */
 export function isRenderEvent(event: unknown): event is RenderEvent {
   return hasProperty(event, RenderEventTypeId);
@@ -495,7 +495,7 @@ export function isRenderEvent(event: unknown): event is RenderEvent {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category Native DOM recognition
  */
 export function isDomRenderEvent(event: unknown): event is DomRenderEvent {
   return isRenderEvent(event) && event[RenderEventTypeId] === "dom";
@@ -523,7 +523,7 @@ export function isDomRenderEvent(event: unknown): event is DomRenderEvent {
  * ```
  *
  * @since 1.0.0
- * @category guards
+ * @category HTML transport recognition
  */
 export function isHtmlRenderEvent(event: unknown): event is HtmlRenderEvent {
   return (

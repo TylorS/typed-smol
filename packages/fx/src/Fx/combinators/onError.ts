@@ -42,7 +42,7 @@ import type { Fx } from "../Fx.js";
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Observing failures
  */
 export const onError: {
   <E, X, R2>(

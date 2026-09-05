@@ -19,7 +19,7 @@ import { isFx } from "../TypeId.js";
  * These are type-level contracts. They start no Effect or `Fx` run.
  *
  * @since 1.0.0
- * @category function
+ * @category Generator composition
  */
 export namespace fn {
   /**
@@ -50,7 +50,7 @@ export namespace fn {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Type contracts
    */
   export type Gen = {
     <Eff extends Effect.Effect<any, any, any>, ReturnFx extends Fx.Any, Args extends Array<any>>(
@@ -221,7 +221,7 @@ export namespace fn {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Type contracts
    */
   export type NonGen = {
     <Args extends Array<any>, ReturnFx extends Fx.Any>(
@@ -300,7 +300,7 @@ export namespace fn {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Generator composition
  */
 export const fn: fn.Gen &
   fn.NonGen & {

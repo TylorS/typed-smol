@@ -30,6 +30,6 @@ import { failCause } from "./failCause.js";
  * @param error - The error to fail with.
  * @returns An `Fx` that fails immediately.
  * @since 1.0.0
- * @category constructors
+ * @category Failure sources
  */
 export const fail: <E>(error: E) => Fx<never, E, never> = /*#__PURE__*/ flow(Cause.fail, failCause);

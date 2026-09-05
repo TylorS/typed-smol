@@ -234,3 +234,37 @@ Fx/Stream source held by the ref.
 `ref.interrupt` is the explicit early-stop operation. It closes the private Scope, interrupts the
 initializer and current subscribers, and clears pending initialization; it is not a restart command.
 Use it when the real owner ends early.
+
+## Diagnose a stale or silent value by checking the contract
+
+| Symptom | First check |
+| --- | --- |
+| Construction returned but a read waits forever | Has a live source emitted, failed, or completed empty? |
+| A new observer sees an old result | Is this the same retained ref, and was a new request actually started? |
+| Reads change but observers do not | Does `eq` intentionally treat those values as equivalent? |
+| Each view causes a separate connection | Are you constructing one ref per consumer instead of sharing one owner? |
+| A mounted view stops receiving updates | Did the construction Scope close before the view finished? |
+| An empty/reset live ref never reloads | Did the original finite source already finish? |
+
+Test source startup with a counter or acquisition finalizer, and synchronize observer tests with
+`subscriberCount`. A delay in a test may hide the race without explaining whether the subscription
+was active. `subscriberCount` measures ref observers, so zero subscribers is compatible with a live
+source still running in the ref's private Scope.
+
+## Define equality from every consumer's needs
+
+An equivalence that compares only record IDs suppresses edits to a record's title. That may look
+like an optimization in a list count, but a title view sharing the same ref also misses the update.
+Use domain equality for the owner, then derive narrow values such as a count at the consumer edge.
+
+Never mutate a retained object or array in place and then rely on `set` to discover the mutation.
+The old and new references can be the same already-mutated object, leaving equality no previous
+snapshot to compare. Return a new value from `update`; preserve references for unchanged children
+when that reflects the model. `readonly` in TypeScript communicates intent but does not freeze the
+runtime object.
+
+A custom equality that ignores metadata also weakens the relationship between `version` and the
+exact current value. The temperature example intentionally allows `sampledAt` to change without a
+version change. A cache keyed solely by version must therefore avoid depending on `sampledAt`, or
+choose a stricter equivalence. Equality affects more than render counts: it defines invalidation
+for every observer of the state.

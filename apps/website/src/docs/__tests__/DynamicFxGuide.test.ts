@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
+import { expectExampleCalls, runGuideExample } from "./FxGuideTestSupport.js";
 import { renderMarkdown } from "../../site/Markdown.js";
+import { extractFxMarbleOperators } from "../FxMarbleCoverage.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guideFile = "fx-dynamic-producers.md";
@@ -23,11 +25,26 @@ describe("dynamic Fx producers guide", () => {
       kind: "guide",
       order: 1.15,
     });
-    expect(source).not.toMatch(/\b(?:template|renderer|dom|ui)\b/iu);
-    expect(source.match(/^```fx-marble$/gmu)).toHaveLength(2);
     for (const operator of ["gen", "unwrap", "unwrapScoped"]) {
       expect(rendered).toContain(`<code>${operator}</code>`);
     }
+    expectExampleCalls(source, [
+      "Fx.unwrap",
+      "Fx.fn",
+      "Fx.genScoped",
+      "Fx.unwrapScoped",
+      "Effect.acquireRelease",
+      "Effect.provideService",
+    ]);
+    expect(extractFxMarbleOperators(source)).toEqual(
+      expect.arrayContaining(["gen", "unwrap", "unwrapScoped"]),
+    );
+  });
+
+  it("runs the authored Fx.fn workspace factory with its provided service", async () => {
+    const source = fs.readFileSync(guidePath, "utf8");
+    const result = await runGuideExample(websiteRoot, source, "const designActivity:", "result");
+    expect(result).toEqual(["design:opened", "design:updated"]);
   });
 
   it("keeps every TypeScript example independently compilable", () => {
@@ -61,5 +78,10 @@ describe("dynamic Fx producers guide", () => {
     } finally {
       fs.rmSync(staging, { recursive: true, force: true });
     }
+  });
+  it("runs the selected producer rather than emitting the Fx object", async () => {
+    const source = fs.readFileSync(guidePath, "utf8");
+    const result = await runGuideExample(websiteRoot, source, "const chooseActivity =", "result");
+    expect(result).toEqual(["workspace:opened", "workspace:updated"]);
   });
 });

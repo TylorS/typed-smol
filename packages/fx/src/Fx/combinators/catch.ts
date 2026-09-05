@@ -60,7 +60,7 @@ const matchesTag = <E, K extends string>(
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const catch_: {
   <E, A2, E2, R2>(f: (e: E) => Fx<A2, E2, R2>): <A, R>(self: Fx<A, E, R>) => Fx<A | A2, E2, R | R2>;
@@ -108,7 +108,7 @@ export { catch_ as catch };
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const catchAll = catch_;
 
@@ -143,7 +143,7 @@ export const catchAll = catch_;
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const catchCause: {
   <E, A2, E2, R2>(
@@ -194,7 +194,7 @@ export const catchCause: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const catchTag: {
   <const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>, E, A2, E2, R2>(
@@ -290,7 +290,7 @@ export const catchTag: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const catchIf: {
   <E, A2, E2, R2>(
@@ -357,7 +357,7 @@ export const catchIf: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const catchCauseIf: {
   <E, A2, E2, R2>(
@@ -431,7 +431,7 @@ type CaseServices<T> = T extends (error: never) => Fx<infer _A, infer _E, infer 
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Errors and recovery
  */
 export const catchTags: {
   <E, Cases extends TaggedCase<E>>(

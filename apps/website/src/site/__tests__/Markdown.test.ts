@@ -12,6 +12,19 @@ const documentFor = (code: string) => {
 };
 
 describe("site Markdown rendering", () => {
+  it("preserves relative indentation through source expansion and syntax highlighting", async () => {
+    const source = [
+      "        const draft = input.value;",
+      "        if (draft) {",
+      "          submit(draft);",
+      "        }",
+    ].join("\n");
+    const rendered = documentFor((await renderMarkdown(`\`\`\`ts\n${source}\n\`\`\``)).code);
+    expect(rendered.querySelector("pre > code")?.textContent).toBe(
+      ["const draft = input.value;", "if (draft) {", "  submit(draft);", "}"].join("\n"),
+    );
+  });
+
   it("keeps rendered page links below the configured base while leaving artifact extensions intact", async () => {
     expect(siteHref("/explore/quick-start#install", "/typed-smol/")).toBe(
       "/typed-smol/explore/quick-start/#install",

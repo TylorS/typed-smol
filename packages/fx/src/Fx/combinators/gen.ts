@@ -35,7 +35,7 @@ import { unwrap } from "./unwrap.js";
  * @param f - The generator function.
  * @returns An `Fx` representing the result of the generator.
  * @since 1.0.0
- * @category combinators
+ * @category Generator composition
  */
 export const gen = <Yield extends Effect.Effect<any, any, any>, Return extends Fx.Any>(
   f: () => Generator<Yield, Return, any>,

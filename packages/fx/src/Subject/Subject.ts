@@ -64,7 +64,7 @@ import type * as Sink from "../Sink/Sink.js";
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Publication contracts
  */
 export interface Subject<A, E = never, R = never>
   extends Fx.Fx<A, E, R | Scope.Scope>, Sink.Sink<A, E, R> {
@@ -130,7 +130,7 @@ export declare namespace Subject {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Subject services
    */
   export interface Service<Self, Id extends string, A, E> extends Subject<A, E, Self> {
     /**
@@ -207,7 +207,7 @@ export declare namespace Subject {
    * static `make` layer to allocate and scope the backing instance.
    *
    * @since 1.0.0
-   * @category models
+   * @category Subject services
    */
   export interface Class<Self, Id extends string, A, E> extends Service<Self, Id, A, E> {
     /**
@@ -283,7 +283,7 @@ export declare namespace Subject {
  * @param subject - The subject to use for multicasting.
  * @returns A shared `Fx`.
  * @since 1.0.0
- * @category combinators
+ * @category Sharing sources
  */
 export function share<A, E, R, R2>(
   fx: Fx.Fx<A, E, R>,
@@ -345,7 +345,7 @@ const invalidReplayCapacity = (): Cause.IllegalArgumentError =>
  * ```
  *
  * @since 1.0.0
- * @category models
+ * @category Sharing sources
  */
 export class Share<A, E, R, R2> implements Fx.Fx<A, E, R | R2 | Scope.Scope> {
   /**
@@ -597,7 +597,7 @@ export class Share<A, E, R, R2> implements Fx.Fx<A, E, R | R2 | Scope.Scope> {
  * @param fx - The source Fx.
  * @returns A multicasted `Fx`.
  * @since 1.0.0
- * @category combinators
+ * @category Sharing sources
  */
 export function multicast<A, E, R>(fx: Fx.Fx<A, E, R>): Fx.Fx<A, E, R | Scope.Scope> {
   return new Share(fx, unsafeMake<A, E>(0));
@@ -636,7 +636,7 @@ export function multicast<A, E, R>(fx: Fx.Fx<A, E, R>): Fx.Fx<A, E, R | Scope.Sc
  * @param fx - The source Fx.
  * @returns A shared `Fx` that replays the latest value.
  * @since 1.0.0
- * @category combinators
+ * @category Sharing sources
  */
 export function hold<A, E, R>(fx: Fx.Fx<A, E, R>): Fx.Fx<A, E, R | Scope.Scope> {
   return new Share(fx, unsafeMake<A, E>(1));
@@ -685,7 +685,7 @@ export function hold<A, E, R>(fx: Fx.Fx<A, E, R>): Fx.Fx<A, E, R | Scope.Scope> 
  * @param fx - The source Fx.
  * @returns A shared `Fx` that replays values.
  * @since 1.0.0
- * @category combinators
+ * @category Sharing sources
  */
 export const replay: {
   (
@@ -1385,7 +1385,7 @@ export class ReplaySubjectImpl<A, E> extends SubjectImpl<A, E> {
  * `replay` values, so callers own the memory policy for valid capacities.
  * @returns A `Subject` that replays the last `replay` values.
  * @since 1.0.0
- * @category constructors
+ * @category Subject construction
  */
 export function unsafeMake<A, E = never>(replay: number = 0): Subject<A, E> {
   if (!isReplayCapacity(replay)) {
@@ -1419,8 +1419,9 @@ export function unsafeMake<A, E = never>(replay: number = 0): Subject<A, E> {
  * ## Errors
  *
  * Invalid capacities fail in the typed error channel with `Cause.IllegalArgumentError`; no subject
- * is allocated. Once acquired, publication callbacks cannot fail and the subject's `E` parameter
- * describes failures that producers may publish to sinks.
+ * is allocated. Once acquired, publication callbacks have no typed failure result; the subject's
+ * `E` parameter describes incoming Causes rather than publication acknowledgment errors.
+ * Interruption and defects remain distinct from that typed channel.
  *
  * @example
  * ```ts
@@ -1435,7 +1436,7 @@ export function unsafeMake<A, E = never>(replay: number = 0): Subject<A, E> {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Subject construction
  */
 export function make<A, E = never>(
   replay?: number,
@@ -1482,7 +1483,7 @@ export function make<A, E = never>(
  * ```
  *
  * @since 1.0.0
- * @category context
+ * @category Subject services
  */
 export function Service<Self, A, E = never>() {
   return <const Id extends string>(id: Id): Subject.Class<Self, Id, A, E> => {

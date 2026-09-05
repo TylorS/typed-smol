@@ -25,7 +25,7 @@ import { unwrap } from "./unwrap.js";
  * @param n - The number of elements to skip.
  * @returns An `Fx` that emits values after the first `n` elements.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const skip: {
   (n: number): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, R>;
@@ -57,7 +57,7 @@ export const skip: {
  * @param count - Effect that produces the number of elements to skip.
  * @returns An `Fx` that emits values after the first `n` elements.
  * @since 1.0.0
- * @category combinators
+ * @category Selecting values
  */
 export const skipEffect: {
   <E2, R2>(

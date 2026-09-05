@@ -21,36 +21,18 @@ describe("Wire and Rendered DOM output guide", () => {
 
     expect(guide).toMatchObject({
       slug: "wire-and-rendered-dom-output",
-      section: "DOM and platform",
+      section: "Template internals",
       kind: "deep-dive",
-      order: 5.35,
     });
-    expect(guide.headings).toEqual(
-      expect.arrayContaining([
-        "Pass a real DOM value",
-        "Make a multi-node range persistent",
-        "Treat boundary comments as renderer extension territory",
-        "Inspect detached output deliberately",
-      ]),
-    );
-    for (const term of [
-      "Node",
-      "DocumentFragment",
-      "Wire",
-      "Rendered",
-      "DomRenderEvent",
-      "persistent",
-      "unique-template-id-or-hash",
-      "fromComments",
-      "internal-but-published",
-      "getElements",
-      "toHtml",
-      "valueOf()",
-      "moveBefore",
-    ]) {
-      expect(guide.body).toContain(term);
+    const examples = extractTypeScriptFences(guide.body).join("\n");
+    for (const term of ["DomRenderEvent", "persistent", "fromComments", "createDocumentFragment"]) {
+      expect(examples).toContain(term);
     }
-    expect(extractTypeScriptFences(guide.body)).toHaveLength(4);
+    for (const operation of ["getElements", "toHtml", "valueOf()", "internal-but-published"]) {
+      expect(guide.body).toContain(operation);
+    }
+    expect(guide.body).toContain("/explore/dom-updates-and-reconciliation");
+    expect(extractTypeScriptFences(guide.body)).not.toHaveLength(0);
     expect(validateAuthoredExampleQuality([guide])).toEqual([]);
   });
 

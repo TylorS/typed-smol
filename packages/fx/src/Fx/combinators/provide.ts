@@ -40,7 +40,7 @@ import type { Fx } from "../Fx.js";
  * @param layer - The Layer to provide.
  * @returns An `Fx` with the required context provided.
  * @since 1.0.0
- * @category combinators
+ * @category Providing services
  */
 export const provide: {
   <R2, E2 = never, R3 = never>(
@@ -104,7 +104,7 @@ export const provide: {
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Providing services
  */
 export const provideContext: {
   <R2>(services: Context.Context<R2>): <A, E, R>(fx: Fx<A, E, R>) => Fx<A, E, Exclude<R, R2>>;
@@ -150,7 +150,7 @@ export const provideContext: {
  * @param service - The service implementation.
  * @returns An `Fx` with the required service provided.
  * @since 1.0.0
- * @category combinators
+ * @category Providing services
  */
 export const provideService: {
   <Id, S>(
@@ -223,7 +223,7 @@ export const provideService: {
  * @param serviceEffect - Effect that produces the service (may have its own requirements).
  * @returns An `Fx` with the required service provided.
  * @since 1.0.0
- * @category combinators
+ * @category Providing services
  */
 export const provideServiceEffect: {
   <Id, S, E2, R2>(

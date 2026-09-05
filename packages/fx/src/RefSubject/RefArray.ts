@@ -30,7 +30,7 @@ import { Result } from "effect";
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefArray<in out A, in out E = never, out R = never> extends RefSubject.RefSubject<
   ReadonlyArray<A>,
@@ -75,7 +75,7 @@ export interface RefArray<in out A, in out E = never, out R = never> extends Ref
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<A, E = never, R = never>(
   initial: ReadonlyArray<A> | Effect.Effect<ReadonlyArray<A>, E, R> | Fx.Fx<ReadonlyArray<A>, E, R>,
@@ -98,7 +98,7 @@ export function make<A, E = never, R = never>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const prepend: {
   <A>(value: A): <E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -121,7 +121,7 @@ export const prepend: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const prependAll: {
   <A>(value: Iterable<A>): <E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -144,7 +144,7 @@ export const prependAll: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const append: {
   <A>(value: A): <E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -167,7 +167,7 @@ export const append: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const appendAll: {
   <A>(value: Iterable<A>): <E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -190,7 +190,7 @@ export const appendAll: {
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const drop: {
   (n: number): <A, E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -213,7 +213,7 @@ export const drop: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const dropRight: {
   (n: number): <A, E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -236,7 +236,7 @@ export const dropRight: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const dropWhile: {
   <A>(
@@ -268,7 +268,7 @@ export const dropWhile: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const filterValues: {
   <A>(
@@ -296,7 +296,7 @@ export const filterValues: {
  * while absent; the observing Scope owns and finalizes its Fx subscription.
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const getIndex: {
   (index: number): <A, E, R>(ref: RefArray<A, E, R>) => RefSubject.Filtered<A, E, R>;
@@ -319,7 +319,7 @@ export const getIndex: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const groupBy: {
   <A>(
@@ -347,7 +347,7 @@ export const groupBy: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const insertAt: {
   <A>(index: number, a: A): <E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -372,7 +372,7 @@ export const insertAt: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isEmpty = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, ReadonlyArray.isReadonlyArrayEmpty);
@@ -391,7 +391,7 @@ export const isEmpty = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed<bo
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category State predicates
  */
 export const isNonEmpty = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed<boolean, E, R> =>
   RefSubject.map(ref, ReadonlyArray.isReadonlyArrayNonEmpty);
@@ -410,7 +410,7 @@ export const isNonEmpty = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const length = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed<number, E, R> =>
   RefSubject.map(ref, ReadonlyArray.length);
@@ -435,7 +435,7 @@ export const length = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Computed<num
  * changing that signature or runtime behavior requires a separate compatibility decision.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const map: {
   <A>(
@@ -463,7 +463,7 @@ export const map: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const mapValues: {
   <A, B>(
@@ -491,7 +491,7 @@ export const mapValues: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const modifyAt: {
   <A>(
@@ -523,7 +523,7 @@ export const modifyAt: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const partition: {
   <A, B extends A>(
@@ -555,7 +555,7 @@ export const partition: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduce: {
   <A, B>(
@@ -590,7 +590,7 @@ export const reduce: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const reduceRight: {
   <A, B>(
@@ -625,7 +625,7 @@ export const reduceRight: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const replaceAt: {
   <A>(index: number, a: A): <E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -650,7 +650,7 @@ export const replaceAt: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const rotate: {
   (n: number): <A, E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -673,7 +673,7 @@ export const rotate: {
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const sortBy: {
   <A>(
@@ -701,7 +701,7 @@ export const sortBy: {
  * acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const take: {
   (n: number): <A, E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -724,7 +724,7 @@ export const take: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const takeRight: {
   (n: number): <A, E, R>(ref: RefArray<A, E, R>) => Effect.Effect<ReadonlyArray<A>, E, R>;
@@ -747,7 +747,7 @@ export const takeRight: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const takeWhile: {
   <A>(
@@ -779,7 +779,7 @@ export const takeWhile: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const dedupeWith =
   <A>(valueEq: Equivalence<A>) =>
@@ -819,7 +819,7 @@ export const dedupeWith =
  * ```
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const last = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Filtered<A, E, R> =>
   RefSubject.filterMap(ref, ReadonlyArray.last);
@@ -857,7 +857,7 @@ export const last = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Filtered<A, E,
  * ```
  *
  * @since 1.18.0
- * @category filtered
+ * @category Optional queries
  */
 export const head = <A, E, R>(ref: RefArray<A, E, R>): RefSubject.Filtered<A, E, R> =>
   RefSubject.filterMap(ref, ReadonlyArray.head);

@@ -32,7 +32,7 @@ type ComponentResult<Args extends ReadonlyArray<any>, Result> = Args extends rea
  * running Effect `Scope` owns yielded effects, subscriptions, and cleanup.
  *
  * @since 1.0.0
- * @category models
+ * @category Component construction
  */
 export namespace component {
   /**
@@ -62,15 +62,15 @@ export namespace component {
    * ```
    *
    * @since 1.0.0
-   * @category models
+   * @category Generator overloads
    */
   export type Gen = {
-    /** Creates a component directly for a zero-argument body. @since 1.0.0 @category constructors */
+    /** Creates a component directly for a zero-argument body. @since 1.0.0 @category Zero-argument components */
     <Yield extends Effect.Effect<any, any, any>, const Result extends Renderable.Any>(
       body: () => Generator<Yield, Result, any>,
     ): ComponentFx<Yield, Result>;
 
-    /** Creates a component function while preserving the generator's parameters. @since 1.0.0 @category constructors */
+    /** Creates a component function while preserving the generator's parameters. @since 1.0.0 @category Parameterized components */
     <
       Args extends readonly [any, ...ReadonlyArray<any>],
       Yield extends Effect.Effect<any, any, any>,
@@ -79,7 +79,7 @@ export namespace component {
       body: (...args: Args) => Generator<Yield, Result, any>,
     ): (...args: Args) => ComponentFx<Yield, Result>;
 
-    /** Applies one argument-aware transformation to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies one argument-aware transformation to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -90,7 +90,7 @@ export namespace component {
       a: (_: ComponentFx<Yield, Result>, ...args: Args) => A,
     ): ComponentResult<Args, A>;
 
-    /** Applies two ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies two ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -103,7 +103,7 @@ export namespace component {
       b: (_: A, ...args: Args) => B,
     ): ComponentResult<Args, B>;
 
-    /** Applies three ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies three ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -118,7 +118,7 @@ export namespace component {
       c: (_: B, ...args: Args) => C,
     ): ComponentResult<Args, C>;
 
-    /** Applies four ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies four ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -135,7 +135,7 @@ export namespace component {
       d: (_: C, ...args: Args) => D,
     ): ComponentResult<Args, D>;
 
-    /** Applies five ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies five ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -154,7 +154,7 @@ export namespace component {
       e: (_: D, ...args: Args) => E,
     ): ComponentResult<Args, E>;
 
-    /** Applies six ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies six ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -175,7 +175,7 @@ export namespace component {
       f: (_: E, ...args: Args) => F,
     ): ComponentResult<Args, F>;
 
-    /** Applies seven ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies seven ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -198,7 +198,7 @@ export namespace component {
       g: (_: F, ...args: Args) => G,
     ): ComponentResult<Args, G>;
 
-    /** Applies eight ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies eight ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -223,7 +223,7 @@ export namespace component {
       h: (_: G, ...args: Args) => H,
     ): ComponentResult<Args, H>;
 
-    /** Applies nine ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies nine ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -250,7 +250,7 @@ export namespace component {
       i: (_: H, ...args: Args) => I,
     ): ComponentResult<Args, I>;
 
-    /** Applies ten ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category constructors */
+    /** Applies ten ordered argument-aware transformations to the generated Fx. @since 1.0.0 @category Argument-aware pipelines */
     <
       Args extends ReadonlyArray<any>,
       Yield extends Effect.Effect<any, any, any>,
@@ -321,7 +321,7 @@ export namespace component {
  * ```
  *
  * @since 1.0.0
- * @category constructors
+ * @category Component construction
  */
 export const component: component.Gen = function (
   body: (

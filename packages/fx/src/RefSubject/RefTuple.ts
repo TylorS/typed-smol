@@ -27,7 +27,7 @@ import * as RefSubject from "./RefSubject.js";
  * interruption, and Scope requirements expressed by its members.
  *
  * @since 1.18.0
- * @category models
+ * @category State models
  */
 export interface RefTuple<
   in out T extends ReadonlyArray<unknown>,
@@ -62,7 +62,7 @@ export interface RefTuple<
  * ```
  *
  * @since 1.18.0
- * @category constructors
+ * @category Constructors
  */
 export function make<T extends ReadonlyArray<unknown>, E = never, R = never>(
   initial: T | Effect.Effect<T, E, R> | Fx.Fx<T, E, R>,
@@ -85,7 +85,7 @@ export function make<T extends ReadonlyArray<unknown>, E = never, R = never>(
  * It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const setAt: {
   <T extends ReadonlyArray<unknown>, I extends number>(
@@ -124,7 +124,7 @@ export const setAt: {
  * value. It acquires no resource; failures and services remain those of the source ref.
  *
  * @since 1.18.0
- * @category combinators
+ * @category State updates
  */
 export const updateAt: {
   <T extends ReadonlyArray<unknown>, I extends number>(
@@ -163,7 +163,7 @@ export const updateAt: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const appendElement: {
   <E>(
@@ -198,7 +198,7 @@ export const appendElement: {
  * Fx observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const prependElement: {
   <E>(
@@ -222,7 +222,7 @@ export const prependElement: {
 /**
  * Get the element at a specific index from the current state of a RefTuple.
  * @since 1.18.0
- * @category computed
+ * @category Type utilities
  */
 type Indices<T extends ReadonlyArray<unknown>> = Exclude<Partial<T>["length"], T["length"]>;
 
@@ -241,7 +241,7 @@ type Indices<T extends ReadonlyArray<unknown>> = Exclude<Partial<T>["length"], T
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category combinators
+ * @category Derived queries
  */
 export const get: {
   <T extends ReadonlyArray<unknown>, I extends Indices<T> & keyof T>(
@@ -274,7 +274,7 @@ export const get: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const length = <T extends ReadonlyArray<unknown>, E, R>(
   ref: RefTuple<T, E, R>,
@@ -294,7 +294,7 @@ export const length = <T extends ReadonlyArray<unknown>, E, R>(
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const pick: {
   <T extends ReadonlyArray<unknown>, const I extends ReadonlyArray<Indices<T>>>(
@@ -327,7 +327,7 @@ export const pick: {
  * observation follows later pushes and its observing Scope owns subscription cleanup.
  *
  * @since 1.18.0
- * @category computed
+ * @category Derived queries
  */
 export const omit: {
   <T extends ReadonlyArray<unknown>, const I extends ReadonlyArray<Indices<T>>>(

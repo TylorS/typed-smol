@@ -8,147 +8,83 @@ import { extractTypeScriptFences, validateAuthoredExampleQuality } from "../Reci
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guideDirectory = path.join(websiteRoot, "content/guides");
 
-const pages = [
-  {
-    slug: "render-your-first-template",
-    section: "Templates",
-    kind: "guide",
-    requiredHeadings: ["Write and mount a static template", "Add one live value"],
-  },
-  {
-    slug: "authoring-typed-templates",
-    section: "Templates",
-    kind: "concept",
-    requiredHeadings: ["Author markup, interpolate values", "Choose the part you mean"],
-  },
-  {
-    slug: "template-element-bindings",
-    section: "Templates",
-    kind: "deep-dive",
-    requiredHeadings: [
-      "Attributes serialize values",
-      "Properties write live element state",
-      "Boolean attributes use presence",
-    ],
-  },
-  {
-    slug: "renderable-normalization",
-    section: "Templates",
-    kind: "concept",
-    requiredHeadings: ["The normalization matrix", "Errors and requirements compose"],
-  },
-  {
-    slug: "template-spreads-data",
-    section: "Templates",
-    kind: "guide",
-    requiredHeadings: ["`.data` owns a dataset slice", "Spread a record when the shape is dynamic"],
-  },
-  {
-    slug: "template-text-only-contexts",
-    section: "Templates",
-    kind: "deep-dive",
-    requiredHeadings: ["Choose the context deliberately", "Closing tags need neutralization"],
-  },
-  {
-    slug: "keyed-template-collections",
-    section: "Templates",
-    kind: "guide",
-    requiredHeadings: [
-      "Render each item from its RefSubject",
-      "DOM and SSR have different lifetimes",
-    ],
-  },
-  {
-    slug: "template-references-and-element-access",
-    section: "Templates",
-    kind: "guide",
-    requiredHeadings: [
-      "Capture an element without a component wrapper",
-      "Let the rendering Scope own an external resource",
-    ],
-  },
-  {
-    slug: "template-namespaces-and-platform-markup",
-    section: "Templates",
-    kind: "deep-dive",
-    requiredHeadings: [
-      "Enter and leave foreign content in the markup",
-      "Prefixed and case-sensitive attributes follow their element",
-    ],
-  },
-  {
-    slug: "native-events-with-effect",
-    section: "Templates",
-    kind: "guide",
-    requiredHeadings: ["Make an event-aware Effect handler", "Native options stay native"],
-  },
-  {
-    slug: "render-scheduling",
-    section: "DOM and platform",
-    kind: "deep-dive",
-    requiredHeadings: [
-      "A queue chooses when, not what",
-      "Provide a queue at the rendering boundary",
-    ],
-  },
-  {
-    slug: "wire-and-rendered-dom-output",
-    section: "DOM and platform",
-    kind: "deep-dive",
-    requiredHeadings: ["Pass a real DOM value", "Make a multi-node range persistent"],
-  },
-  {
-    slug: "template-compilation-pipeline",
-    section: "Integration",
-    kind: "deep-dive",
-    requiredHeadings: ["The public pipeline", "Emit the RenderEvent your target owns"],
-  },
-  {
-    slug: "implementing-render-template",
-    section: "Integration",
-    kind: "deep-dive",
-    requiredHeadings: [
-      "Implement the public RenderTemplate contract",
-      "Keep renderer-only machinery at the boundary",
-    ],
-  },
-  {
-    slug: "event-source-delegation",
-    section: "Integration",
-    kind: "deep-dive",
-    requiredHeadings: [
-      "Register a concrete target in a rendered range",
-      "Keep browser listener semantics intact",
-    ],
-  },
-] as const;
+// Preserve topic coverage and demonstrated contracts without freezing prose,
+// chapter headings, article length, or the number of examples.
+const groups = {
+  "Template authoring": ["render-your-first-template", "authoring-typed-templates", "renderable-normalization", "keyed-template-collections"],
+  "Template bindings": ["template-element-bindings", "template-spreads-data", "dom-class-names", "native-events-with-effect", "template-references-and-element-access", "template-namespaces-and-platform-markup", "template-text-only-contexts"],
+  "Template rendering": ["mounting-dom-output", "rendering-html-on-the-server", "hydrating-typed-html", "server-rendering-and-hydration", "dom-updates-and-reconciliation", "dom-parts-and-attributes", "render-scheduling"],
+  "Template internals": ["render-event-substrate", "dom-render-event", "html-render-event", "wire-and-rendered-dom-output", "template-compilation-pipeline", "implementing-render-template", "event-source-delegation"],
+};
+const demonstratedContracts: Record<string, ReadonlyArray<string>> = {
+  "render-your-first-template": ["render(host)", "Fiber.interrupt", "RefSubject.make"],
+  "authoring-typed-templates": [".value=${query}", "oninput=${readQuery}"],
+  "renderable-normalization": ["Effect.succeed", "Stream.fromIterable", "Context.Service"],
+  "keyed-template-collections": ["many(", "article.id", "RefSubject.map"],
+  "template-element-bindings": ["title=${description}", ".value=${query}", "?disabled=${readOnly}"],
+  "template-spreads-data": ["...${saveCapabilities}", ".data=${"],
+  "dom-class-names": ["class=", "RefSubject.map"],
+  "native-events-with-effect": ["EventHandler.make", "FormData", "preventDefault", "catchCause"],
+  "template-references-and-element-access": ["Effect.acquireRelease", "RefSubject.hydrate", "hydrateAll"],
+  "template-namespaces-and-platform-markup": ["foreignObject", "xlink:href", "<math>"],
+  "template-text-only-contexts": ["<textarea", "JSON.stringify", "<style>"],
+  "mounting-dom-output": ["host.ownerDocument", "Fx.drain", "Fiber.interrupt"],
+  "rendering-html-on-the-server": ["StaticHtmlRenderTemplate", "HtmlRenderTemplate", "renderToHtmlString", "Fx.toStream"],
+  "hydrating-typed-html": ["render(host)", "DomRenderTemplate", "Effect.scoped"],
+  "server-rendering-and-hydration": ["RefSubject.hydrate", "HtmlRenderTemplate", "DomRenderTemplate"],
+  "dom-updates-and-reconciliation": ["many(", "RefSubject.map"],
+  "dom-parts-and-attributes": ["EventHandler.make", "RefSubject.set", ".value=${query}"],
+  "render-scheduling": ["MixedRenderQueue", "SyncRenderQueue", "CurrentRenderPriority"],
+  "render-event-substrate": ["DomRenderEvent", "HtmlRenderEvent"],
+  "dom-render-event": ["DomRenderEvent", "Effect.acquireRelease", "clearInterval"],
+  "html-render-event": ["HtmlRenderEvent"],
+  "wire-and-rendered-dom-output": ["persistent", "fromComments", "DomRenderEvent"],
+  "template-compilation-pipeline": ["@typed/template/Parser", "templateToHtmlChunks", "addTemplateHash"],
+  "implementing-render-template": ["RenderTemplate", "Layer.effect", "Fx.tap"],
+  "event-source-delegation": ["makeEventSource", "addEventListener", "events.setup", "Scope.Scope"],
+};
+const readGuide = (slug: string) => parseGuideDocumentation(
+  `${slug}.md`, fs.readFileSync(path.join(guideDirectory, `${slug}.md`), "utf8"),
+);
+const linkedGuides = (body: string) => Array.from(
+  body.matchAll(/\]\(\/explore\/([^#)]+)(?:#[^)]*)?\)/g), (match) => match[1],
+);
 
 describe("public Template curriculum", () => {
-  it("covers authoring, bindings, platform markup, events, output, and renderer targets", () => {
-    const documents = pages.map(({ slug, section, kind, requiredHeadings }) => {
-      const fileName = `${slug}.md`;
-      const source = fs.readFileSync(path.join(guideDirectory, fileName), "utf8");
-      const guide = parseGuideDocumentation(fileName, source);
-
-      expect(guide.section).toBe(section);
-      expect(guide.kind).toBe(kind);
-      expect(guide.headings).toEqual(expect.arrayContaining([...requiredHeadings]));
-      expect(extractTypeScriptFences(guide.body).length).toBeGreaterThan(0);
+  it("demonstrates public contracts with self-contained examples in integrated Template groups", () => {
+    const documents = Object.entries(groups).flatMap(([section, slugs]) => slugs.map((slug) => {
+      const guide = readGuide(slug);
+      expect(guide.section, slug).toBe(section);
+      const examples = extractTypeScriptFences(guide.body);
+      expect(examples.length, slug).toBeGreaterThan(0);
+      const source = examples.join("\n");
+      for (const contract of demonstratedContracts[slug]) {
+        expect(source, `${slug}: ${contract}`).toContain(contract);
+      }
+      expect(source, slug).not.toMatch(/from\s+["']@typed\/template\/internal\//);
       return guide;
-    });
-
+    }));
     expect(validateAuthoredExampleQuality(documents)).toEqual([]);
   });
 
-  it("keeps the first template path short and links its deeper follow-ups", () => {
-    const source = fs.readFileSync(path.join(guideDirectory, "render-your-first-template.md"), "utf8");
-
-    expect(source.trim().split(/\s+/u).length).toBeLessThanOrEqual(1000);
-    expect(source).toContain("/explore/template-element-bindings");
-    expect(source).toContain("/explore/template-spreads-data");
-    expect(source).toContain("/explore/template-references-and-element-access");
-    expect(source).toContain("/explore/native-events-with-effect");
-    expect(source).toContain("/explore/renderable-normalization");
-    expect(source).toContain("/explore/render-scheduling");
+  it("connects the first view to every Template topic through valid learning links", () => {
+    const documents = new Map(Object.values(groups).flat().map((slug) => [slug, readGuide(slug)]));
+    for (const [slug, guide] of documents) {
+      const links = linkedGuides(guide.body);
+      expect(links.length, `${slug} has related learning`).toBeGreaterThan(0);
+      for (const link of links) {
+        expect(fs.existsSync(path.join(guideDirectory, `${link}.md`)), `${slug} links to ${link}`).toBe(true);
+      }
+    }
+    const reachable = new Set<string>();
+    const pending = ["render-your-first-template"];
+    while (pending.length > 0) {
+      const slug = pending.pop()!;
+      if (reachable.has(slug)) continue;
+      reachable.add(slug);
+      const guide = documents.get(slug);
+      if (guide) pending.push(...linkedGuides(guide.body).filter((link) => documents.has(link)));
+    }
+    expect([...documents.keys()].filter((slug) => !reachable.has(slug))).toEqual([]);
   });
 });

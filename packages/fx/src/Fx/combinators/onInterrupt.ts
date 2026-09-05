@@ -68,7 +68,7 @@ const toFinalizer =
  * ```
  *
  * @since 1.0.0
- * @category combinators
+ * @category Resource lifetime
  */
 export const onInterrupt: {
   <XE, XR>(

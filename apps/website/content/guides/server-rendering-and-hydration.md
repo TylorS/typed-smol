@@ -1,66 +1,68 @@
 ---
 title: "Server rendering and hydration"
 summary: "Send buffered or streamed Typed HTML from Effect HTTP, then adopt that same inner template in the browser."
-section: "Applications"
+section: "Template rendering"
 kind: "guide"
-order: 8
+order: 4
 ---
 
-An interactive server-rendered page has three cooperating owners: the server prepares response data,
-the HTML renderer serializes a finite view, and the browser adopts that view and starts its live
-subscriptions. Sharing the template is necessary; sharing the initial state and the exact mount
-boundary is equally important.
+Sending an interactive saved-article page involves three owners. A request prepares initial data,
+the HTML renderer serializes a finite view, and the browser starts a new live run that adopts the
+existing output. The runs share a program and serialized state; they do not share an in-memory
+subject or a long-lived server component instance.
 
-## Make the inner application a reusable program
+This article joins [HTML serialization](/explore/rendering-html-on-the-server) with
+[DOM mounting](/explore/mounting-dom-output). Use those guides for the individual APIs and
+[Hydrating Typed HTML](/explore/hydrating-typed-html) for detailed mismatch diagnosis.
 
-The server and browser should import the same application factory. Its state is created each time
-it runs. A hydration ref lets the server's chosen initial value travel on the element that owns it.
+## Make the handoff explicit in the shared view
+
+Start with a saved-result counter whose state is visible before and after client startup:
 
 ```ts
-import { Fx, RefSubject } from "@typed/fx";
-import { html } from "@typed/template";
 import { Schema } from "effect";
+import { RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
+import { html } from "@typed/template";
 
-export const Counter = Fx.genScoped(function* () {
+export const SavedCount = component(function* () {
   const count = yield* RefSubject.hydrate(Schema.Finite, 12);
-  return html`<button ref=${count} onclick=${RefSubject.increment(count)}>
-    Count: ${count}
+  return html`<button type="button" ref=${count} onclick=${RefSubject.increment(count)}>
+    Saved articles: ${count}
   </button>`;
 });
 ```
 
-On the server, the HTML renderer serializes the initial count and its hydration envelope. On the
-client, the ref restores that serialized value before the reactive text part starts. The button's
-click handler runs only in the browser. The state remains a RefSubject; hydration is the handoff
-protocol, not a separate state store.
+The generator creates state per run. On the server, the hydration ref encodes the chosen value on
+its button host. In the browser, that ref restores the encoded value before the text subscription
+starts. The click handler is installed only in the browser.
 
-In an application, obtain request data through an Effect service inside this setup. Keep the
-service implementation request-scoped so concurrent requests cannot share a mutable user's state.
-A browser may provide a different implementation, but its initial state must agree with the
-serialized page or be restored from it.
+The number is a deliberately small stand-in for request data. In a real collection page, obtain
+authorized initial data through a request-provided Effect service. Keep each request's mutable state
+inside that request; a module-level RefSubject would combine otherwise independent users' lifetimes.
 
-## Put the inner view inside a stable document shell
+## Put the shared view inside a server-owned shell
 
-The server owns the full response document. The browser owns the contents of one dedicated host.
-This complete example puts hydration markers inside that host, where parsing a full HTML document
-will retain the inner boundary.
+The following self-contained server example repeats `SavedCount`; production entries should import
+one shared implementation so its authored template cannot drift:
 
 ```ts
-import { Fx, RefSubject } from "@typed/fx";
-import { html, HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 import { Effect, Schema } from "effect";
+import { RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
+import { html, HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
 
-const Counter = Fx.genScoped(function* () {
+const SavedCount = component(function* () {
   const count = yield* RefSubject.hydrate(Schema.Finite, 12);
-  return html`<button ref=${count} onclick=${RefSubject.increment(count)}>
-    Count: ${count}
+  return html`<button type="button" ref=${count} onclick=${RefSubject.increment(count)}>
+    Saved articles: ${count}
   </button>`;
 });
 
 const documentPage = html`<!doctype html><html lang="en">
-  <head><title>Server-rendered counter</title></head>
+  <head><title>Saved articles</title></head>
   <body>
-    <div id="app">${Counter}</div>
+    <div id="app">${SavedCount}</div>
     <script type="module" src="/client.js"></script>
   </body>
 </html>`;
@@ -72,77 +74,71 @@ export const responseBody = documentPage.pipe(
 );
 ```
 
-Use the same `Counter` export in both entry points in a real project; it is repeated here so each
-example is self-contained. Give the host ordinary layout styling, or `display: contents` when the
-extra layout box is inappropriate. The shell's script URL and asset delivery belong to the
-application's build and server configuration.
+The inner template's markers remain below `#app` after document parsing. The response adapter owns
+status, content type, encoding, and asset URLs. This Effect only serializes the body.
 
-## Start the browser at the inner host
+Choose `HtmlRenderTemplate` for interactive adoption. Choosing `StaticHtmlRenderTemplate` would
+produce intentionally static markup and omit the handoff metadata, even though the visible text
+could look identical.
+
+## Start a separate browser run at the inner boundary
 
 ```ts
-import { Fx, RefSubject } from "@typed/fx";
-import { DomRenderTemplate, html, render } from "@typed/template";
 import { Effect, Fiber, Schema } from "effect";
+import { Fx, RefSubject } from "@typed/fx";
+import { component } from "@typed/ui/Component";
+import { DomRenderTemplate, html, render } from "@typed/template";
 
-const Counter = Fx.genScoped(function* () {
+const SavedCount = component(function* () {
   const count = yield* RefSubject.hydrate(Schema.Finite, 12);
-  return html`<button ref=${count} onclick=${RefSubject.increment(count)}>
-    Count: ${count}
+  return html`<button type="button" ref=${count} onclick=${RefSubject.increment(count)}>
+    Saved articles: ${count}
   </button>`;
 });
 
 const host = document.getElementById("app");
 if (host === null) throw new Error("Missing #app host");
-
-const application = Counter.pipe(
+const application = SavedCount.pipe(
   render(host),
   Fx.drain,
   Effect.provide(DomRenderTemplate.using(host.ownerDocument)),
   Effect.scoped,
 );
-
 const fiber = Effect.runFork(application);
 export const stop = () => Effect.runPromise(Fiber.interrupt(fiber));
 ```
 
-`render` derives the hydration context from this host. It adopts matching template markers and
-installs the button's DOM parts and listener on the existing node. Passing `documentPage` instead
-would request the wrong shape below the host. Clearing `host.innerHTML` before mounting would
-remove the very nodes and markers hydration needs.
+The client renders `SavedCount`, not `documentPage`, because its host already sits inside the
+server-owned document. `render` builds the hydration context from that host and connects the matching
+button. Do not clear the host first or insert unrelated owned widgets among its replaceable children.
 
-The root is still a mount slot: rendering fresh output can replace its children. Put unrelated
-widgets beside it, or inside a separately owned child host, rather than relying on hydration to
-protect arbitrary root siblings.
+After restoration, clicking increments the browser's subject from the serialized value. The server
+run has already finished. A later save service belongs to the live browser application, not to the
+response that created the HTML.
 
-## Choose the response transport independently
+## Keep transport timing separate from adoption
 
-`renderToHtmlString` buffers a full body before it succeeds. `renderToHtml` exposes ordered strings
-that a streaming transport can send as they arrive. Both preserve typed render failures and service
-requirements, but a failure after streaming headers cannot change the already-sent response status.
-Request cancellation must close the response's render work.
+`renderToHtmlString` buffers the body. `renderToHtml` exposes ordered strings for an incremental
+transport. Both can carry the same hydratable markup, but a streamed response cannot change already
+sent headers after a later failure. Resolve expected request errors before committing a successful
+response, and let cancellation close the response's rendering work.
 
-For a Typed route matcher, `ssrForHttp` and `streamingSsrForHttp` from `@typed/ui/HttpRouter` register
-buffered and streamed GET responses on Effect's HttpRouter. They sit above this same renderer
-boundary. See [Integrating Matcher with Effect HTTP](/explore/integrating-matcher-with-effect-http)
-for route registration and [HTML output](/integrate/html-output) for a renderer adapter without a
-matcher. Use `StaticHtmlRenderTemplate` only when the destination will not hydrate.
+A Typed route matcher can use `ssrForHttp` or `streamingSsrForHttp` from `@typed/ui/HttpRouter` above
+this boundary. [Integrating Matcher with Effect HTTP](/explore/integrating-matcher-with-effect-http)
+covers route registration. These helpers do not change the inner-host or initial-state agreement.
 
-## Verify adoption and interaction separately
+## Prove all three handoffs
 
-A successful HTML response proves serialization; matching final text in a browser does not prove
-hydration. A fresh render can produce the same text. Capture the server button before starting the
-client, wait for the client to attach, and assert the button is the same object. Then click it and
-assert that its count changes from the serialized initial value. Finally interrupt the client and
-assert later clicks no longer update state.
+First assert the response contains the intended encoded state and finite HTML. Then retain its
+button object before starting the browser and assert that startup keeps it. Finally click the
+button and verify the count changes from the server value; after interruption, verify further
+clicks no longer run the handler.
 
-Add native-state assertions when they matter: an edited input's value, selection, focus, a custom
-element's connection lifecycle, or a reordered keyed child's identity. Preserving a node is not a
-promise that an explicitly controlled property will retain a user's pre-hydration write; its
-reactive part remains the writer for that field.
+Those checks distinguish serialization, adoption, and live lifetime. Matching final text alone
+can hide a fresh replacement. For an editable control, add the chosen early-edit policy: retained
+identity does not prevent a `.value` binding from overwriting a pre-startup edit. For lists, also
+assert retained keyed item identity after a reorder.
 
-If markers are missing, template hashes differ, or an adopted range cannot be wired, the renderer
-can rebuild that range. The page may look correct while losing its original node identity. Treat
-that as an integration failure to investigate, not evidence that hydration worked. Follow
-[Hydrating Typed HTML](/explore/hydrating-typed-html) for a focused diagnosis, and
-[Hydrated template state](/explore/refsubject-template-hydration) for schema and state-envelope
-failures.
+If one check fails, follow its owner: response data/encoding, host and marker compatibility, or the
+browser's subscriptions and events. A single label such as "SSR works" is too broad to locate the
+failure or establish that this handoff is correct.

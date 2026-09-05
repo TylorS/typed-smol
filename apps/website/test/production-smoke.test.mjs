@@ -29,6 +29,18 @@ test(
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto(`${origin}${base}/`);
     assert.match(await page.title(), /Typed/);
+    const logo = page.locator(".brand-animated .typewriter");
+    assert.match(
+      await logo.evaluate((node) => getComputedStyle(node, "::after").animationName),
+      /logo-typing/,
+    );
+    assert.equal(await page.locator("footer .brand .typewriter").count(), 0);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    assert.equal(
+      await logo.evaluate((node) => getComputedStyle(node, "::after").animationName),
+      "none",
+    );
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.waitForFunction(() =>
       [...document.querySelectorAll("astro-island")].every((island) => !island.hasAttribute("ssr")),
     );
@@ -52,8 +64,7 @@ test(
     assert.equal(await page.locator("html").getAttribute("data-theme"), "matrix-light");
     await page.getByRole("button", { name: /Search docs/ }).click();
     await page.getByRole("dialog").waitFor({ state: "visible" });
-    assert.equal(await page.getByRole("dialog").getAttribute("aria-label"), null);
-    assert.equal(await page.getByRole("dialog").getAttribute("aria-describedby"), null);
+    assert.ok(await page.getByRole("dialog", { name: /Search/ }).isVisible());
     await page.getByRole("searchbox").fill("RefSubject");
     await page.getByRole("dialog").getByRole("link").first().waitFor();
     const result = await page.getByRole("dialog").getByRole("link").first().getAttribute("href");
@@ -75,17 +86,64 @@ test(
     ]) {
       const response = await page.goto(`${origin}${base}/${route}`);
       assert.equal(response.status(), 200, route);
-      assert.equal(await page.locator("main h1").count(), 1, route);
-      assert.ok((await page.locator("main").innerText()).length > 100, route);
+      assert.equal(await page.locator("main .page-title").count(), 1, route);
+      assert.ok((await page.locator("#main-content").innerText()).length > 100, route);
     }
     await page.goto(`${origin}${base}/explore/tutorial/`);
-    await page.getByPlaceholder("What needs to be done?").fill("Verify the Astro build");
+    await page.getByPlaceholder("What needs to be done?").fill("Verify the built tutorial");
     await page.getByPlaceholder("What needs to be done?").press("Enter");
     await page.waitForFunction(() =>
-      [...document.querySelectorAll(".todo-demo__edit")].some(
-        (input) => input.value === "Verify the Astro build",
+      [...document.querySelectorAll(".todo-list .view label")].some(
+        (label) => label.textContent === "Verify the built tutorial",
       ),
     );
+    for (const [route, id, initial, increase] of [
+      ["quick-start", "counter-reactive", "0", "+"],
+      ["counter/component-lifetime", "counter-component", "0", "Increase"],
+      ["counter/hydrate-state", "counter-hydrated", "7", "Increase"],
+    ]) {
+      const response = await page.goto(`${origin}${base}/explore/${route}/`);
+      assert.equal(response.status(), 200, route);
+      assert.equal(await page.locator("[data-demo]").count(), 1, `${route}: one focused example`);
+      const demo = page.locator(`[data-demo="${id}"]`);
+      await demo.scrollIntoViewIfNeeded();
+      await page.waitForFunction(
+        (id) =>
+          !document
+            .querySelector(`[data-demo="${id}"]`)
+            ?.closest("astro-island")
+            ?.hasAttribute("ssr"),
+        id,
+      );
+      assert.equal(await demo.locator("output").textContent(), initial);
+      const code = await page.locator("article pre code").allTextContents();
+      assert.ok(
+        code.some(
+          (source) =>
+            source.includes(`>${increase}</button>`) || source.includes(`\n        ${increase}\n`),
+        ),
+        `${id}: displayed source must contain the live button label`,
+      );
+      if (route === "quick-start") {
+        assert.ok(
+          code.every(
+            (source) =>
+              !source.includes("RefSubject.hydrate") && !source.includes("renderToHtmlString"),
+          ),
+          "Quick Start contains only the first working counter",
+        );
+        assert.equal(
+          await page.locator("#server-html > a").first().getAttribute("href"),
+          `${base}/explore/counter/server-html/`,
+        );
+      }
+      await demo.getByRole("button", { name: increase, exact: true }).click();
+      await page.waitForFunction(
+        ({ id, expected }) =>
+          document.querySelector(`[data-demo="${id}"] output`)?.textContent === expected,
+        { id, expected: String(Number(initial) + 1) },
+      );
+    }
     for (const scheme of ["dark", "light"]) {
       const mobile = await browser.newPage({
         viewport: { width: 390, height: 844 },

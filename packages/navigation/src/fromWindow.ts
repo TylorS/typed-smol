@@ -124,7 +124,7 @@ const navigationId = uuid7.pipe(Effect.mapError((error) => new NavigationError({
  * `@typed/navigation/memory` and must not evaluate the default `globalThis.window` argument.
  *
  * @since 1.0.0
- * @category layers
+ * @category Browser history provider
  */
 export const fromWindow = (window: Window = globalThis.window) =>
   Layer.effect(Navigation)(

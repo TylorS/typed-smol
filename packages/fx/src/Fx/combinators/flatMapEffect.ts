@@ -20,7 +20,7 @@ import { flatMap } from "./flatMap.js";
  * The type acquires no resources. Implementations adapt each Effect to a
  * one-value Fx whose execution is owned by the returned Fx's required `Scope`.
  * @since 1.0.0
- * @category types
+ * @category Type contracts
  */
 export type FlatMapEffectLike<Args extends ReadonlyArray<any> = []> = {
   <A, B, E2, R2>(
@@ -73,7 +73,7 @@ export type FlatMapEffectLike<Args extends ReadonlyArray<any> = []> = {
  * @param f - A function that maps an element `A` to an `Effect<B>`.
  * @returns An `Fx` that emits the results of the effects.
  * @since 1.0.0
- * @category combinators
+ * @category Concurrent work
  */
 export const flatMapEffect: FlatMapEffectLike = dual(
   2,
