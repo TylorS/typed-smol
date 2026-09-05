@@ -1,5 +1,5 @@
 import { dual } from "effect/Function";
-import { Fx } from "../Fx.js";
+import type { Fx } from "../Fx.js";
 import { Duration, Effect } from "effect";
 import { mapEffect } from "./mapEffect.js";
 

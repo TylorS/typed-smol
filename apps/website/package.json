@@ -15,7 +15,7 @@
     "test": "pnpm test:production",
     "test:docs": "pnpm docs:dependencies && vitest run --config vitest.config.ts src/docs/__tests__ src/site/__tests__",
     "test:production": "pnpm build && pnpm test:static",
-    "typecheck": "astro check",
+    "typecheck": "astro sync && tsc --noEmit && astro check",
     "dev": "pnpm docs:generate && pnpm build:storybook && astro sync --force && astro dev",
     "preview": "astro preview",
     "test:static": "node --test test/production-smoke.test.mjs test/static-links.test.mjs test/reference-layout.test.mjs test/marble-playback.test.mjs test/storybook-embed.test.mjs test/search-experience.test.mjs test/page-layouts.test.mjs",

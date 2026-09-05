@@ -82,7 +82,7 @@ const genericGreeting = GenericGreeting({ content: genericContent });
 
 type _GenericComponentSuccess = Assert<Equal<Fx.Success<typeof genericGreeting>, string>>;
 type _GenericComponentErrors = Assert<Equal<Fx.Error<typeof genericGreeting>, "generic-error">>;
-type _GenericComponentServices = Assert<Equal<Fx.Services<typeof genericGreeting>, ContentService>>;
+type _GenericComponentServices = Assert<Equal<Fx.Services<typeof genericGreeting>, ContentService | Scope.Scope>>;
 
 const PipedGreeting = component(
   // oxlint-disable-next-line require-yield
@@ -102,3 +102,6 @@ type _PipedComponentSuccess = Assert<
 
 // @ts-expect-error piped components retain the generator parameter types
 PipedGreeting("Hi", 1);
+
+type _ScalarPipelineRequiresParentScope = Assert<Equal<Fx.Services<typeof PipedStaticGreeting>, Scope.Scope>>;
+type _ParameterizedPipelineRequiresParentScope = Assert<Equal<Fx.Services<typeof pipedGreeting>, Scope.Scope>>;

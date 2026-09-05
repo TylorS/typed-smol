@@ -1,5 +1,5 @@
 import { Duration, Effect, Scope } from "effect";
-import { Fx } from "../Fx.js";
+import type { Fx } from "../Fx.js";
 import { switchMap } from "./switchMap.js";
 import { make } from "../constructors/make.js";
 import { dual } from "effect/Function";

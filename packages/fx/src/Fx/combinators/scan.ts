@@ -3,7 +3,7 @@ import { dual, pipe } from "effect/Function";
 import { loop as sinkLoop, loopEffect as sinkLoopEffect } from "../../Sink/combinators.js";
 import { make } from "../constructors/make.js";
 import type { Fx } from "../Fx.js";
-import { Sink } from "../../Sink.js";
+import type { Sink } from "../../Sink.js";
 
 /**
  * Scans the stream with a pure function, emitting the accumulated state after each element.

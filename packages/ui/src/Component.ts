@@ -1,4 +1,5 @@
-import type * as Effect from "effect/Effect";
+import * as Effect from "effect/Effect";
+import * as Scope from "effect/Scope";
 import { Fx } from "@typed/fx";
 import { liftRenderableToFx, type Renderable } from "@typed/template";
 
@@ -6,7 +7,7 @@ type ComponentFx<Yield extends Effect.Effect<any, any, any>, Result extends Rend
   Fx.Fx<
     Renderable.Success<Result>,
     Effect.Error<Yield> | Renderable.Error<Result>,
-    Effect.Services<Yield> | Renderable.Services<Result>
+    Effect.Services<Yield> | Renderable.Services<Result> | Scope.Scope
   >,
 ] extends [Fx.Fx<infer Success, infer Error, infer Services>]
   ? Fx.Fx<Success, Error, Services>
@@ -297,10 +298,12 @@ export namespace component {
  *
  * ## Ownership and lifetime
  *
- * Construction is lazy. Each run evaluates the generator inside the running
- * Fx's Effect lifetime; interruption and Scope finalization release everything
- * acquired by yielded effects and by the returned renderable. The constructor
- * does not own DOM outside the render events emitted by that renderable.
+ * Construction is lazy. Each run forks the required parent Scope and provides
+ * that child to both yielded effects and the lifted returned renderable. The
+ * child stays open throughout subscription and closes on completion, failure,
+ * or interruption; closing the parent also closes every child. Sibling runs
+ * therefore own separate resources. Even a scalar component requires Scope.
+ * The constructor does not own DOM outside its returned renderable.
  *
  * ## Composition
  *
@@ -330,10 +333,7 @@ export const component: component.Gen = function (
   ...pipeables: ReadonlyArray<Function>
 ): any {
   if (body.length === 0) {
-    let result: any = Fx.gen(function* () {
-      const renderable = yield* body();
-      return liftRenderableToFx(renderable);
-    });
+    let result: any = instance(() => body());
 
     for (const pipeable of pipeables) {
       result = pipeable(result);
@@ -344,9 +344,21 @@ export const component: component.Gen = function (
 
   return (Fx.fn as (...args: ReadonlyArray<any>) => any)(
     function* (...args: ReadonlyArray<any>) {
-      const renderable = yield* body(...args);
-      return liftRenderableToFx(renderable);
+      return instance(() => body(...args));
     },
     ...pipeables,
   );
 };
+
+function instance(
+  body: () => Generator<Effect.Effect<any, any, any>, Renderable.Any, any>,
+): Fx.Fx<any, any, any> {
+  return Fx.make(sink => Effect.flatMap(Scope.Scope, parent => Effect.acquireUseRelease(
+    Scope.fork(parent),
+    child => Scope.provide(Fx.gen(function* () {
+      const renderable = yield* body();
+      return liftRenderableToFx(renderable);
+    }).run(sink), child),
+    (child, exit) => Scope.close(child, exit),
+  )));
+}

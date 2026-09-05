@@ -5,7 +5,7 @@ import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import { make as makeSink } from "../../Sink/Sink.js";
 import { make } from "../constructors/make.js";
-import { Fx } from "../Fx.js";
+import type { Fx } from "../Fx.js";
 import { isFx } from "../TypeId.js";
 import { exhaustMap } from "./exhaustMap.js";
 import { extendScope } from "../internal/scope.js";
