@@ -15,7 +15,7 @@ test("reference names wrap and the selected module is visible without scrolling 
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage();
-  for (const width of [360, 390, 1440]) {
+  for (const width of [320, 360, 390, 1440]) {
     await page.setViewportSize({ width, height: 950 });
     for (const route of [
       "/reference/modules/@typed/template/Renderable/",
@@ -35,7 +35,7 @@ test("reference names wrap and the selected module is visible without scrolling 
             (bounds.height > 0 && bounds.top >= 0 && bounds.bottom <= innerHeight),
         };
       });
-      assert.ok(state.width <= width + 1, `${route} overflows ${width}px`);
+      assert.ok(state.width <= width + 1, `${route} overflows ${width}px (document: ${state.width}px)`);
       assert.equal(state.main, "MAIN");
       assert.equal(state.pageY, 0, "revealing a module must not move the document");
       assert.ok(state.visible, `${route} selected module is outside the viewport`);

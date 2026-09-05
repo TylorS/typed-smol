@@ -65,7 +65,11 @@ test(
         path: process.env.MARBLE_SCREENSHOT.replace("-mobile", "-desktop"),
       });
     // Browser clock makes a half-tick boundary deterministic; RAF remains the real implementation.
-    await page.clock.install();
+    const clockStart = new Date("2026-01-01T00:00:00Z");
+    await page.clock.install({ time: clockStart });
+    // install() still lets wall time advance between commands. Freeze it before
+    // measuring speed so a busy CI runner cannot add time to runFor().
+    await page.clock.pauseAt(new Date(clockStart.getTime() + 60_000));
     await figure.getByRole("button", { name: "Play", exact: true }).click();
     await page.clock.runFor(1000);
     const halfway = await figure.evaluate((node) =>
