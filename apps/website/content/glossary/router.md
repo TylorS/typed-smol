@@ -1,7 +1,7 @@
 ---
 id: router
 term: "Router"
-definition: "The navigation service layer that supplies current route context and route-selection lifetime."
+definition: "The CurrentRoute and Navigation requirements used by reactive route selection."
 aliases: []
 related: [route, matcher, scope]
 links: []

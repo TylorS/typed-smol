@@ -111,7 +111,7 @@ import { Effect } from "effect";
 import { html } from "@typed/template";
 import * as Button from "@typed/ui/Button";
 
-const reportActions = (refresh: Effect.Effect<void>) => html`
+const reportActions = <E, R>(refresh: Effect.Effect<void, E, R>) => html`
   <nav aria-label="Report navigation"><a href="/reports">All reports</a></nav>
   ${Button.Button({ content: "Refresh report", onclick: refresh })}
 `;

@@ -17,8 +17,8 @@ import { html } from "@typed/template";
 import { component } from "@typed/ui/Component";
 import * as Hovercard from "@typed/ui/Hovercard";
 
-const AuthorPreview = component(function* () {
-  const state = yield* Hovercard.makeState({ id: "author-preview-ada" });
+const AuthorPreview = component(function* (id: string) {
+  const state = yield* Hovercard.makeState({ id });
   return [
     Hovercard.Anchor(
       { state, content: "Ada Lovelace", showDelay: 150, hideDelay: 150 },
@@ -26,9 +26,9 @@ const AuthorPreview = component(function* () {
     ),
     Hovercard.Content({
       state,
-      labelledBy: "ada-preview-heading",
+      labelledBy: `${id}-title`,
       content: html`
-        <h2 id="ada-preview-heading">Ada Lovelace</h2>
+        <h2 id=${`${id}-title`}>Ada Lovelace</h2>
         <p>Author of notes on computation and analytical machines.</p>
         <a href="/authors/ada">Read the full profile</a>
       `,
@@ -37,7 +37,7 @@ const AuthorPreview = component(function* () {
 });
 ```
 
-The anchor itself stays a usable link. Its direct focus listeners now run on the focusable host; placing a link inside the default span would not deliver non-bubbling focus to that span. A stable state ID links `aria-controls` to the content. `label` and `labelledBy` are mutually exclusive; the example chooses a visible heading.
+The anchor itself stays a usable link. Its direct focus listeners now run on the focusable host; placing a link inside the default span would not deliver non-bubbling focus to that span. Pass a stable, page-unique instance ID. That state ID links `aria-controls` to the content. `label` and `labelledBy` are mutually exclusive; the example chooses a visible heading.
 
 ## Trace transfer rather than just opening
 

@@ -18,50 +18,47 @@ within a workspace. The model stays the same when a test or production host repl
 
 ## Decode the response at the request boundary
 
-The API module distinguishes transport failure, an unsuccessful HTTP response, and invalid JSON
-shape. Each is an expected request failure. The caller retains the complete Cause when converting
-an Exit to AsyncData. Passing Effect's AbortSignal to `fetch` connects cancellation to the browser
-request instead of merely ignoring its Promise.
+Effect's HTTP client owns transport, response status checks, and cancellation. Schema decoding
+validates the body before the model can publish it. The application asks for an `IssueSearch`
+service, so replacing HTTP with a controlled test implementation does not change the model.
 
 ```ts file="Api.ts"
 import { Context, Data, Effect, Layer, Schema } from "effect"
+import { FetchHttpClient, HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http"
 
 export const Issue = Schema.Struct({ id: Schema.String, title: Schema.String })
 export type Issue = typeof Issue.Type
 const SearchResponse = Schema.Struct({ items: Schema.Array(Issue) })
 
-export class TransportFailed extends Data.TaggedError("TransportFailed")<{ readonly cause: unknown }> {}
-export class HttpFailed extends Data.TaggedError("HttpFailed")<{ readonly status: number }> {}
-export type SearchError = TransportFailed | HttpFailed | Schema.SchemaError
+export class SearchUnavailable extends Data.TaggedError("SearchUnavailable")<{}> {}
+export type SearchError = HttpClientError.HttpClientError | Schema.SchemaError | SearchUnavailable
 export type SearchInput = { readonly workspaceId: string; readonly query: string }
 
 export class IssueSearch extends Context.Service<IssueSearch, {
   readonly run: (input: SearchInput) => Effect.Effect<ReadonlyArray<Issue>, SearchError>
 }>()("issues/IssueSearch") {}
 
-const request = Effect.fn("IssueSearch.request")(function* (input: SearchInput) {
-  const query = new URLSearchParams({ workspace: input.workspaceId, q: input.query })
-  const response = yield* Effect.tryPromise({
-    // Interrupting the Effect should abort the HTTP request, not just ignore its result.
-    try: (signal) => fetch(`/api/issues?${query}`, { signal }),
-    catch: (cause) => new TransportFailed({ cause }),
-  })
-  if (!response.ok) return yield* Effect.fail(new HttpFailed({ status: response.status }))
-  const json = yield* Effect.tryPromise({
-    try: () => response.json() as Promise<unknown>,
-    catch: (cause) => new TransportFailed({ cause }),
-  })
-  // Validate untrusted JSON before any model or view can consume it.
-  const decoded = yield* Schema.decodeUnknownEffect(SearchResponse)(json)
-  return decoded.items
-})
-
-export const IssueSearchLive = Layer.succeed(IssueSearch, { run: request })
+export const IssueSearchLive = (origin: string) => Layer.effect(IssueSearch, Effect.gen(function* () {
+  const client = HttpClient.filterStatusOk(yield* HttpClient.HttpClient)
+  const url = new URL("/api/issues", origin).href
+  return {
+    run: Effect.fn("IssueSearch.request")(function* (input: SearchInput) {
+      const response = yield* client.get(url, {
+        urlParams: { workspace: input.workspaceId, q: input.query },
+      })
+      // Read and validate the response through the same interruptible HTTP workflow.
+      const decoded = yield* HttpClientResponse.schemaBodyJson(SearchResponse)(response)
+      return decoded.items
+    }),
+  }
+})).pipe(Layer.provide(FetchHttpClient.layer))
 ```
 
-Decode before publishing. A TypeScript assertion on `response.json()` would give the rest of the
-application an unverified promise about its shape. The assertion here only narrows the Promise to
-`unknown`; the Schema performs the actual validation.
+`filterStatusOk` rejects non-2xx responses. Transport and response failures retain Effect's HTTP
+error structure; invalid response data retains its Schema error. `FetchHttpClient` connects
+interruption to the browser request. Supply the API origin at the application boundary, keeping
+browser globals out of the service module. `SearchUnavailable` below represents a simulated outage
+in the development service.
 
 ## Preview the behavior before connecting a backend
 
@@ -72,7 +69,7 @@ request is pending to exercise replacement. The attempt counter belongs to this 
 
 ```ts file="Development.ts"
 import { Effect, Layer } from "effect"
-import { HttpFailed, IssueSearch, type SearchInput } from "./Api.js"
+import { SearchUnavailable, IssueSearch, type SearchInput } from "./Api.js"
 
 export const IssueSearchDevelopment = Layer.effect(IssueSearch, Effect.sync(() => {
   const attempts = new Map<string, number>()
@@ -82,7 +79,7 @@ export const IssueSearchDevelopment = Layer.effect(IssueSearch, Effect.sync(() =
     attempts.set(key, attempt)
     yield* Effect.sleep("700 millis")
     if (input.query === "retry" && attempt === 1) {
-      return yield* Effect.fail(new HttpFailed({ status: 503 }))
+      return yield* Effect.fail(new SearchUnavailable())
     }
     return [{ id: "42", title: `${input.workspaceId}: ${input.query} (response ${attempt})` }]
   })
@@ -229,9 +226,8 @@ not an unsent draft.
 ## Mount once under an owner that stays alive
 
 This browser entry point expects `<main id="app"></main>`. Its scoped fiber owns the model, the
-request observer, and rendering. Interrupt it when the application host removes this feature. In an
-Astro island or another managed integration, use that host's lifetime instead of creating another
-root fiber.
+request observer, and rendering. Interrupt it when the application host removes this feature. In a managed
+integration, use that host's lifetime instead of creating another root fiber.
 
 ```ts file="main.ts"
 import { Effect, Fiber } from "effect"
@@ -255,7 +251,8 @@ const fiber = Effect.runFork(mount(root).pipe(
 export const stop = () => Effect.runPromise(Fiber.interrupt(fiber))
 ```
 
-Replace `IssueSearchDevelopment` with `IssueSearchLive` from `Api.ts` when the endpoint is ready.
+When the endpoint is ready, import `IssueSearchLive` from `Api.ts` and replace
+`Effect.provide(IssueSearchDevelopment)` with `Effect.provide(IssueSearchLive(window.location.origin))`.
 
 ## Prove replacement without sleeping
 

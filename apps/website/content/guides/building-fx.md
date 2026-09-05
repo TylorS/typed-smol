@@ -54,49 +54,33 @@ iterator inside [lazy setup](/explore/fx-dynamic-producers).
 
 ## Make a cancelable one-shot request
 
-A network read is an Effect because it can fail and requires configuration. Lifting it should
-preserve both facts:
+Use Effect's HTTP client for requests. Its service selects the transport, and its typed errors
+preserve request, status, and response-body failures:
 
 ```ts
-import { Context, Data, Effect, Layer } from "effect";
+import { Effect } from "effect";
+import { FetchHttpClient, HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
 import { Fx } from "@typed/fx";
 
-class RequestFailed extends Data.TaggedError("RequestFailed")<{
-  readonly cause: unknown;
-}> {}
+const request = HttpClient.get("https://example.com/api/status").pipe(
+  // HTTP error statuses become typed failures before reading the body.
+  Effect.flatMap(HttpClientResponse.filterStatusOk),
+  Effect.flatMap((response) => response.text),
+);
 
-interface ApiConfig {
-  readonly endpoint: string;
-}
+const response: Fx.Fx<string, HttpClientError.HttpClientError, HttpClient.HttpClient> =
+  Fx.fromEffect(request);
 
-const ApiConfig = Context.Service<ApiConfig>("docs/ApiConfig");
-
-const request = Effect.gen(function* () {
-  const config = yield* ApiConfig;
-  return yield* Effect.tryPromise({
-    try: (signal) => fetch(config.endpoint, { signal }).then((response) => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.text();
-    }),
-    catch: (cause) => new RequestFailed({ cause }),
-  });
-});
-
-const response: Fx.Fx<string, RequestFailed, ApiConfig> = Fx.fromEffect(request);
-const ApiConfigLive = Layer.succeed(ApiConfig)({ endpoint: "/api/status" });
-const program = Fx.first(response).pipe(Effect.provide(ApiConfigLive));
+const program = Fx.first(response).pipe(Effect.provide(FetchHttpClient.layer));
 ```
 
-The `ApiConfig` requirement remains until the application provides its Layer. The returned Fx emits
-one successful response or reports `RequestFailed`; a failed request is not an empty successful
-source. `Fx.first` stops after the first value and returns an Option, so callers still distinguish
-absence from failure.
+`FetchHttpClient.layer` provides the browser transport and connects Effect interruption to request
+cancellation. The HTTP client requirement remains until that Layer is provided; errors remain in
+the Effect's failure channel. `Fx.first` returns an Option, so successful absence and failure stay
+distinct. For an application service, provide the client once at its Layer boundary.
 
-The request passes Effect's cancellation signal to `fetch`. Without that bridge, interrupting local
-observation would not cancel the underlying request. It also checks `response.ok`: the
-[fetch contract](https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch) resolves HTTP error
-responses normally, so status validation belongs in the adapter. `Fx.fail` constructs an expected
-failure directly; use `Fx.die` only for an unexpected invariant violation.
+`Fx.fail` constructs an expected failure directly; use `Fx.die` only for an unexpected invariant
+violation. Use `Effect.tryPromise` when adapting a Promise API without an existing Effect service.
 
 ## Reuse an existing Stream or Effect clock
 

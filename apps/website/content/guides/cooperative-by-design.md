@@ -119,10 +119,12 @@ Clearing the input also reaches the switch, cancelling the previous search and p
 empty result. Filtering empty queries out earlier would leave that previous search running.
 The returned Fx retains the search implementation's errors and service requirements.
 
-Cancellation has to reach the resource doing the work. An HTTP adapter can pass the AbortSignal
-provided by `Effect.tryPromise` into `fetch`. Interrupting a wrapper around an unrelated Promise
-does not make the external operation cancellable. And cancelling a client request cannot undo
-a write the server has already accepted.
+Cancellation has to reach the resource doing the work. Use Effect's `HttpClient` service for HTTP:
+its implementations connect interruption to the underlying request, while the application composes
+status handling and Schema decoding. The [HTTP recipe](/integrate/fetch-schema) shows that boundary.
+For a foreign Promise API, pass the AbortSignal from `Effect.tryPromise` to the operation when it
+supports cancellation. Interrupting a wrapper cannot cancel unrelated work or undo a write the
+server has already accepted.
 
 That is why a save operation may need a different policy. [`concatMap`](/explore/fx-higher-order-and-concurrency)
 can finish work in order; `exhaustMap` can ignore repeated activation while current work runs;
@@ -172,9 +174,10 @@ This example owns a local field and its hint; it does not issue a request yet. C
 `SearchField("issue-query")` with an ID unique in the document. The label and description use
 that ID to identify their input, including for assistive technology.
 
-`component` connects the generator's Effectful setup to its returned Renderable. The generator
-runs when the returned Fx runs. The query belongs to that execution, so two separately mounted
-fields can have independent state. A zero-argument generator produces the Fx directly.
+`component` connects the generator's Effectful setup to its returned Renderable. Each run forks
+the parent Scope and supplies that child to both setup and the returned renderable. Completion,
+failure, or interruption closes the child; closing the parent also releases it. Two mounted fields
+therefore own separate queries and subscriptions. A zero-argument generator produces the Fx directly.
 
 `hint` is a **Computed**: a read-only view of the query. There is one writable fact and a rule
 for deriving the hint. A command can read the current hint, and a template can observe it,

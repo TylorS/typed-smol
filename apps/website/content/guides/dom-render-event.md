@@ -40,11 +40,12 @@ when inserted; use a persistent range when a multi-node result must remain addre
 ## Acquire the running resource beside the output
 
 A real chart adapter should acquire its chart instance in a scope and call that library's actual
-teardown. This smaller example makes the same relationship testable with a drawing timer:
+teardown. This smaller example uses an Effect-owned schedule to redraw a canvas:
 
 ```ts
 import { Effect } from "effect";
 import { component } from "@typed/ui/Component";
+import { Fx } from "@typed/fx";
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 
 export const ClockCanvas = component(function* (document: Document) {
@@ -52,28 +53,28 @@ export const ClockCanvas = component(function* (document: Document) {
   canvas.width = 320;
   canvas.height = 60;
 
-  yield* Effect.acquireRelease(
-    Effect.sync(() => {
-      const paint = () => {
-        const context = canvas.getContext("2d");
-        if (context === null) return;
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.fillText(new Date().toLocaleTimeString(), 8, 30);
-      };
-      paint();
-      return setInterval(paint, 1000);
-    }),
-    (timer) => Effect.sync(() => clearInterval(timer)),
+  const paint = Effect.sync(() => {
+    const context = canvas.getContext("2d");
+    if (context === null) return;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillText(new Date().toLocaleTimeString(), 8, 30);
+  });
+
+  yield* paint;
+  // The component's child scope owns the recurring work.
+  yield* Fx.periodic("1 second").pipe(
+    Fx.observe(() => paint),
+    Effect.forkScoped,
   );
 
   return DomRenderEvent(canvas);
 });
 ```
 
-The component returns the event directly. Timer ticks redraw the same canvas without emitting
+The component returns the event directly. Scheduled ticks redraw the same canvas without emitting
 replacement nodes. Interruption closes the component's
-[Effect scope](https://github.com/Effect-TS/effect/blob/main/packages/effect/src/Scope.ts) and clears
-the timer. The canvas has
+[Effect scope](https://github.com/Effect-TS/effect/blob/main/packages/effect/src/Scope.ts) and interrupts
+the periodic producer. The canvas has
 no magic disposer attached by `DomRenderEvent`; the resource finalizer is explicit in the producer.
 
 This component deliberately depends on a browser Document. Canvas pixels do not serialize into an
@@ -107,7 +108,7 @@ explains the persistent range representation and consuming conversions.
 ## Test the adapter's promises
 
 At construction, assert `event.valueOf() === canvas`. After an internal update, assert that the
-host still contains the same canvas. At interruption, assert the timer or foreign teardown stops
+host still contains the same canvas. At interruption, assert the periodic producer or foreign teardown stops
 exactly once. If placement can reorder output, separately test native state required by the product;
 node identity and state-preserving platform movement are different guarantees.
 

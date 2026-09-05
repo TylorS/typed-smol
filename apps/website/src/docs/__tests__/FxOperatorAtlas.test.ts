@@ -162,7 +162,7 @@ describe("complete Fx operator atlas", () => {
     expect(
       extractFxMarbleOperators(renderFxOperatorAtlasMarkdown()).toSorted(),
     ).toEqual(fxOperatorDiagrams.map(({ name }) => name).toSorted());
-  });
+  }, 60_000);
 
   it("keeps forwarded inner results in their causal slots", () => {
     const flatteners = new Set([

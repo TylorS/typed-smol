@@ -1,59 +1,81 @@
 ---
 slug: fetch-schema
 title: Fetch and validate API data before rendering
-summary: Keep network cancellation, HTTP failure, JSON parsing, and schema decoding distinct in a Typed component.
+summary: Use Effect's HTTP client and Schema to give Typed views validated data with cancellable requests.
 ---
 
-A project settings page requests a profile from an HTTP API. A successful `fetch` only establishes that a response arrived; it does not prove the status is successful, the body is JSON, or the JSON matches the application model. Decode at this boundary before passing data into templates.
+A profile response needs three checks: did the request succeed, is its body valid JSON, and does that JSON match the application model? Effect's HTTP client handles the transport and cancellation. Schema turns the response into a value the template can use.
 
-This uses the platform Fetch API and Effect Schema already used by Typed. Add a cache library only when the application needs shared caching, invalidation, or background refresh. An Fx subscription by itself is not a request cache.
+## Describe the request with Effect's HTTP client
 
-## Make the request cancellable
+In `Profile.ts`, request the profile through the `HttpClient` service. Reject non-success statuses before decoding the body.
 
-The request callback receives Effect's AbortSignal and passes it to `fetch`. Leaving the component interrupts the request rather than allowing a late result to update a discarded view. HTTP and decoding failures stay on the error channel.
-
-```ts
-import { Data, Effect, Schema } from "effect";
-import { html } from "@typed/template";
-import { component } from "@typed/ui/Component";
-
-class ProfileRequestError extends Data.TaggedError("ProfileRequestError")<{
-  readonly cause: unknown;
-}> {}
+```ts file="Profile.ts"
+import { Effect, Schema } from "effect";
+import * as HttpClient from "effect/unstable/http/HttpClient";
+import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
 
 const Profile = Schema.Struct({
   id: Schema.String,
   displayName: Schema.String,
 });
 
-const loadProfile = Effect.fn("loadProfile")(function* (id: string) {
-  const json = yield* Effect.tryPromise({
-    try: async (signal) => {
-      const response = await fetch(`/api/profiles/${encodeURIComponent(id)}`, { signal });
-      if (!response.ok) throw new Error(`Profile request failed (${response.status})`);
-      return await response.json() as unknown;
-    },
-    catch: (cause) => new ProfileRequestError({ cause }),
-  });
-  return yield* Schema.decodeUnknownEffect(Profile)(json);
-});
-
-export const ProfileCard = component(function* (id: string) {
-  const profile = yield* loadProfile(id);
-  return html`<article><h2>${profile.displayName}</h2><p>Account ${profile.id}</p></article>`;
+export const loadProfile = Effect.fn("loadProfile")(function* (id: string) {
+  const response = yield* HttpClient.get(`/api/profiles/${encodeURIComponent(id)}`).pipe(
+    // Receiving an HTTP response does not imply a successful status.
+    Effect.flatMap(HttpClientResponse.filterStatusOk),
+  );
+  // Decode the JSON body into the application's profile model.
+  return yield* HttpClientResponse.schemaBodyJson(Profile)(response);
 });
 ```
 
-The component begins rendering its article only after the request and decode succeed. Put loading and failure UI in the owning screen; for a richer loading/refresh state model follow [AsyncData](/explore/async-data). `ProfileRequestError` deliberately groups network, HTTP, and JSON syntax failure in a transport boundary while Schema retains structural decoding errors. If the UI needs a special 404 action or retry policy, give those statuses their own error cases instead of parsing the error message.
+The request retains its typed errors and `HttpClient` requirement. A failed status is an HTTP client error; a structurally invalid body is a Schema error. If the screen treats a 404 specially, inspect the client's response error and status rather than parsing an error message.
+
+## Render the decoded value
+
+In `ProfileCard.ts`, the component acquires data through that request. It does not choose a transport implementation.
+
+```ts file="ProfileCard.ts"
+import { html } from "@typed/template";
+import { component } from "@typed/ui/Component";
+import { loadProfile } from "./Profile.js";
+
+export const ProfileCard = component(function* (id: string) {
+  const profile = yield* loadProfile(id);
+  return html`<article>
+    <h2>${profile.displayName}</h2>
+    <p>Account ${profile.id}</p>
+  </article>`;
+});
+```
+
+The article appears after the request and decoding succeed. Put loading and failure UI in the owning screen; [AsyncData](/explore/async-data) models pending, failed, successful, and refreshing data. Removing this component interrupts its request along with the rest of its running scope.
+
+## Provide the browser transport at the application boundary
+
+In `Browser.ts`, supply the Fetch-backed implementation. Render `profile` with the application's existing DOM runtime.
+
+```ts file="Browser.ts"
+import { Fx } from "@typed/fx";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import { ProfileCard } from "./ProfileCard.js";
+
+export const profile = ProfileCard("ada").pipe(
+  Fx.provide(FetchHttpClient.layer),
+);
+```
+
+The same request can receive a test client or a server client's configuration through its service requirement. For multiple screens, provide the client once around the application instead of choosing a new transport in each component. The [Effect HTTP client reference](https://effect.website/docs/v4/api/effect/unstable/http/HttpClient) describes the shared request and response operations.
 
 ## Choose who may share the result
 
-One subscription to `ProfileCard` performs one request. Two independent instances may request the same profile twice. To share data, put the request state in an explicitly shared service or cache and let multiple views observe it. Include all identity inputs in a cache key—profile ID, account or tenant, and relevant query parameters. Dispose or invalidate user-specific state when the account changes.
+One subscription performs one request. Two independent instances may request the same profile twice: an Fx subscription is not a request cache. Put deliberately shared request state in an application service or cache. Include the profile ID, account or tenant, and relevant query parameters in its identity; invalidate user-specific state when the account changes.
 
-A changing selected ID needs an explicit replacement policy. Interrupt the old component before showing the new request, or use the switching operators described in [dynamic Fx](/explore/fx-higher-order-and-concurrency). Keeping old data during refresh is a separate product choice; label its freshness instead of accidentally showing one profile under another profile's heading.
+A changing selected ID needs a replacement policy. Use [switching Fx operators](/explore/fx-higher-order-and-concurrency) to interrupt the old request when a new selection arrives. Keeping old data during refresh is a separate product choice; label its freshness so one profile is not mistaken for another.
 
-## Exercise the four failure surfaces
+## Check failure and interruption separately
 
-Test a valid response, HTTP 404, malformed JSON, and structurally invalid JSON. Then delay the response and remove the view; verify that its request signal becomes aborted. This distinguishes interruption from a server error. The [Fetch guide](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch) documents why HTTP error statuses do not reject the promise automatically and how cancellation reaches body consumption.
+Test a valid response, HTTP 404, malformed JSON, and structurally invalid JSON through the supplied client. Then delay a response and remove the view; confirm the underlying request is cancelled. Interruption means the owner stopped needing the work, rather than a server failure to present as an error.
 
-The relative URL assumes a browser entry. Server rendering needs a request-aware absolute URL or an HTTP client service; do not guess the host from global process state. Authenticated browser requests also need the API's documented cookie/CORS contract. Treat those as deployment and server policy, then keep the template concerned with already-decoded values.
+The relative URL assumes a browser entry. Server rendering needs a request-aware base URL or absolute URL configured at the HTTP boundary. Keep authentication, cookies, and origin policy with that boundary so templates receive decoded values without knowing deployment details.

@@ -98,19 +98,12 @@ const editor = Fx.sync(() => DomRenderEvent(document.createElement("div")));
 export const workspace = html`<main>${editor}</main>`;
 ```
 
-For a native text editor, the host can be the actual textarea rather than an extra wrapper. Allocate it lazily, seed its initial document, and let the browser own editing. This concrete value has selection and undo state that a serialization-only test cannot observe.
+For an ordinary textarea, let a template create the native element. `DomRenderEvent` is useful when adapting output that another renderer already owns; a template can express this native editor directly:
 
 ```ts
-import * as Fx from "@typed/fx/Fx";
 import { html } from "@typed/template";
-import { DomRenderEvent } from "@typed/template/RenderEvent";
 
-const DraftEditor = (initial: string) => Fx.sync(() => {
-  const editor = document.createElement("textarea");
-  editor.value = initial;
-  editor.setAttribute("aria-label", "Document draft");
-  return DomRenderEvent(editor);
-});
+const DraftEditor = (initial: string) => html`<textarea aria-label="Document draft">${initial}</textarea>`;
 
 export const documentPanel = html`<section>
   <h2>Release notes</h2>
@@ -118,7 +111,9 @@ export const documentPanel = html`<section>
 </section>`;
 ```
 
-This native editor needs no external disposal method. A library editor hosted in a `div` usually does: acquire its instance in the component Scope and register its real shutdown operation. Its update API, not a fresh textarea or host allocation, should apply ordinary document edits.
+The textarea's initial text seeds its native value; the browser owns subsequent editing. A retained template keeps the same element, including its selection and editing state. For a controlled editor, put the draft in a `RefSubject` and connect its value and input event as shown in [native events](/explore/native-events-with-effect).
+
+A library editor hosted in a `div` usually has an external disposal method: acquire its instance in the component Scope and register its real shutdown operation. Its update API should apply ordinary document edits without allocating a fresh host.
 
 Use `Fx.callback` only when the renderer actually exposes a callback subscription. The React, Svelte, Vue,
 and Web Component recipes show their real mount and update APIs; this page does not invent a generic one.

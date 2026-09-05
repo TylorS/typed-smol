@@ -48,13 +48,16 @@ native link becomes:
 ```ts
 import { html } from "@typed/template";
 
-const link = (label: string) => html`<a href="#details">${label}</a>`;
+const link = (content: string | ReturnType<typeof html>) => html`<a href="#details">${content}</a>`;
 
 export const toolbar = html`<nav>${link("Details")}</nav>`;
-export const diagramLink = html`<svg viewBox="0 0 240 80">${link("Details")}</svg>`;
+export const diagramLink = html`<svg viewBox="0 0 240 80">
+  ${link(html`<text x="20" y="40">Details</text>`)}
+</svg>`;
 ```
 
-The toolbar's `a` is HTML; the SVG parent's `a` is SVG. The DOM target caches compiled fragments by
+The toolbar's `a` is HTML; the SVG parent's `a` is SVG. Its visible label uses an SVG `text`
+element: bare text inside an SVG link does not draw a label. The DOM target caches compiled fragments by
 insertion namespace as well as the template identity. Reusing a fragment from the wrong context
 would create a node that looks plausible in serialized HTML but has the wrong native interface.
 

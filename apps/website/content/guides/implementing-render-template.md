@@ -20,7 +20,8 @@ new template target.
 | Library responsibility | Appropriate boundary |
 | --- | --- |
 | Static reusable markup | direct `html` template function |
-| View setup returning renderable output | `component` |
+| Setup returning a template Fx | `Fx.gen` |
+| Isolated view scope or setup returning other renderable forms | `component` |
 | Foreign nodes and their resource lifetime | scoped producer of `DomRenderEvent` |
 | One element's observer/resource | scoped ref callback |
 | Policy around template interpretation | delegated `RenderTemplate` service |

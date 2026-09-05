@@ -81,9 +81,10 @@ handoff between them. Avoid running a second independent client fetch before res
 expecting hydration to reconcile two unrelated results. If data should refresh immediately after
 adoption, make that an explicit operation over the restored state.
 
-A hydrated ref still has its normal source policy. In particular, a live Fx/Stream is a producer,
-not merely a default value. Choose when that producer starts relative to restoration, and test the
-case where it emits before the DOM is adopted. Do not assume adding a codec imposes network ordering.
+Hydration gates the supplied initializer until the renderer chooses the server or DOM path.
+On the DOM path, a live Fx/Stream first publishes the restored value, then starts its original
+producer. Test that handoff and subsequent updates. This ordering applies to the supplied source;
+it cannot coordinate an external producer that application code has already started independently.
 
 Only serialize data intended for the browser. A schema validates its encoded shape; it does not
 make hidden service credentials or internal records appropriate to embed in HTML. Project the

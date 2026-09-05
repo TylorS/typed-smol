@@ -93,9 +93,9 @@ import { html } from "@typed/template";
 
 export default component(function* (_props: {}, slots: Slots) {
   return html`<article>
-  <header>${slots.heading}</header>
-  <div>${slots.default}</div>
-</article>`;
+    <header>${slots.heading}</header>
+    <div>${slots.default}</div>
+  </article>`;
 });
 ```
 

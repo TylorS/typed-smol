@@ -20,7 +20,7 @@ import { component } from "@typed/ui/Component";
 import * as Form from "@typed/ui/Form";
 
 const Order = Form.make(Schema.Struct({
-  copies: Schema.FiniteFromString.pipe(Schema.check(Schema.isGreaterThan(0))),
+  copies: Schema.FiniteFromString.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThan(0))),
   includeNotes: Schema.Boolean,
 }));
 
@@ -54,6 +54,8 @@ This example renders decoded request values in a status paragraph. Supply the ac
 Input handlers decode native strings using the field codec. A successful edit updates `values` and metadata, then clears that field's error. A failed decode records an error while retaining the last decoded value. The renderer encodes that retained value back into `.value`; this is not a promise to preserve arbitrary incomplete draft text. Test partial numeric/date editing when selecting codecs and controls.
 
 `State` contains values, defaultValues, errors, meta, and submitting. `FieldMeta.dirty` compares the new field value with its default using reference/value inequality; `touched` becomes true on a successful update, including `setValue`. It is not specifically a blur flag, and object/array dirty tracking is not deep equality. `reset` restores defaults and clears errors/meta/submitting; it does not cancel an outstanding request.
+
+`Form.setValue` assigns an already-decoded value and updates metadata; it does not run the field codec or clear an existing error. Decode unknown data with Effect Schema before assigning it. Use `Form.validate(form)` when you need an explicit whole-form check; successful validation clears errors, while failed validation returns a `SchemaError` as described below.
 
 The factory includes string input variants, NumberInput/RangeInput, DateInput, boolean Checkbox, native Select, MaskedInput, and array Push/Remove. `mask` and `slot` build string codecs for structured text. When every slot declares a fixed length and a character set distinct from the punctuation, MaskedInput adds that punctuation while typing or pasting and preserves the caret across edits. Incomplete or invalid text remains visible until corrected; only decoded values reach form state. Use string slot codecs for identifiers such as phone numbers so leading zeroes survive. Variable-width or ambiguous masks still validate drafts but leave formatting to the user. Push/Remove operate on top-level array fields and do not invent nested field paths or a repeated editor. Explicit-state APIs (`makeState`, `Form`, and controls with `state`) are useful when library components receive state directly.
 

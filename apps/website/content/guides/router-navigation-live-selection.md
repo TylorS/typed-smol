@@ -24,7 +24,7 @@ work. No browser or DOM is needed to test route behavior.
 
 ```ts
 import * as Router from "@typed/router"
-import { Context, Effect, Layer } from "effect"
+import { Context, Deferred, Effect, Layer } from "effect"
 import { Fx } from "@typed/fx"
 import { Navigation } from "@typed/navigation"
 import { TestRouter } from "@typed/router/RouterTest"
@@ -48,10 +48,16 @@ const IssuesLive = Layer.succeed(Issues, {
 
 const journey = Effect.scoped(Effect.gen(function* () {
   const seen: Array<{ readonly issueId: number; readonly title: string }> = []
-  yield* Effect.forkScoped(Fx.observe(pages, (page) => Effect.sync(() => { seen.push(page) })))
-  while (seen.length < 1) yield* Effect.yieldNow
+  const first = yield* Deferred.make<void>()
+  const second = yield* Deferred.make<void>()
+  yield* Effect.forkScoped(Fx.observe(pages, Effect.fn(function* (page) {
+    seen.push(page)
+    yield* Deferred.succeed(page.issueId === 42 ? first : second, undefined)
+  })))
+  // Wait for each observed result, rather than assuming navigation means data is ready.
+  yield* Deferred.await(first)
   yield* Navigation.navigate("/issues/43", { history: "push" })
-  while (!seen.some((page) => page.issueId === 43)) yield* Effect.yieldNow
+  yield* Deferred.await(second)
   return seen
 })).pipe(
   Effect.provide(IssuesLive),
@@ -64,9 +70,9 @@ const seen = await Effect.runPromise(journey)
 
 The handler's `params` stays live. `switchMapEffect` interrupts an obsolete load when the next
 parameter arrives and waits for its finalizers before starting the replacement. `Issues` remains in
-the Matcher/Effect requirement channel until the outer program provides its Layer. The test's loops
-wait for concrete observations rather than an arbitrary sleep; a test runner should also impose a
-timeout so a regression fails instead of waiting indefinitely.
+the Matcher/Effect requirement channel until the outer program provides its Layer. The Deferred values
+signal concrete observations without polling; a test runner should also impose a timeout so a
+regression fails instead of waiting indefinitely.
 
 Reading `yield* params` once would take a snapshot. That can be correct for setup intentionally tied
 to initial selection, but it is wrong for a loader expected to follow later IDs. Keep resource identity

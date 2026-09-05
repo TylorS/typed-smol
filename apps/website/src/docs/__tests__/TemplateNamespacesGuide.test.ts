@@ -29,7 +29,7 @@ describe("Template namespaces guide", () => {
     }
     const examples = extractTypeScriptFences(guide.body).join("\n");
     expect(examples).toContain('<nav>${link("Details")}</nav>');
-    expect(examples).toContain('<svg viewBox="0 0 240 80">${link("Details")}</svg>');
+    expect(examples).toContain('${link(html`<text x="20" y="40">Details</text>`)}');
     expect(extractTypeScriptFences(guide.body)).not.toHaveLength(0);
   });
 

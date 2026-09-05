@@ -55,12 +55,11 @@ is only one direction.
 Here is the complete loop:
 
 ```ts
-import { RefSubject } from "@typed/fx";
+import { Fx, RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
 import * as EventHandler from "@typed/template/EventHandler";
-import { component } from "@typed/ui/Component";
 
-export const Search = component(function* () {
+export const Search = Fx.gen(function* () {
   const query = yield* RefSubject.make("");
   const readQuery = EventHandler.make((event: Event) =>
     RefSubject.set(query, (event.currentTarget as HTMLInputElement).value),
@@ -77,7 +76,7 @@ export const Search = component(function* () {
 });
 ```
 
-`RefSubject` supplies a current value and subsequent changes. The component creates it when its
+`RefSubject` supplies a current value and subsequent changes. The generator creates it when its
 lazy program runs. The returned template subscribes to it in two places: the input property and
 the output's text position. When someone types `scope`, the event reads the native property,
 `RefSubject.set` publishes `scope`, and those two retained parts receive it.
@@ -98,10 +97,9 @@ also needs that state. Move creation to the page and pass the subject to the fie
 owns its markup and event binding; it no longer decides where the query is stored.
 
 ```ts
-import { RefSubject } from "@typed/fx";
+import { Fx, RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
 import * as EventHandler from "@typed/template/EventHandler";
-import { component } from "@typed/ui/Component";
 
 const SearchField = (query: RefSubject.RefSubject<string>) => {
   const readQuery = EventHandler.make((event: Event) =>
@@ -113,7 +111,7 @@ const SearchField = (query: RefSubject.RefSubject<string>) => {
   </label>`;
 };
 
-export const SearchPage = component(function* () {
+export const SearchPage = Fx.gen(function* () {
   const query = yield* RefSubject.make("");
   return html`<main>
     <h1>Saved articles</h1>
@@ -123,16 +121,15 @@ export const SearchPage = component(function* () {
 });
 ```
 
-The field needs no yielded setup, so a direct template function is sufficient. The parent needs
-scoped state and uses `component`; its zero-argument generator produces an Fx value such as
-`SearchPage`. A component with generator parameters would produce a function accepting those
-parameters. Neither approach inserts a wrapper element around the child's label.
+The field needs no yielded setup, so a direct template function is sufficient. The parent uses
+`Fx.gen` to yield state creation and return an Fx template. Neither adds a wrapper element around
+the child's label. The running Effect scope owns the state and subscriptions; constructing either
+value starts no fiber. [Mounting DOM output](/explore/mounting-dom-output) supplies that lifetime.
 
-The running scope owns the yielded state creation and returned subscriptions. Calling the template
-function or constructing the component does not start a fiber. The browser entry remains responsible
-for running and stopping
-the page; see [Mounting DOM output](/explore/mounting-dom-output). Use `Fx.fn` for a generator-backed
-producer that is not a view, and `component` for setup whose result is rendered output.
+Use `component` when the view needs its own child Scope, or setup can return other Renderable forms
+such as an array of templates. It forks the parent's Scope and provides that child to both setup
+and returned output. `Fx.gen` is enough when setup returns an Fx such as `html`; plain `html` is
+enough when there is no yielded setup. These are composition choices, not different rendering systems.
 
 ## Name the browser surface you intend to change
 

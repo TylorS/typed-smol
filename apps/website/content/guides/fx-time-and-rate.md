@@ -128,7 +128,7 @@ inner repeat-2: . . . . ^ poll |
 output: . poll . poll . poll |
 ```
 
-Each repeated `^` follows normal completion of the previous run. There is no overlapping poll.
+Each raised start chevron follows normal completion of the previous run. There is no overlapping poll.
 A failed source stops repeat; [retry](/explore/fx-errors-and-recovery) handles a failed subscription
 instead. Schedules can contribute their own errors and service requirements, which remain visible
 rather than escaping into a detached timer callback.
@@ -182,7 +182,7 @@ The drag interaction needs an event boundary and may then apply a rate policy to
 `pointerup` or `pointercancel` closes that drag:
 
 ```ts
-import { Effect } from "effect";
+import { Stream } from "effect";
 import { Fx } from "@typed/fx";
 
 type DragEvent =
@@ -198,14 +198,10 @@ type DragEvent =
   | { readonly _tag: "End"; readonly pointerId: number };
 
 const pointerEvents = (target: EventTarget, type: string): Fx.Fx<PointerEvent> =>
-  Fx.callback((emit) => {
-    const onPointer = (event: Event) => {
-      if (event instanceof PointerEvent) emit.succeed(event);
-    };
-
-    target.addEventListener(type, onPointer);
-    return Effect.sync(() => target.removeEventListener(type, onPointer));
-  });
+  Stream.fromEventListener<Event>(target, type).pipe(
+    Stream.filter((event): event is PointerEvent => event instanceof PointerEvent),
+    Fx.fromStream,
+  );
 
 export const dragEvents = (handle: HTMLElement) => {
   const starts = pointerEvents(handle, "pointerdown").pipe(
@@ -252,8 +248,9 @@ export const dragEvents = (handle: HTMLElement) => {
 };
 ```
 
-The callback adapter installs each listener only during observation and returns its matching removal.
-The browser does not await the delivery Fiber returned by `emit.succeed`. `until(stop)` interrupts
+`Stream.fromEventListener` owns listener registration, removal, and buffering; `Fx.fromStream`
+keeps that scoped lifetime. Its default unbounded buffer retains events until consumed, so avoid
+slow work in the movement handler. `until(stop)` interrupts
 the move subscription at the matching stop event; `switchMap` replaces an unfinished drag when a
 new start arrives.
 

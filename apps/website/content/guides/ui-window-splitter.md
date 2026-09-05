@@ -12,11 +12,11 @@ value announced for the divider. We will bind those outputs to one state, then f
 restore to see why the current width and remembered width differ. Both interactions update the same bounded value. The component owns the native drag session;
 the application binds that value to the actual pane layout.
 
-## Bind the value to a pane's width
+## Bind the value to a responsive pane layout
 
-This splitter measures the primary pane in pixels. Its minimum is deliberately nonzero, so collapse
-means the smallest permitted width rather than hiding navigation completely. The visible keyboard
-hint and accessible value text make that unit explicit.
+This splitter divides the available pane space into proportions, so the example shrinks with its
+container. Its minimum is deliberately nonzero: collapse means the smallest permitted share rather
+than hiding navigation completely. The accessible value text makes that unit explicit.
 
 ```ts
 import { RefSubject } from "@typed/fx";
@@ -24,30 +24,35 @@ import { html } from "@typed/template";
 import { component } from "@typed/ui/Component";
 import * as WindowSplitter from "@typed/ui/WindowSplitter";
 
-export const ResizableInspector = component(function* () {
+export const ResizableInspector = component(function* (id: string) {
   const state = yield* WindowSplitter.makeState({
-    value: 280, min: 160, max: 480, step: 20, orientation: "vertical",
+    value: 35, min: 15, max: 70, step: 5, orientation: "vertical",
   });
-  const width = RefSubject.map(state, ({ value }) => `flex: 0 0 ${value}px; min-width: 0;`);
+  // Reserve the handle width, then share the remaining space between panes.
+  const layout = RefSubject.map(state, ({ value }) =>
+    `display: grid; grid-template-columns: minmax(0, ${value}fr) 12px minmax(0, ${100 - value}fr);`);
   return html`<section>
-    <p id="inspector-resize-help">Drag the divider, or focus it and use Left/Right. Enter collapses or restores.</p>
-    <div style="display: flex; max-width: 100%;">
-      <aside id="inspector-pane" style=${width}>
+    <p id=${`${id}-help`}>Drag the divider, or focus it and use Left/Right. Enter collapses or restores.</p>
+    <div style=${layout}>
+      <aside id=${`${id}-pane`} style="overflow-wrap: anywhere;">
         <h2>Inspector</h2><p>Selected project properties.</p>
       </aside>
-      ${WindowSplitter.WindowSplitter({ state, primaryPaneId: "inspector-pane", label: "Inspector width", valuePerPixel: 1,
-        valueText: RefSubject.map(state, ({ value }) => `${value} pixels`),
-        props: { "aria-describedby": "inspector-resize-help", style: "width: 12px; flex: 0 0 12px; cursor: col-resize; background: currentColor;" },
+      ${WindowSplitter.WindowSplitter({ state, primaryPaneId: `${id}-pane`, label: "Inspector width",
+        valueText: RefSubject.map(state, ({ value }) => `${value}% of pane space`),
+        props: { "aria-describedby": `${id}-help`, style: "cursor: col-resize; background: currentColor;" },
       })}
-      <main style="flex: 1; min-width: 0;"><h2>Project content</h2></main>
+      <div style="overflow-wrap: anywhere;"><h2>Project content</h2></div>
     </div>
   </section>`;
 });
 ```
 
-The separator's `primaryPaneId` points to the existing aside. State drives both CSS width and
-`aria-valuenow`; `valueText` supplies readable units. `valuePerPixel: 1` makes one CSS pixel of pointer movement add one pixel to pane width. A production layout still needs a visible focus indicator, a discoverable divider, and
-responsive bounds that leave enough room for the second pane.
+Pass a stable, page-unique ID. The separator's `primaryPaneId` points to the aside from this instance.
+State drives both grid proportions and `aria-valuenow`; `valueText` supplies readable units. The
+default drag scale treats the space excluding the handle as 100 units, matching these grid tracks.
+`minmax(0, …)` lets both tracks shrink instead of overflowing at their content's intrinsic width.
+Keep a visible focus indicator and check real content at narrow widths; complex pane contents may
+need a stacked layout when neither pane has enough usable room.
 
 ## Understand orientation and collapse memory
 
@@ -79,7 +84,7 @@ Every movement goes through `setValue`, retaining the same min/max clamp as keyb
 
 Without `valuePerPixel`, the parent dimension minus separator thickness represents 100 value units.
 This fits the default percentage range and a two-pane grid using `value` and `100 - value` fractional
-tracks. The pixel-based example must instead pass `valuePerPixel: 1`. Other units need a positive,
+tracks. For a pixel-based pane layout, pass `valuePerPixel: 1` instead. Other units need a positive,
 finite scale. The scale and orientation are sampled when a gesture starts; responsive layout changes
 during that gesture do not continually reinterpret its origin. Positive axis-aligned CSS scaling
 is included in the conversion: pointer coordinates and separator thickness use viewport pixels,

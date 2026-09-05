@@ -19,7 +19,7 @@ import { Effect } from "effect";
 import { html } from "@typed/template";
 import { Button } from "@typed/ui/Button";
 
-const SaveAction = (save: Effect.Effect<void>) => html`<div class="account-actions">
+const SaveAction = <E, R>(save: Effect.Effect<void, E, R>) => html`<div class="account-actions">
   ${Button({ content: "Save account", onclick: save })}
 </div>`;
 
@@ -58,22 +58,23 @@ export const makeSaveState = Effect.fn("makeSaveState")(function* <R>(
 ) {
   const busy = yield* RefSubject.make(false);
   const status = yield* RefSubject.make("Ready to save");
-  const submit = Effect.gen(function* () {
-    // Claim and check in one update so two callers cannot both start a save.
-    const acquired = yield* RefSubject.modify(busy, (current) => [!current, true] as const);
-    if (!acquired) return;
-
-    yield* Effect.gen(function* () {
-      yield* RefSubject.set(status, "Saving…");
-      yield* save;
-      yield* RefSubject.set(status, "Saved");
-    }).pipe(
-      // Expected rejections become UI messages; defects still reach error reporting.
-      Effect.catchTag("SaveRejected", ({ message }) => RefSubject.set(status, message)),
-      // Restore availability even when the request fails or its owner interrupts it.
-      Effect.ensuring(RefSubject.set(busy, false)),
-    );
-  });
+  const submit = Effect.acquireUseRelease(
+    // Claim atomically; acquisition and release cannot be interrupted.
+    RefSubject.modify(busy, (current) => [!current, true] as const),
+    (acquired) => acquired
+      ? Effect.gen(function* () {
+          yield* RefSubject.set(status, "Saving…");
+          yield* save;
+          yield* RefSubject.set(status, "Saved");
+        }).pipe(
+          // Expected rejections become UI messages; defects remain failures.
+          Effect.catchTag("SaveRejected", ({ message }) => RefSubject.set(status, message)),
+          Effect.asVoid,
+        )
+      : Effect.void,
+    // A competing caller must not release the first caller's claim.
+    (acquired) => acquired ? RefSubject.set(busy, false) : Effect.void,
+  );
 
   return {
     busy: RefSubject.map(busy, (value) => value),
@@ -102,7 +103,7 @@ The returned state exposes Computed views. A consumer can read or observe them, 
 
 `SaveRejected` is an expected result that this interaction knows how to present. Its message becomes visible status, and finalization releases busy state so another attempt can run. A defect is not silently relabeled as a validation message; it remains available to the application's error reporting boundary.
 
-`ensuring` runs on success, failure, and interruption. Here it restores availability. This control has no separate Cancel command: interruption normally comes from its owner ending the interaction. If a save must survive navigation, provide a longer-lived command service that owns that work and let the view observe it.
+`acquireUseRelease` protects acquisition and release from interruption while leaving the save interruptible. Once a caller claims busy state, its release restores availability on success, failure, or interruption. A competing caller acquires no claim and must not release another caller's work. This control has no separate Cancel command: interruption normally comes from its owner ending the interaction. If a save must survive navigation, provide a longer-lived command service that owns that work and let the view observe it.
 
 A status region announces changed text without moving focus. Use a meaningful native button label and retain focus on the button through a retry. A whole form also needs validation, field errors, and submission semantics; compose [Form](/explore/ui-form) when those responsibilities enter the design.
 
@@ -133,6 +134,7 @@ it("ignores overlapping submissions and permits retry after rejection", () =>
     expect(yield* state.busy).toBe(true);
     expect(yield* state.status).toBe("Saving…");
     yield* state.submit;
+    expect(yield* state.busy).toBe(true); // The competing call did not release the owner.
     expect(attempts).toBe(1);
 
     yield* Deferred.fail(pending, new SaveRejected({ message: "The account changed. Review and retry." }));
@@ -142,6 +144,19 @@ it("ignores overlapping submissions and permits retry after rejection", () =>
     yield* state.submit;
     expect(attempts).toBe(2);
     expect(yield* state.status).toBe("Saved");
+  }).pipe(Effect.scoped, Effect.runPromise));
+
+it("releases its claim when interrupted", () =>
+  Effect.gen(function* () {
+    const started = yield* Deferred.make<void>();
+    const state = yield* makeSaveState(
+      Deferred.succeed(started, undefined).pipe(Effect.andThen(Effect.never)),
+    );
+    const running = yield* Effect.forkScoped(state.submit);
+    yield* Deferred.await(started);
+    expect(yield* state.busy).toBe(true);
+    yield* Fiber.interrupt(running);
+    expect(yield* state.busy).toBe(false);
   }).pipe(Effect.scoped, Effect.runPromise));
 
 it("connects a native button click to visible pending and saved states", async () => {
@@ -175,7 +190,7 @@ it("connects a native button click to visible pending and saved states", async (
 });
 ```
 
-Run `npm install --save-dev vitest happy-dom`, then `npx vitest run SaveAccount.test.ts`. The first test proves the command policy without rendering. The second proves that a native event reaches that policy and that the live properties and status text reflect its progress. Both close their Effect Scope even if an assertion fails.
+Run `npm install --save-dev vitest happy-dom`, then `npx vitest run SaveAccount.test.ts`. The first two tests prove overlap, retry, and interruption without rendering. The browser fixture test proves that a native event reaches that policy and that the live properties and status text reflect its progress. Both close their Effect Scope even if an assertion fails.
 
 A real-browser test should additionally check keyboard activation and focus retention. Happy DOM checks event wiring, not what a screen reader announces or how a browser lays out the control.
 

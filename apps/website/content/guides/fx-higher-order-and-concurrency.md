@@ -151,7 +151,7 @@ output: . a1 . b1 . b2 |
 
 `b` causes the `x` in `a`'s lane. `a1` remains because it arrived before the switch; `a2` never arrives.
 Switching waits for interruption and finalizers before starting the replacement, so a slow finalizer
-can delay the next `^` beyond this idealized timeline.
+can delay the next raised start chevron beyond this idealized timeline.
 
 This is a good contract for previews and current search results. It is not a rollback mechanism:
 interrupting local work does not undo a command already accepted by a server. Connect cancellation

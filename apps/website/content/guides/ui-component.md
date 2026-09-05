@@ -61,7 +61,19 @@ const notice = LoadedNotice(Effect.succeed("Inventory refreshed"), "Review befor
 
 The output combines `Effect.Error<Yield>` with `Renderable.Error<Result>`, and the corresponding service requirements. The rendered success type comes from `Renderable.Success<Result>`. Returning a string is valid; returning an arbitrary business object is not an instruction to stringify it. Format domain values explicitly.
 
-The constructor does not catch errors or supply services. A load failure remains in E until an owner handles it. State, renderer, and application services remain in R until provided at the correct boundary. This makes the component usable in browser or server renderers without hiding the resources it needs.
+The constructor does not catch errors or supply application services. A load failure remains in E until an owner handles it. State, renderer, and application services remain in R until provided at the correct boundary. This makes the component usable in browser or server renderers without hiding the resources it needs.
+
+## Each execution owns a child Scope
+
+Each execution forks the required parent Scope and provides that child to both the generator's
+setup and its returned renderable. Scoped work started in setup and subscriptions in the template
+therefore share one instance lifetime. Completion, failure, or interruption closes the child;
+closing the parent closes every child. Siblings keep separate resources.
+
+Returning a template does not end this lifetime at its first DOM emission: its subscription stays
+active while mounted. Even a component returning a scalar requires a parent Scope. Use
+`Effect.forkScoped` for ongoing work owned by the instance; provide longer-lived application
+services outside the component when their work should survive it.
 
 ## Pipelines receive the original arguments
 

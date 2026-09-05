@@ -71,11 +71,11 @@ class TypedProfile extends HTMLElement {
   }
 }
 
-if (customElements.get("typed-profile") === undefined) {
-  customElements.define("typed-profile", TypedProfile);
-}
+// Load this definition module once; a name has one constructor per document.
+customElements.define("typed-profile", TypedProfile);
 
-const profile = document.createElement("typed-profile") as TypedProfile;
+// The registered constructor gives this browser boundary its concrete type.
+const profile = new TypedProfile();
 profile.content = html`<section><h2>Ada’s profile</h2>
   <output>${Fx.fromIterable(["Loading profile…", "Profile ready"])}</output>
 </section>`;
@@ -83,22 +83,20 @@ document.body.append(profile);
 ```
 
 The runtime belongs to the application/definition owner. Call `stopProfileElements` only when that owner shuts down; disconnecting one instance interrupts only that instance's fiber. The server runtime has its own `stopProfileRendering` shutdown function.
-`customElements.define()` registers a constructor; it does not mount an instance. Custom-element names are
+`customElements.define()` registers a constructor; it does not mount an instance. Keep this registration in one definition module. Changing its class during development requires a page reload because the browser cannot replace an existing registration. Custom-element names are
 lowercase and contain a hyphen; use `customElements.whenDefined()` when a consumer must wait for a lazy
 definition.
 
 ## Decide what a server-rendered element upgrades
 
-The custom-element platform does not prescribe an SSR renderer. A server can serialize its own custom-element markup and
-pass trusted output to Typed with `HtmlRenderEvent`; the browser upgrades that markup once its definition
-loads.
+The custom-element platform does not prescribe an SSR renderer. Author its host with `html` just as you
+would any other element. Typed serializes the attributes; the browser upgrades the host when its definition
+loads. `HtmlRenderEvent` is only needed when another renderer already produced trusted serialized output.
 
 ```ts
-import * as Fx from "@typed/fx/Fx";
-import { HtmlRenderEvent } from "@typed/template/RenderEvent";
+import { html } from "@typed/template";
 
-const customElementMarkup = "<typed-profile></typed-profile>";
-const chartHtml = Fx.sync(() => HtmlRenderEvent(customElementMarkup, true));
+export const profileHost = html`<typed-profile></typed-profile>`;
 ```
 
 For Typed output, use a separate application-owned HTML runtime. Its result can be placed in the custom element's light DOM. A declarative shadow root requires a different element implementation that adopts that root; the light-DOM `TypedProfile` shown above does not do so.

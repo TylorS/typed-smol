@@ -70,7 +70,7 @@ application you build.
 
 Use [component](/explore/ui-component) for generator-backed views. A generator with parameters
 creates a component function; a parameterless generator creates an Fx value. Its return value can
-be any Renderable. The running Scope owns the work acquired by that component.
+be any Renderable. Each execution forks the parent Scope; its setup and rendered output share that child lifetime.
 
 When the higher-level control does not fit, follow the primitive's lower-level state and prop
 functions. [Collection](/explore/ui-collection), [Composite](/explore/ui-composite), and

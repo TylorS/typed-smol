@@ -6,7 +6,7 @@ summary: Give a plain Vite entry point one DOM runtime, an explicit mount, and p
 
 Use this when a Vite application needs a Typed screen without a framework shell. Vite owns bundling and development module updates. Typed owns the children of one application host; the entry module owns the runtime that supplies DOM rendering services.
 
-Start with [building UI components](/explore/building-ui-components). If Astro already owns the page, use the [Astro integration](/integrate/astro) instead of adding a second entry point over its islands.
+Start with [building UI components](/explore/building-ui-components). Give this entry one application host and keep its runtime alive for as long as that application is mounted.
 
 ## Start from an empty host
 

@@ -16,12 +16,12 @@ The default host is a div with `role="heading"` and `aria-level`, not an h1–h6
 import { html } from "@typed/template";
 import { Heading } from "@typed/ui/Heading";
 
-export function AccountSection(level: 2 | 3) {
-  return html`<section aria-labelledby="account-section-title">
+export function AccountSection(titleId: string, level: 2 | 3) {
+  return html`<section aria-labelledby=${titleId}>
     ${Heading({
       level,
       content: "Account security",
-      props: { id: "account-section-title", class: "section-title" },
+      props: { id: titleId, class: "section-title" },
     })}
     <p>Review the devices and credentials that can access this account.</p>
   </section>`;
@@ -29,11 +29,11 @@ export function AccountSection(level: 2 | 3) {
 
 export const AccountPage = html`<main>
     <h1>Account settings</h1>
-    ${AccountSection(2)}
+    ${AccountSection("account-section-title", 2)}
   </main>`;
 ```
 
-The caller selects the hierarchy; the child selects its visual class. A plain function is sufficient for the parameterized section because it acquires no state or services; `AccountPage` is a template Fx value. Give multiple instances unique IDs instead of reusing the sample's fixed section title ID.
+The caller selects the hierarchy; the child selects its visual class. A plain function is sufficient for the parameterized section because it acquires no state or services; `AccountPage` is a template Fx value. The caller supplies a stable title ID for each instance, preserving the naming relationship across rendering and hydration.
 
 ## A role supplies semantics, not document policy
 

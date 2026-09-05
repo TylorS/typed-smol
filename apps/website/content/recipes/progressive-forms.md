@@ -1,81 +1,143 @@
 ---
 slug: progressive-forms
-title: Enhance a server form with a Typed status region
-summary: Keep native submission and no-JavaScript behavior while Typed owns one live validation hint.
+title: Enhance a server form with Typed
+summary: Render a working native form on the server, then hydrate its Typed validation hints without taking over submission.
 ---
 
-A newsletter signup or account settings form can work before JavaScript loads. The server owns the form action and authoritative validation; the browser owns normal input, constraint validation, and submission; Typed owns a small status region. This is useful when migrating one feature of a server-rendered page without replacing the whole form.
+A newsletter form should work before JavaScript loads. Write its markup and enhancement together
+in a Typed template: the server renders the form, and the browser connects its event handlers and
+reactive status. The form's action and native validation work in both cases.
 
-For a new fully Typed form, start with [forms as a browser contract](/explore/forms-as-a-browser-contract). This recipe instead enhances existing HTML and preserves the server's fallback path.
+## Write the shared form
 
-## Ship a functional server form first
+The input keeps its native value. Typed owns the hint through a `RefSubject`; an `EventHandler`
+reads the input's validity and updates that state. There is no submit handler because submission
+already has the behavior we want.
 
-Serve the following markup from the page. `/newsletter` is an application endpoint you implement; it must validate the submitted data and return a usable result or field errors even with JavaScript disabled. Use the server framework's normal CSRF protection for endpoints that require it.
+```ts file="Newsletter.ts"
+import { Fx, RefSubject } from "@typed/fx";
+import { EventHandler, html } from "@typed/template";
 
-```html
-<form id="newsletter" action="/newsletter" method="post">
-  <label for="newsletter-email">Email address</label>
-  <input id="newsletter-email" name="email" type="email" required autocomplete="email"
-    aria-describedby="newsletter-hint">
-  <p id="newsletter-hint" aria-live="polite"></p>
-  <button type="submit">Subscribe</button>
-</form>
+export const Newsletter = Fx.gen(function* () {
+  const hint = yield* RefSubject.make("");
+  const updateHint = EventHandler.make(
+    (event: InputEvent & { target: HTMLInputElement }) => {
+      const input = event.target;
+      return RefSubject.set(hint,
+        input.value.length === 0 ? "" : input.validity.valid
+          ? "Email format looks valid."
+          : "Enter a complete email address.",
+      );
+    },
+  );
+
+  return html`<form action="/newsletter" method="post">
+    <label for="newsletter-email">Email address</label>
+    <input id="newsletter-email" name="email" type="email" required
+      autocomplete="email" aria-describedby="newsletter-hint"
+      oninput=${updateHint}>
+    <p id="newsletter-hint" aria-live="polite">${hint}</p>
+    <button type="submit">Subscribe</button>
+  </form>`;
+});
 ```
 
-The live region starts empty; the label and native input contract do not depend on Typed. It is the only descendant range that the enhancement will render into. Do not mount a second renderer over the entire form merely to update a hint.
+`Fx.gen` creates hint state for each render run. The same `html` template supplies server markup
+and browser bindings. No `.value` binding writes over an address entered before the client starts.
+Keep this form's IDs unique on its page; repeated forms need distinct label and hint IDs.
 
-## Subscribe to input without taking over submit
+The hint reports format, not deliverability. Native validation still checks the required email
+field when the user submits. For longer messages, consider updating after blur instead of
+announcing every intermediate edit.
 
-Run this in the browser after the markup exists. Each mount has one render fiber; its owner can stop the enhancement when a server-driven navigation removes the form.
+## Render it before sending the response
 
-```ts
+Use the HTML renderer that preserves hydration markers. Your server returns this HTML with a
+content type of `text/html`; your build supplies the browser entry at `/bootstrap.js`.
+
+```ts file="server.ts"
+import { Effect } from "effect";
+import { html, HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
+import { Newsletter } from "./Newsletter.js";
+
+const page = html`<!doctype html><html lang="en">
+  <head><title>Newsletter signup</title></head>
+  <body>
+    <main id="app">${Newsletter}</main>
+    <script type="module" src="/bootstrap.js"></script>
+  </body>
+</html>`;
+
+export const responseBody = renderToHtmlString(page).pipe(
+  Effect.provide(HtmlRenderTemplate),
+  Effect.scoped,
+);
+```
+
+Even if `/bootstrap.js` never runs, the browser submits to `/newsletter`. Implement that endpoint
+with server validation and a usable success or error response. Include your application's CSRF
+protection when the endpoint requires it.
+
+## Connect the same template in the browser
+
+Pass the server-owned `#app` mount to this entry from your application's bootstrap. `render`
+adopts the matching Typed HTML and installs the event handler; its scope owns the subscription
+and listener cleanup.
+
+```ts file="client.ts"
 import { Effect, ManagedRuntime } from "effect";
-import * as Fx from "@typed/fx/Fx";
-import { html } from "@typed/template";
-import { DomRenderTemplate, render } from "@typed/template/Render";
+import { Fx } from "@typed/fx";
+import { DomRenderTemplate, render } from "@typed/template";
+import { Newsletter } from "./Newsletter.js";
 
-const form = document.getElementById("newsletter");
-const input = document.getElementById("newsletter-email");
-const hint = document.getElementById("newsletter-hint");
-if (!(form instanceof HTMLFormElement) || !(input instanceof HTMLInputElement) || hint === null) {
-  throw new Error("Newsletter enhancement requires its server markup");
-}
+export const mountNewsletter = (host: HTMLElement) => {
+  const runtime = ManagedRuntime.make(DomRenderTemplate.using(host.ownerDocument));
+  runtime.runFork(Effect.scoped(Fx.drain(render(Newsletter, host))));
+  // The navigation owner calls this when it removes the form.
+  return () => runtime.dispose();
+};
+```
 
-const hints = Fx.callback<string>((emit) => {
-  const update = () => emit.succeed(
-    input.value.length === 0 ? "" :
-      input.validity.valid ? "Email format looks valid." : "Enter a complete email address.",
-  );
-  input.addEventListener("input", update);
-  update();
-  return Effect.sync(() => input.removeEventListener("input", update));
+The browser entry only locates the mount and starts that Typed program:
+
+```ts file="bootstrap.ts"
+import { mountNewsletter } from "./client.js";
+
+const host = document.getElementById("app");
+if (host === null) throw new Error("Missing newsletter mount");
+export const stop = mountNewsletter(host);
+```
+
+The server and browser import one shared view so their templates agree. Do not clear the host
+before mounting: its existing input, value, and focus should survive hydration.
+[Server rendering and hydration](/explore/server-rendering-and-hydration) explains that handoff.
+
+## Decode the submission with UI and Effect
+
+Use UI's FormData adapter at the server boundary. It preserves repeated names as arrays instead
+of silently choosing one value. This schema requires one nonempty string for `email`; add your
+server's email policy and confirmation workflow before accepting a subscription.
+
+```ts file="submission.ts"
+import { Schema } from "effect";
+import * as Form from "@typed/ui/Form";
+
+const NewsletterFields = Schema.Struct({
+  email: Schema.String.check(Schema.isNonEmpty()),
 });
 
-const runtime = ManagedRuntime.make(DomRenderTemplate.using(document));
-runtime.runFork(Effect.scoped(Fx.drain(render(html`${hints}`, hint))));
-export const removeNewsletterEnhancement = () => runtime.dispose();
-```
-
-The example never prevents submission and never claims that syntactically valid email proves deliverability. The browser retains the entered value and performs native validation. Read `validity.valid` for a hint; calling `reportValidity` on every keystroke would add intrusive browser UI. For long validation messages, consider reporting after blur rather than announcing each intermediate edit.
-
-If application code triggers submission, use `form.requestSubmit()` when you want submit-button semantics and constraint validation. `form.submit()` bypasses that event/validation path. The [requestSubmit contract](https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/requestSubmit) explains the distinction.
-
-## Decode again at the server boundary
-
-Browser validation is a convenience and can be bypassed. The following decoder accepts a real `FormData` value and rejects missing or non-string email fields. It intentionally does not claim to validate email deliverability; add your server's documented email policy and confirmation workflow there.
-
-```ts
-import { Schema } from "effect";
-
-const Newsletter = Schema.Struct({ email: Schema.String });
 export const decodeNewsletter = (data: FormData) =>
-  Schema.decodeUnknownEffect(Newsletter)({ email: data.get("email") });
+  Form.decodeFormData(NewsletterFields, data);
 ```
 
-For repeated field names, use `getAll` and decode an array. Checkboxes and disabled controls have distinct submission semantics; do not infer a domain object by blindly treating every form key as one string. Keep that mapping next to server validation. See the [FormData API](https://developer.mozilla.org/en-US/docs/Web/API/FormData).
+Native constraint validation is a convenience, not a server trust boundary. The server must
+reject invalid submissions even when JavaScript is disabled or the request bypasses the browser.
+For richer client form state and submissions, continue with
+[forms as a browser contract](/explore/forms-as-a-browser-contract).
 
-## Verify both paths
+## Verify the handoff
 
-Submit with JavaScript disabled and inspect successful and invalid server responses. With the enhancement enabled, type an invalid address, fix it, submit with Enter, and submit with the button. The result should follow the same endpoint and browser validation behavior.
-
-Then remove the page through the actual navigation mechanism and call `removeNewsletterEnhancement`; assert that its listener stops. If your server navigation reuses the same page module, recreate the enhancement for the new elements rather than keeping references to removed DOM. A browser test should preserve the input's node identity, value, and focus while the Typed hint changes. No hydration is needed for this empty, dedicated status region.
+Submit with JavaScript disabled, then repeat with the enhancement enabled using both Enter and
+the submit button. Test invalid and valid server responses. Type before hydration and retain the
+input node: mounting should preserve its identity, value, and focus. After mounting, an invalid
+address should update the hint; after disposal, the same event should no longer update it.

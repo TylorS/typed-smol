@@ -11,7 +11,8 @@ A Matcher is an immutable table of ordered route cases that produces reactive ou
 Registration builds the description; matching, guards, navigation observation, and selected-route
 lifetime happen with the required Router services.
 
-If a broad parameterized case captures a URL intended for a more specific case, inspect registration
-order and guards. Changing browser history cannot resolve competing cases. See
+Literal paths take precedence over parameter paths. Registration order decides among candidates
+with the same compiled path, whose decoding and guards are tried in sequence. Inspect that distinction
+when a URL selects an unexpected case. See
 [live route selection](/explore/router-navigation-live-selection) and the
 [Matcher API](/reference/modules/%40typed%2Frouter%2FMatcher).

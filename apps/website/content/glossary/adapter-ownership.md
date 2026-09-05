@@ -1,7 +1,7 @@
 ---
 id: adapter-ownership
 term: "Adapter ownership"
-definition: "The rule that an integration publishes its output boundary without taking over the foreign renderer's lifetime."
+definition: "The agreement separating DOM placement from explicitly acquired foreign-renderer cleanup."
 aliases: []
 related: [cooperative-ownership, dom-render-event, scope]
 links: []

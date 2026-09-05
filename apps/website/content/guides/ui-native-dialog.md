@@ -12,17 +12,16 @@ Prerequisites: [refs and DOM lifetime](/explore/ui-dom#refs) and [RefSubject sta
 
 ## Integrate an application-owned dialog
 
-This example wires the reverse direction explicitly. Browser dismissal and application updates converge on the same state.
+Pass a stable, page-unique ID. This example wires the reverse direction explicitly. Browser dismissal and application updates converge on the same state.
 
 ```ts
-import { Effect } from "effect";
 import { RefSubject } from "@typed/fx";
 import { EventHandler, html } from "@typed/template";
 import { component } from "@typed/ui/Component";
 import * as Dom from "@typed/ui/Dom";
 import * as NativeDialog from "@typed/ui/NativeDialog";
 
-const KeyboardHelp = component(function* () {
+const KeyboardHelp = component(function* (id: string) {
   const state = yield* RefSubject.make({ open: false });
   const setOpen = (open: boolean) => RefSubject.set(state, { open });
   const readNative = EventHandler.make((event: Event) => {
@@ -31,10 +30,10 @@ const KeyboardHelp = component(function* () {
   });
   return html`
     <button type="button" onclick=${setOpen(true)}>Keyboard shortcuts</button>
-    <dialog aria-labelledby="shortcuts-title"
+    <dialog aria-labelledby=${`${id}-title`}
       ref=${NativeDialog.ref(state)}
-      onclose=${setOpen(false)} ontoggle=${readNative}>
-      <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+      onclose=${readNative} ontoggle=${readNative}>
+      <h2 id=${`${id}-title`}>Keyboard shortcuts</h2>
       <p>Use Tab to move between page controls.</p>
       <button type="button" autofocus onclick=${setOpen(false)}>Done</button>
     </dialog>
@@ -48,10 +47,10 @@ Native modal dialogs make the surrounding page inert. A literal `open` attribute
 
 ## Account for the missing half
 
-Without `onclose` or another reverse synchronization path, Escape can close the element while state still says open. Subsequent state emissions may reopen it. The example reads native state on toggle and reports close directly. If you need vetoable cancellation, attach a real cancel handler that calls `preventDefault()` during dispatch; an asynchronous confirmation cannot retroactively cancel the browser event.
+Without `onclose` or another reverse synchronization path, Escape can close the element while state still says open. Subsequent state emissions may reopen it. The example reads current native state for both events: a queued close from an earlier opening must not close a dialog that has already reopened. If you need vetoable cancellation, attach a real cancel handler that calls `preventDefault()` during dispatch; an asynchronous confirmation cannot retroactively cancel the browser event.
 
 The callback returns `Effect<void, E, R | Scope>`, retaining the input state's errors and services. Its fiber belongs to the ref's Scope. Scope closure stops observation; the primitive does not itself close the element or remove externally owned markup. DOM method exceptions are defects from `Effect.sync`, not a new typed domain-error case.
 
-Test state-to-native opening, native-to-state closing, and teardown independently. In a DOM mock, missing `showModal` is a platform limitation; use a real browser to test modal focus. Keep the host connected before opening it and avoid two observers competing over the same element.
+Test state-to-native opening, native-to-state closing, and teardown independently. In a DOM mock, missing `showModal` is a platform limitation; use a real browser to test modal focus. Modal opening waits for a detached host to connect; a newer closed state or Scope teardown cancels that wait. Avoid two observers competing over the same element.
 
 For reusable triggers, naming constraints, hydration refs, and close requests, return to [Dialog](/explore/ui-dialog). API: [NativeDialog.ref](/reference/modules/%40typed%2Fui%2FNativeDialog).

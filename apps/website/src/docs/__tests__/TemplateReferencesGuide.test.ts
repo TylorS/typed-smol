@@ -22,7 +22,7 @@ describe("Template references guide", () => {
       kind: "guide",
     });
     const examples = extractTypeScriptFences(guide.body).join("\n");
-    for (const term of ["Effect.acquireRelease", "observer.disconnect()", "RefSubject.hydrate", "RefSubject.hydrateAll", "ref=${"]) {
+    for (const term of ["Fx.callback", "RefSubject.set", "observer.disconnect()", "RefSubject.hydrate", "RefSubject.hydrateAll", "ref=${"]) {
       expect(examples).toContain(term);
     }
     expect(guide.body).toContain("/explore/hydrating-typed-html");

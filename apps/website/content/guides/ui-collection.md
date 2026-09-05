@@ -21,10 +21,11 @@ import { html } from "@typed/template";
 import { component } from "@typed/ui/Component";
 import * as Collection from "@typed/ui/Collection";
 
-const ReportCommands = component(function* (
-  exportReport: Effect.Effect<void>,
-  printReport: Effect.Effect<void>,
-) {
+const ReportCommands = <E, R, E2, R2>(
+  exportReport: Effect.Effect<void, E, R>,
+  printReport: Effect.Effect<void, E2, R2>,
+) => component(function* () {
+  // Commands retain their error and service requirements in the rendered result.
   const items = yield* Collection.makeState<string, HTMLButtonElement>();
   const count = RefSubject.map(items, (registered) => registered.length);
   return html`

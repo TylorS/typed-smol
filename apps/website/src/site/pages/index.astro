@@ -36,12 +36,11 @@ const packages = [
     "Represent loading, refreshing, success, failure, and optimistic data explicitly.",
   ],
 ];
-const source = `import { RefSubject } from "@typed/fx";
+const source = `import { Fx, RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
 import { Button } from "@typed/ui/Button";
-import { component } from "@typed/ui/Component";
 
-export const Quantity = component(function* () {
+export const Quantity = Fx.gen(function* () {
   const quantity = yield* RefSubject.make(1);
   const total = RefSubject.map(quantity, n => n * 24);
 

@@ -96,7 +96,7 @@ It does not recover the source or restart its work:
 title: mapBoth keeps one success output while also mapping typed failures
 covers: mapBoth
 input: ok !offline
-operator: mapBoth(success, failure)
+operator: mapBoth({ onSuccess, onFailure })
 output: OK !OfflineError
 ```
 

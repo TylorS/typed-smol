@@ -23,21 +23,30 @@ import { liftRenderableToFx } from "@typed/template/Render";
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 import { component } from "@typed/ui/Component";
 import { Button } from "@typed/ui/Button";
-import { createApp, defineComponent, h, nextTick, shallowRef } from "vue";
+import { createApp, defineComponent, h, nextTick, ref, shallowRef } from "vue";
 
 type PriceProps = { readonly symbol: string; readonly last: number };
 
 const livePrice = component(function* <E, R>(values: Renderable<PriceProps, E, R>) {
   const current = shallowRef<PriceProps>();
-  const Root = defineComponent(
-    () => () =>
-      current.value === undefined
-        ? null
-        : h("section", [
-            h("label", ["Alert threshold ", h("input", { type: "number", value: 42 })]),
-            h("output", `${current.value.symbol}: ${current.value.last}`),
-          ]),
-  );
+  const Root = defineComponent(() => {
+    // Vue owns the draft; incoming price snapshots never replace it.
+    const threshold = ref("42");
+    return () => current.value === undefined
+      ? null
+      : h("section", [
+          h("label", ["Alert threshold ", h("input", {
+            type: "number",
+            value: threshold.value,
+            onInput: (event: Event) => {
+              if (event.currentTarget instanceof HTMLInputElement) {
+                threshold.value = event.currentTarget.value;
+              }
+            },
+          })]),
+          h("output", `${current.value.symbol}: ${current.value.last}`),
+        ]);
+  });
   const host = document.createElement("div");
   const app = yield* Effect.acquireRelease(
     Effect.sync(() => {
@@ -84,7 +93,7 @@ services on the returned `Fx`. This local source has no typed failures; an exter
 The reverse `TypedSlot` samples `props.value` during `onMounted`. It is designed for a stable live Typed renderable, not changing Vue prop identity. If the Vue parent must replace that value, add an explicit watcher that interrupts and awaits the old fiber before starting the replacement; otherwise a new prop will be ignored by this slot. Document that contract in your application's wrapper.
 
 Create the DOM runtime once at application bootstrap. Vue owns the outer `div`; its lifecycle starts one
-scoped Typed render fiber and interrupts only that fiber before Vue discards the host. Runtime disposal is an
+scoped Typed render fiber and requests interruption of that fiber as Vue removes the host. Vue does not await asynchronous unmount work; finalizers must tolerate a detached host. Runtime disposal is an
 application shutdown concern, not a component-unmount concern.
 
 ```ts
@@ -99,7 +108,7 @@ import type { RenderTemplate } from "@typed/template/RenderTemplate";
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, type PropType } from "vue";
 
 // Application bootstrap owns runtime.dispose() during application shutdown.
-const runtime = ManagedRuntime.make(DomRenderTemplate);
+const runtime = ManagedRuntime.make(DomRenderTemplate.using(document));
 
 const TypedSlot = defineComponent({
   props: {

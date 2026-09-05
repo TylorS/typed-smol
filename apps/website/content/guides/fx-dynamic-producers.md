@@ -45,7 +45,7 @@ inner selected Fx: . . ^ opened updated |
 output: . . . opened updated |
 ```
 
-Read down from `choose`: it permits the selected lane's `^`, not an output event. The first output
+Read down from `choose`: it permits the selected lane's raised start chevron, not an output event. The first output
 is `opened`. The spaces between phases are logical sequencing, not promised clock delays.
 
 `Fx.gen` is the generator form of this same two-phase operation. Yield setup Effects and return the

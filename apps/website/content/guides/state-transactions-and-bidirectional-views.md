@@ -52,7 +52,7 @@ rejection into a defect just because the callback can fail.
 
 ## Use transaction-local operations for several steps
 
-A reservation may read the model, buffer an update, and return a receipt. `runUpdates` exposes
+A reservation may read the model, update its value, and return a receipt. `runUpdates` exposes
 `GetSetDelete` for that one transaction. Use the callback's operations instead of re-entering the
 same ref's top-level write methods.
 
@@ -71,6 +71,11 @@ const reserve = <E, R>(slots: RefSubject.RefSubject<number, E, R>) =>
     onInterrupt: (initial) => Effect.log(`reservation interrupted from ${initial} available slots`),
   })
 ```
+
+Each transaction-local write changes retained state immediately; its publication waits until the
+callback exits. If the callback fails or is interrupted after writing, those writes remain and
+their publications still run. Serialization does not provide rollback or collapse several writes
+into one publication. Use one `modify` when a decision and its replacement fit one transition.
 
 The `onInterrupt` option can receive the initial or current transaction value. Use it for a
 specific interruption policy or diagnostic record. It is not evidence that a remote operation was

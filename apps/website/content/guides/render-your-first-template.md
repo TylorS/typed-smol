@@ -13,7 +13,7 @@ You need a TypeScript browser entry and an existing `<div id="app"></div>` in th
 Install the public packages in your application:
 
 ```sh
-pnpm add effect@^4 @typed/fx @typed/template @typed/ui
+pnpm add effect@^4 @typed/fx @typed/template
 ```
 
 ## Describe the view before running it
@@ -77,16 +77,15 @@ another application's widgets, and unrelated nodes belong beside that host.
 
 ## Connect one user action to one value
 
-The interactive version needs scoped state, so introduce `component` for that setup. Replace the
+Use `Fx.gen` to create state when the view runs, then return the template. Replace the
 view with this version, leaving the mounting code unchanged:
 
 ```ts
-import { RefSubject } from "@typed/fx";
-import { component } from "@typed/ui/Component";
+import { Fx, RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
 import * as EventHandler from "@typed/template/EventHandler";
 
-export const SearchPage = component(function* () {
+export const SearchPage = Fx.gen(function* () {
   const query = yield* RefSubject.make("");
   const readInput = EventHandler.make((event: Event) =>
     RefSubject.set(query, (event.currentTarget as HTMLInputElement).value),
@@ -102,11 +101,11 @@ export const SearchPage = component(function* () {
 });
 ```
 
-A zero-argument component generator produces an Fx value directly. Its subject provides the initial
+The generator produces an Fx value. Its subject provides the initial
 empty string and later changes. `.value` writes the input's live
 property. `oninput` receives the browser event and returns an Effect that stores the edit. The output
 subscribes to the same subject. Typing changes those retained parts; it does not recreate the main,
-label, or input and does not rerun the component's setup generator.
+label, or input and does not rerun the setup generator.
 
 This is a controlled editing loop, not a search request implementation. Request timing, cancellation,
 and results can be added above the field once this loop works.

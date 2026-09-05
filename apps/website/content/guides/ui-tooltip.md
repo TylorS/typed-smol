@@ -20,8 +20,8 @@ import { html } from "@typed/template";
 import { component } from "@typed/ui/Component";
 import * as Tooltip from "@typed/ui/Tooltip";
 
-const RefreshWithHelp = component(function* (refresh: Effect.Effect<void>) {
-  const state = yield* Tooltip.makeState({ id: "refresh-help" });
+const RefreshWithHelp = component(function* <R>(id: string, refresh: Effect.Effect<void, never, R>) {
+  const state = yield* Tooltip.makeState({ id });
   return [
     Tooltip.Anchor(
       { state, showDelay: 250, hideDelay: 100, content: "Refresh", onclick: refresh },
@@ -30,10 +30,9 @@ const RefreshWithHelp = component(function* (refresh: Effect.Effect<void>) {
     Tooltip.Content({ state, content: "Fetch the latest values without changing your filters." }),
   ];
 });
-const refreshControl = RefreshWithHelp(Effect.void);
 ```
 
-The action name remains visible. The text explains its consequences. Use an instance-specific deterministic ID if several refresh controls appear together; duplicate IDs can describe the wrong control and confuse pointer-transfer checks.
+Pass the real refresh Effect and a stable, page-unique ID. Its required services remain in the view’s inferred type. The action name remains visible. The text explains its consequences. Use an instance-specific deterministic ID if several refresh controls appear together; duplicate IDs can describe the wrong control and confuse pointer-transfer checks.
 
 ## Follow the interaction sequence
 

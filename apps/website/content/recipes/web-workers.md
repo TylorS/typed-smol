@@ -1,83 +1,109 @@
 ---
 slug: web-workers
 title: Compute in a browser Worker and render with Typed
-summary: Move a CPU-bound summary off the UI thread while keeping messages, worker ownership, and cleanup explicit.
+summary: Use Effect RPC and its browser worker platform for typed requests, cooperative cancellation, and scoped rendering.
 ---
 
-A large numeric summary should not block typing in the page. A dedicated Worker computes; Typed renders its progress or result on the main thread. The worker never receives template nodes, Effect services, or a RefSubject. Its boundary is structured-cloneable messages.
+Move CPU-heavy computation into a Worker while Typed keeps the page responsive. Effect's worker-backed RPC supplies the request IDs, schema validation, replies, and cancellation protocol. Your application supplies the computation and the template.
 
-This example computes a sum for one selected dataset. Use it when the computation is large enough to justify worker startup and message costs. Ordinary I/O such as `fetch` does not need a worker simply to be asynchronous.
+Install `@effect/platform-browser` at the version matching your `effect` release. This recipe uses Effect 4's `effect/unstable/rpc` APIs and three files in the same directory.
 
-## Give one run one worker
+## Describe the request in `summary.ts`
 
-The adapter takes a worker factory and numeric input. Each subscription owns a dedicated worker and terminates it on interruption. A request that supersedes this one should interrupt its subscription; a separate worker per run avoids accidentally rendering a late result from the previous dataset.
+The page and the worker share a schema, not DOM nodes or mutable UI state. RPC validates the payload and the response at the boundary.
 
-```ts
-import { Data, Effect } from "effect";
+```ts file="summary.ts"
+import { Schema } from "effect";
+import { Rpc, RpcGroup } from "effect/unstable/rpc";
+
+export const SummaryRpc = RpcGroup.make(
+  Rpc.make("Summarize", {
+    payload: { values: Schema.Array(Schema.Finite) },
+    success: Schema.Finite,
+  }),
+);
+```
+
+`Summarize` accepts finite numbers and returns their total. For a domain failure you expect callers to recover from, add an `error` schema to this contract. Transport failures already appear in the client's error channel.
+
+## Run the computation in `summary.worker.ts`
+
+The browser runner provides the worker transport. The RPC server decodes a request and invokes the matching Effect handler.
+
+```ts file="summary.worker.ts"
+import * as BrowserWorkerRunner from "@effect/platform-browser/BrowserWorkerRunner";
+import { Effect, Layer } from "effect";
+import { RpcServer } from "effect/unstable/rpc";
+import { SummaryRpc } from "./summary.js";
+
+const Handlers = SummaryRpc.toLayer({
+  Summarize: Effect.fn(function* ({ values }) {
+    let total = 0;
+    for (let start = 0; start < values.length; start += 4096) {
+      const end = Math.min(start + 4096, values.length);
+      for (let index = start; index < end; index++) {
+        total += values[index]!;
+      }
+      // Let the worker process cancellation messages between chunks.
+      yield* Effect.yieldNow;
+    }
+    return total;
+  }),
+});
+
+RpcServer.layer(SummaryRpc).pipe(
+  Layer.provide(Handlers),
+  Layer.provide(RpcServer.layerProtocolWorkerRunner),
+  Layer.provide(BrowserWorkerRunner.layer),
+  Layer.launch,
+  Effect.runFork,
+);
+```
+
+The worker has its own runtime, so starting it here is an application boundary. Chunking matters even off the main thread: a single uninterrupted JavaScript loop cannot receive a cancellation message until it finishes. A finite input can still overflow during addition; the response schema rejects a non-finite total.
+
+## Render the result in `SummaryView.ts`
+
+Create the RPC client inside the component's scope. The template accepts the request Effect directly; no callback adapter, manual message listener, or intermediate state container is needed.
+
+```ts file="SummaryView.ts"
+import * as BrowserWorker from "@effect/platform-browser/BrowserWorker";
 import * as Fx from "@typed/fx/Fx";
 import { html } from "@typed/template";
+import { component } from "@typed/ui/Component";
+import { Layer } from "effect";
+import { RpcClient } from "effect/unstable/rpc";
+import { SummaryRpc } from "./summary.js";
 
-class WorkerFailure extends Data.TaggedError("WorkerFailure")<{
-  readonly message: string;
-}> {}
+const WorkerProtocol = RpcClient.layerProtocolWorker({ size: 1 }).pipe(
+  Layer.provide(BrowserWorker.layer(() =>
+    // Keep this form intact so Vite can discover and bundle the worker entry.
+    new Worker(new URL("./summary.worker.ts", import.meta.url), { type: "module" }),
+  )),
+);
 
-export const summarize = (createWorker: () => Worker, values: ReadonlyArray<number>) =>
-  Fx.callback<number, WorkerFailure>((emit) => {
-    const worker = createWorker();
-    const onMessage = (event: MessageEvent<unknown>) => {
-      if (typeof event.data !== "number" || !Number.isFinite(event.data)) {
-        emit.fail(new WorkerFailure({ message: "Invalid summary response" }));
-        return;
-      }
-      emit.succeed(event.data);
-    };
-    const onError = (event: ErrorEvent) => {
-      emit.fail(new WorkerFailure({ message: event.message }));
-    };
-    const onMessageError = () => {
-      emit.fail(new WorkerFailure({ message: "Summary could not be deserialized" }));
-    };
-    worker.addEventListener("message", onMessage);
-    worker.addEventListener("error", onError);
-    worker.addEventListener("messageerror", onMessageError);
-    worker.postMessage(values);
-    return Effect.sync(() => {
-      worker.removeEventListener("message", onMessage);
-      worker.removeEventListener("error", onError);
-      worker.removeEventListener("messageerror", onMessageError);
-      worker.terminate();
-    });
-  }).pipe(Fx.take(1));
+export const Summary = component(function* (values: ReadonlyArray<number>) {
+  const client = yield* RpcClient.make(SummaryRpc);
 
-const createSummaryWorker = () =>
-  new Worker(new URL("./summary.worker.ts", import.meta.url), { type: "module" });
-
-export const Summary =
-  html`<output>Dataset total: ${summarize(createSummaryWorker, [10, 20, 30])}</output>`;
-```
-
-`Fx.take(1)` finishes after the first delivered result; it also releases the worker. The input adapter is lazy: declaring `Summary` starts no computation. Expected worker execution and message errors are typed failures. Invalid worker construction, such as a malformed URL or denied script, is a setup exception; handle that at an application error boundary if your deployment can produce it.
-
-## Implement the other side of the protocol
-
-Save this as the worker entry, for example `summary.worker.ts`. It checks incoming data instead of trusting TypeScript annotations across a message boundary.
-
-```ts
-self.addEventListener("message", (event: MessageEvent<unknown>) => {
-  if (!Array.isArray(event.data) ||
-      !event.data.every((value: unknown) => typeof value === "number" && Number.isFinite(value))) {
-    throw new Error("Expected finite numbers");
-  }
-  self.postMessage(event.data.reduce((total: number, value: number) => total + value, 0));
+  return html`
+    <output aria-live="polite">Dataset total: ${client.Summarize({ values })}</output>
+  `;
 });
+
+// The worker protocol lives for this rendered subscription.
+export const Example = Summary([10, 20, 30]).pipe(Fx.provide(WorkerProtocol));
 ```
 
-The browser entry above uses Vite's statically analyzable `new Worker(new URL(..., import.meta.url), { type: "module" })` form. Keep the worker file alongside that entry or adjust the relative path. Passing a factory preserves that syntax at the call site while the adapter still owns creating and terminating the worker. See [Vite worker imports](https://vite.dev/guide/features#web-workers).
+Render `Example` through your existing Typed application entry; it displays **Dataset total: 60**. The worker is created when the supplied layer is acquired, rather than when the module is imported. The component gives the RPC client and its rendered request a shared lifetime.
 
-## Decide when to reuse a worker
+## Replace work without stale results
 
-For repeated small requests, a persistent worker can amortize startup. That is a different ownership contract: the application owns termination, each request owns only its listener, and every request/response needs an ID. A cancelled request removes its listener; terminating the shared worker would cancel unrelated work. For large typed arrays, consider transfer lists, remembering that transferring an ArrayBuffer detaches it from the sender. See [Worker messaging](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage).
+For a changing selection, switch the rendered summary with `Fx.switchMap`. The old component's scope closes and its pending RPC request is interrupted. RPC carries interruption to the worker; the chunked handler can then stop. Put `Fx.provide(WorkerProtocol)` around the whole switching view to reuse the pool across selections, instead of starting a worker for every selection.
 
-## Check cancellation and delivery
+When the owning subscription ends, the protocol closes its pool and sends the worker shutdown message. `BrowserWorkerRunner` handles that message and closes its endpoint. The browser platform does not force `Worker.terminate()`: code that never yields cannot process a shutdown message. For uncooperative third-party computation, explicitly own a dedicated native worker with `Effect.acquireRelease` and terminate it on release.
 
-Test a known input, a malformed response, and worker script failure. Start a slow job, replace it, and verify the old result cannot overwrite the new selection. In a real browser, remove the summary while it computes and verify termination. Measure main-thread responsiveness and end-to-end latency with realistic payloads; a faster loop in isolation does not measure worker startup or cloning cost. Continue with [callback sources](/explore/building-fx) and the [Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Worker).
+## Check the actual boundary
+
+Check a known result, a rejected payload, and worker startup failure. Replace a large computation before it finishes and verify only the latest selection renders. Remove the view and verify the worker exits. Measure responsiveness and total latency with realistic input sizes: worker startup and structured cloning have costs, and ordinary asynchronous I/O does not need a worker.
+
+Continue with [switching work](/explore/fx-higher-order-and-concurrency), [component lifetime](/explore/ui-component), and Effect's [browser worker platform](https://github.com/Effect-TS/effect-smol/blob/main/packages/platform-browser/src/BrowserWorker.ts). The worker entry uses [Vite's worker bundling syntax](https://vite.dev/guide/features#web-workers); the Typed view itself is independent of a site framework.

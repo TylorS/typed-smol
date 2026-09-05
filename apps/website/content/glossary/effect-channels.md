@@ -11,6 +11,7 @@ In `Effect<A, E, R>` and `Fx<A, E, R>`, `A` is the value, `E` is an expected fai
 required services. An invoice lookup might produce invoice data, fail with a repository error, and
 require an invoice repository service.
 
-A wrapper should preserve that information. Declaring `never` for errors or requirements makes a
-stronger promise than the implementation supports. Channels describe contracts; [Scope](#scope)
+A wrapper should preserve errors and requirements that remain. Handling every expected error can
+make `E` become `never`; supplying every required service can make `R` become `never`. A type
+assertion alone does neither. Channels describe contracts; [Scope](#scope)
 controls resource lifetime. See [library development](/explore/library-developers).

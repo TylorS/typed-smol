@@ -27,7 +27,7 @@ describe("Building Fx values guide", () => {
     expect(guide.body).toContain("Fx.fromSchedule");
     expect(guide.body).toContain("Fx.callback");
     expect(guide.body).toContain("Fx.genScoped");
-    expect(guide.body).toContain("Data.TaggedError");
+    expect(guide.body).toContain("HttpClientError.HttpClientError");
     expect(guide.body).toContain("Context.Service");
     expectExampleCalls(guide.body, [
       "Fx.fromEffect",
@@ -38,7 +38,8 @@ describe("Building Fx values guide", () => {
       "Fx.callback",
       "Fx.genScoped",
       "Effect.acquireRelease",
-      "Effect.tryPromise",
+      "HttpClient.get",
+      "Effect.provide",
     ]);
   });
 

@@ -21,7 +21,7 @@ its current implementation limits.
 
 ## Choose application values before controls
 
-The request needs an email string, a positive team size, a plan string, and a boolean preference.
+The request needs an email string, a positive integer team size, one of two plans, and a boolean preference.
 A number input exposes a string to JavaScript while the request needs a number. A field codec
 makes that conversion explicit: `Schema.FiniteFromString` has a string encoding and a finite numeric
 Type. The initial form state therefore contains `teamSize: 1`, not `"1"`.
@@ -39,8 +39,8 @@ import * as Form from "@typed/ui/Form";
 
 const TrialRequest = Form.make(Schema.Struct({
   email: Schema.String,
-  teamSize: Schema.FiniteFromString.pipe(Schema.check(Schema.isGreaterThan(0))),
-  plan: Schema.String,
+  teamSize: Schema.FiniteFromString.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThan(0))),
+  plan: Schema.Literals(["starter", "team"]),
   productUpdates: Schema.Boolean,
 }));
 
@@ -121,10 +121,9 @@ pattern.
 
 Native and application validation solve different problems. In this example `required` rejects an
 empty email through the browser, while `Schema.String` alone does not enforce that policy on a
-programmatic value. The positive number check protects the decoded team-size invariant, while
-`step: 1` configures native integer stepping. Before connecting a service, define its full request
-schema, including allowed plans and integer/email rules, rather than mistaking these demonstration
-fields for a complete server contract.
+programmatic value. Schema checks enforce a positive integer team size and the two allowed plans,
+while `step: 1` configures native integer stepping. Before connecting a service, define its email
+and business rules and validate requests at the service boundary too.
 
 ## Follow an edit through decoding and feedback
 
@@ -178,9 +177,12 @@ visible, because that preview is an independently owned result. If “start over
 make it a named application action that updates both subjects rather than hiding that behavior
 inside a generic reset button.
 
-Use `Form.setValue` for programmatic field changes. Its successful update marks touched and
-compares the new value with the default for dirty tracking; touched is not specifically a blur
-flag. A new record should get the correct defaults and identity instead of silently inheriting the
+Use `Form.setValue` to assign an already-decoded field value. It updates touched/dirty metadata
+without validating the value or clearing an existing field error. Decode unknown data with Effect
+Schema first; call `Form.validate(form)` for an explicit whole-form check. Successful validation
+clears errors, while failure returns a `SchemaError`. Dirty tracking compares the new value with
+the default; touched is not specifically a blur flag. A new record should get the correct defaults
+and identity instead of silently inheriting the
 old record's errors. For server rendering, use stable explicit form/control IDs and matching
 initial data; [hydration](/explore/server-rendering-and-hydration) covers that handoff.
 

@@ -77,8 +77,9 @@ export const page = html`<main>
 
 No wrapper protocol or assumed `foreign.mount()` return type appears here. The adapter models the
 foreign API it actually has. When setup acquires an editor, observer, or timer, use
-`component(function* (...) { ... return output; })` and scoped Effects. When no setup is needed,
-a direct template or Fx value is sufficient. A generator-backed non-view producer uses `Fx.fn`.
+scoped Effects. `component` adds a child Scope and lifts returned output such as a `DomRenderEvent`;
+`Fx.gen` is sufficient for yielded setup returning an Fx. When no setup is needed, a direct template
+or Fx value is sufficient.
 
 The inferred `E` and `R` channels remain part of the caller's program. Do not erase a foreign
 initialization error behind an untracked Promise or start a hidden fiber that outlives the host.

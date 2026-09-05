@@ -80,7 +80,8 @@ permission to mutate the source.
 
 Run a current read like any other Effect. To observe a long-lived update channel, run an Fx
 operation such as `Fx.observe` in the consumer's Scope. `Fx.collectAll` is appropriate only for a
-finite source, as in the example above. Reading the current value shares in-flight work among
+finite source: the settings adapter above stays open, so use `Fx.first` for one update or observe it
+within a Scope for ongoing changes. Reading the current value shares in-flight work among
 concurrent readers; `interrupt` stops that shared current-read work, but does not complete or take
 ownership of the independently supplied update channel.
 

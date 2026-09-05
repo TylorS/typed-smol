@@ -21,7 +21,7 @@ Start from the [Quick Start counter](/explore/quick-start) and add a value compu
 // @expect <p>Twice the count: ${doubled}</p>
 ```
 
-The component's running Scope owns the state, subscriptions, and event listeners. Ending that lifetime releases them together.
+Each run of `component` forks its parent's Scope. That child owns both the generator's setup and the returned template's subscriptions and event listeners. When the run ends or its parent closes, those resources are released together; another mounted counter has its own child Scope.
 
 Replace only `src/Counter.ts`. This version also spells out the button labels as **Decrease** and **Increase**. Click Increase twice: the count should be **2** and the doubled value **4**.
 

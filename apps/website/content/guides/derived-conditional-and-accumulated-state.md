@@ -156,17 +156,19 @@ import { RefSubject } from "@typed/fx"
 const example = Effect.scoped(Effect.gen(function* () {
   const delta = yield* RefSubject.make(1)
   const total = RefSubject.scan(delta, 0, (sum, value) => sum + value)
-  const firstRead = yield* total
-  const secondRead = yield* total
+  const firstRead = yield* total // 1
+  const secondRead = yield* total // 1: the source version has not changed
   return { firstRead, secondRead }
 }))
 ```
 
-The current-read accumulator is private to this scan view and advances on each successful read:
-the example reads `1`, then `2`, without a source write. Its Fx subscription instead emits the seed
-and folds source versions for that subscription. A subscription and current reads do not share one
-exact accumulated history. `scanEffect` leaves the read accumulator unchanged when its fold fails.
-Separate scan calls have separate read accumulators.
+Current reads cache by source version within each Effect Context, so both reads return `1`.
+The next read after a source version changes folds its current value into that Context's private
+accumulator. Changes between reads are not an event history that sampling can recover.
+The Fx channel instead emits the seed and folds observed values; observers in the same Context
+share that active session. It remains separate from the current-read accumulator. `scanEffect`
+leaves the read accumulator unchanged when its fold fails. Separate scan views and Contexts have
+separate read accumulators.
 
 Also, a RefSubject publishes distinct state commits. Writing the same delta `1` repeatedly may be
 suppressed by equality, so a scan over that ref is not a reliable count of commands. Use an event
@@ -175,7 +177,7 @@ history, run that fold under one owner and retain its result, or expose a named 
 for the domain total.
 
 These distinctions explain most derived-state surprises: stale output after absence, duplicated
-remote work, and totals that change merely when read. Choose the question first, then select
+remote work, and sampled totals that differ from observed history. Choose the question first, then select
 Computed, Filtered, Option, or an owned event accumulator to match it. See
 [AsyncData resources](/explore/async-data-requests-and-cache) for shared remote state and
 [Subject events](/explore/subject-event-publications) for repeated occurrences.

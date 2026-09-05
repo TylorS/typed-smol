@@ -48,15 +48,15 @@ import { component } from "@typed/ui/Component";
 import * as Button from "@typed/ui/Button";
 import * as Popover from "@typed/ui/Popover";
 
-const RevenueLegend = component(function* () {
+const RevenueLegend = component(function* (id: string) {
   const state = yield* Popover.makeState();
   return [
     Popover.Trigger({ state, content: "Chart legend" }),
     Popover.Content({
       state,
       content: html`
-        <section aria-labelledby="legend-heading">
-          <h2 id="legend-heading">Revenue legend</h2>
+        <section aria-labelledby=${`${id}-title`}>
+          <h2 id=${`${id}-title`}>Revenue legend</h2>
           <p>Green means recognized revenue. Gray means forecast revenue.</p>
           ${Button.Button({ content: "Close legend", onclick: Popover.setOpen(state, false) })}
         </section>
@@ -96,46 +96,54 @@ class ArchiveRejected extends Data.TaggedError("ArchiveRejected")<{
   readonly message: string;
 }> {}
 
-const ArchiveReport = component(function* (archive: Effect.Effect<void, ArchiveRejected>) {
+const ArchiveReport = component(function* <R>(id: string, archive: Effect.Effect<void, ArchiveRejected, R>) {
   const state = yield* Dialog.makeState();
   const busy = yield* RefSubject.make(false);
   const status = yield* RefSubject.make("");
-  const confirm = Effect.gen(function* () {
-    if (yield* busy) return;
-    yield* RefSubject.set(busy, true);
-    yield* RefSubject.set(status, "Archiving…");
-    yield* archive.pipe(
-      Effect.andThen(Dialog.close(state)),
-      Effect.catchTag("ArchiveRejected", ({ message }) => RefSubject.set(status, message)),
-      Effect.ensuring(RefSubject.set(busy, false)),
-    );
-  });
+  const confirm = Effect.acquireUseRelease(
+    // Protect the busy claim and its release from interruption.
+    RefSubject.modify(busy, (running) => [!running, true] as const),
+    (acquired) => acquired
+      ? Effect.gen(function* () {
+          yield* RefSubject.set(status, "Archiving…");
+          yield* archive;
+          yield* RefSubject.set(status, "Archived.");
+          yield* Dialog.close(state);
+        }).pipe(
+          Effect.catchTag("ArchiveRejected", (error) => RefSubject.set(status, error.message)),
+          Effect.asVoid,
+        )
+      : Effect.void,
+    // A competing click must not release the active operation's claim.
+    (acquired) => acquired ? RefSubject.set(busy, false) : Effect.void,
+  );
   return [
     Dialog.Trigger({ state, content: "Archive report" }),
     Dialog.Content({
       state,
-      labelledBy: "archive-report-heading",
+      labelledBy: `${id}-title`,
       content: html`
-        <h2 id="archive-report-heading">Archive this report?</h2>
+        <h2 id=${`${id}-title`}>Archive this report?</h2>
         <p>You can restore it from the archive later.</p>
         <p role="status">${status}</p>
-        ${Dialog.RequestClose({ state, content: "Keep report" })}
+        ${Dialog.RequestClose({ state, content: "Close dialog" })}
         ${Button.Button({ content: "Archive", disabled: busy, onclick: confirm })}
       `,
     }),
   ];
 });
-const archiveReport = ArchiveReport(Effect.void);
 ```
 
-The generator acquires instance-local interaction state. The supplied Effect performs the domain
-action; no button named Archive merely pretends to perform work by closing. Success calls `close`,
+Pass a stable, page-unique ID and the real archive Effect when composing this view. Its service
+requirements remain in the returned view. Success calls `close`,
 while a recoverable rejection updates visible status and leaves the decision available. The busy
 check protects this instance from repeated activation; cross-screen serialization belongs in the
 archive service.
 
+Closing this dialog dismisses the view; it does not cancel an archive already underway. Reopening shows its current status. The handler belongs to the mounted component Scope, so removing that component interrupts the work. If archiving must survive navigation, let an application service own that operation.
+
 `RequestClose` uses the native cancelable close-request lifecycle. `close` bypasses that request and
-sets state false, which is appropriate after successful acceptance. Escape, a keep button, route
+sets state false, which is appropriate after successful acceptance. Escape, a close button, route
 removal, and successful archiving can all end visibility but are not interchangeable domain results.
 [Dialog](/explore/ui-dialog) develops cancellation, command support, naming, and focus return.
 

@@ -67,15 +67,16 @@ without acquiring another copy:
 ```ts
 import { RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
-const SelectedAccount = (selectedName: RefSubject.RefSubject<string>) => {
+const SelectedAccount = <E, R>(selectedName: RefSubject.Computed<string, E, R>) => {
   const label = RefSubject.map(selectedName, (name) => `Selected account: ${name}`);
   return html`<output>${label}</output>`;
 };
 ```
 
-This small view owns its observation, while its caller owns the selected name. It keeps the source
-live instead of reading and capturing the first name during setup. A richer picker can follow the
-same rule while adding keyboard behavior and a list host.
+The view requests only read access. It accepts a Computed or a writable RefSubject, preserving the
+source's errors and service requirements through the returned template. Its running observation
+belongs to the render lifetime; the caller still owns the selected name. Keeping the source live
+avoids capturing only the first name during setup.
 
 Direct `html` is enough here: the view has no Effect setup to yield. When setup does need Effects,
 use `component` from `@typed/ui/Component` and return any supported renderable from its generator. A parameterless body creates an Fx; a parameterized body creates a function. Pipeline

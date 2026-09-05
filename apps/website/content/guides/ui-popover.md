@@ -12,7 +12,7 @@ Read [overlay selection](/explore/overlays-disclosure-and-transient-ui) and [com
 
 ## Build a chart legend
 
-The visible close action works on touch as well as keyboard. A named region describes the content without claiming modal behavior.
+Pass a stable, page-unique ID for each legend. The visible close action works on touch as well as keyboard. A named region describes the content without claiming modal behavior.
 
 ```ts
 import { html } from "@typed/template";
@@ -20,16 +20,16 @@ import { component } from "@typed/ui/Component";
 import * as Button from "@typed/ui/Button";
 import * as Popover from "@typed/ui/Popover";
 
-const ChartLegend = component(function* () {
+const ChartLegend = component(function* (id: string) {
   const state = yield* Popover.makeState();
   return [
-    Popover.Trigger({ state, controls: "revenue-legend", content: "Explain chart colors" }),
+    Popover.Trigger({ state, controls: id, content: "Explain chart colors" }),
     Popover.Content({
       state,
-      props: { id: "revenue-legend" },
+      props: { id },
       content: html`
-        <section aria-labelledby="revenue-legend-title">
-          <h2 id="revenue-legend-title">Revenue legend</h2>
+        <section aria-labelledby=${`${id}-title`}>
+          <h2 id=${`${id}-title`}>Revenue legend</h2>
           <ul><li>Green: recognized revenue</li><li>Gray: forecast revenue</li></ul>
           ${Button.Button({ content: "Close legend", onclick: Popover.setOpen(state, false) })}
         </section>

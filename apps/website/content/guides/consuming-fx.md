@@ -127,8 +127,9 @@ const average = Stream.runFold(
 ```
 
 `toStream` starts the Fx lazily when the Stream runs. The Stream scope owns the adapter queue and
-cleanup. For ordinary per-event work or a finite collection, prefer the direct Effect runners above;
-a second streaming abstraction is useful only when the consumer actually uses its semantics.
+cleanup. Its optional buffer settings are Effect Stream callback options. `fromStream` carries
+Stream values back into Fx while retaining errors, services, and finalizers. Compose with the
+operations your consumer needs; both remain owned by the same Effect program.
 
 ## Give the live observer the feature's real lifetime
 

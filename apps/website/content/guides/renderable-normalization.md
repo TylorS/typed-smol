@@ -99,7 +99,6 @@ an untracked Promise while constructing the template:
 
 ```ts
 import { Context, Data, Effect } from "effect";
-import { component } from "@typed/ui/Component";
 import { html } from "@typed/template";
 
 class CollectionMissing extends Data.TaggedError("CollectionMissing")<{
@@ -111,16 +110,15 @@ interface Collections {
 }
 const Collections = Context.Service<Collections>("Collections");
 
-export const CollectionHeading = component(function* (id: string) {
-  const collections = yield* Collections;
-  return html`<h1>${collections.title(id)}</h1>`;
-});
+export const CollectionHeading = (id: string) => html`<h1>${
+  Effect.flatMap(Collections, (collections) => collections.title(id))
+}</h1>`;
 ```
 
-The inferred component output retains both `CollectionMissing` and the `Collections` requirement.
+The inferred template output retains both `CollectionMissing` and the `Collections` requirement.
 Effect's [service contract](https://github.com/Effect-TS/effect/blob/main/migration/services.md)
 defines how `Context.Service` makes that dependency explicit.
-Its caller decides which service to provide and how failure becomes a recovery view. The component
+Its caller decides which service to provide and how failure becomes a recovery view. The template
 neither hides a global client nor promises that every render succeeds. See the
 [Renderable reference](/reference/modules/%40typed%2Ftemplate%2FRenderable) for channel inference.
 

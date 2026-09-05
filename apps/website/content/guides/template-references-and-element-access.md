@@ -14,26 +14,24 @@ instance and lets Effect own the resource lifetime.
 Read [Native events with Effect](/explore/native-events-with-effect) before using a ref merely to
 install an event listener. A named event part already expresses that job more precisely.
 
-## Capture the exact element without inventing a component instance
+## Keep ordinary fields declarative
 
-A direct ref accepts a function, or a nullish value to do nothing. The function receives the native
-element; this input annotation is safe because the authored tag is an input:
+An element reference is unnecessary for attributes and properties the template already supports:
 
 ```ts
 import { html } from "@typed/template";
 
-const configureSearch = (input: HTMLInputElement) => {
-  input.autocomplete = "off";
-  input.setAttribute("aria-keyshortcuts", "Meta+K");
-};
-
-export const search = html`<input type="search" aria-label="Search articles" ref=${configureSearch} />`;
+export const search = html`<input
+  type="search"
+  aria-label="Search articles"
+  autocomplete="off"
+  aria-keyshortcuts="Meta+K"
+/>`;
 ```
 
-For ordinary declarative fields, prefer writing their template parts directly. This small callback
-only shows when and with what object the ref runs. It returns `void`, so it acquires no cleanup work.
-Passing a mutable ref-shaped object, string, or DOM node instead of a function is not this protocol
-and fails at runtime.
+Use `ref` when an API needs the element itself. A direct ref accepts a function receiving that
+native element, or a nullish value to do nothing. A mutable ref-shaped object, string, or DOM node
+is not this protocol.
 
 The renderer invokes the ref while preparing fresh output or wiring adopted output. A fresh element
 may not yet be inserted into the outer host. Element availability therefore does not imply layout,
@@ -46,35 +44,43 @@ lifetime that must end when the view ends:
 
 ```ts
 import { Effect } from "effect";
+import { Fx, RefSubject } from "@typed/fx";
 import { html } from "@typed/template";
 
-const measurePanel = (element: HTMLElement) => Effect.acquireRelease(
-  Effect.sync(() => {
-    const observer = new ResizeObserver(([entry]) => {
-      element.style.setProperty("--measured-width", `${entry.contentRect.width}px`);
-    });
-    observer.observe(element);
-    return observer;
-  }),
-  (observer) => Effect.sync(() => observer.disconnect()),
-);
+// Adapt only the browser subscription; rendering stays in the template.
+const widths = (element: HTMLElement) => Fx.callback<number>((emit) => {
+  const observer = new ResizeObserver(([entry]) => {
+    if (entry) emit.succeed(entry.contentRect.width);
+  });
+  observer.observe(element);
+  return Effect.sync(() => observer.disconnect());
+});
 
-export const results = html`<section aria-label="Search results" ref=${measurePanel}>
-  Results appear here.
-</section>`;
+export const results = Fx.gen(function* () {
+  const width = yield* RefSubject.make<number | null>(null);
+  const measurePanel = (element: HTMLElement) => widths(element).pipe(
+    Fx.tap((value) => RefSubject.set(width, value)),
+  );
+
+  return html`<section aria-label="Search results" ref=${measurePanel}>
+    <output>${RefSubject.map(width, (value) =>
+      value === null ? "Waiting for measurement" : `Panel width: ${Math.round(value)}px`)}</output>
+  </section>`;
+});
 ```
 
-The returned Effect installs the observer and registers its finalizer with the rendering scope.
-It can finish after acquisition without immediately disconnecting the observer. The observer lives
-until that owner closes—for example when a keyed result is removed or the containing render stops.
+The ref returns an Fx. The renderer drains it within the ref's scope, and `Fx.callback` disconnects
+the observer when that subscription ends. The callback publishes measurements; the template owns
+the displayed text. No selector or manual text/style mutation connects the two.
 
-A ref may also return an Fx or Effect Stream; its emissions are drained and its subscription is
-interrupted with that scope. Returning a plain JavaScript cleanup function is not a cleanup protocol.
-Use Effect resource management so error and service requirements remain visible to the template.
+A ref may also return an Effect or Effect Stream. Use `Effect.acquireRelease` for an Effect that
+acquires a resource and finishes setup while keeping the resource alive until scope closure.
+Returning a plain JavaScript cleanup function is not a cleanup protocol. Error and service
+requirements remain visible to the template.
 
-The style custom property in this example belongs to the observer. Avoid another writer replacing
-the same style state. A library requiring a connected host also needs explicit mount coordination;
-adding a guessed timeout does not establish connection or layout readiness.
+A library requiring a connected host also needs explicit mount coordination; adding a guessed
+timeout does not establish connection or layout readiness. ResizeObserver delivers measurements
+when the browser has geometry to report. Until then, the view explicitly displays its waiting state.
 
 ## Distinguish retained elements from replaced capabilities
 

@@ -12,7 +12,7 @@ Prerequisites: [Popover](/explore/ui-popover) for the complete Typed family and 
 
 ## Keep an auto popover synchronized
 
-This application uses native auto dismissal and declarative targeting. The toggle handler records the browser's final state; the external button also demonstrates opening through Typed state.
+Pass a stable, page-unique ID for the target relationship. This application uses native auto dismissal and declarative targeting. The toggle handler records the browser's final state; the external button also demonstrates opening through Typed state.
 
 ```ts
 import { RefSubject } from "@typed/fx";
@@ -21,19 +21,19 @@ import { component } from "@typed/ui/Component";
 import * as Dom from "@typed/ui/Dom";
 import * as NativePopover from "@typed/ui/NativePopover";
 
-const ExportHelp = component(function* () {
+const ExportHelp = component(function* (id: string) {
   const state = yield* RefSubject.make({ open: false });
   const readToggle = EventHandler.make((event: Event) => {
     const open = Dom.toggleState(event) === "open";
     return RefSubject.set(state, { open });
   });
   return html`
-    <button type="button" popovertarget="export-help">Export help</button>
+    <button type="button" popovertarget=${id}>Export help</button>
     <button type="button" onclick=${RefSubject.set(state, { open: true })}>Show help</button>
-    <aside id="export-help" popover="auto" aria-label="Export help"
+    <aside id=${id} popover="auto" aria-label="Export help"
       ref=${NativePopover.ref(state)} ontoggle=${readToggle}>
       <p>CSV includes the currently visible rows and columns.</p>
-      <button type="button" popovertarget="export-help" popovertargetaction="hide">Close</button>
+      <button type="button" popovertarget=${id} popovertargetaction="hide">Close</button>
     </aside>
   `;
 });

@@ -165,7 +165,7 @@ changing measurement, not for commands where every occurrence must be handled.
 records, not for pairing an event feed with a rarely changing setting:
 
 ```fx-marble
-title: zip variants pair each next value and finish with the first completed lane
+title: zip variants pair each next value until a completed lane runs out of values
 covers: zip, zipWith, zipLeft, zipRight
 input left: left-1 . left-2 . |
 input right: . right-1 . right-2 |
@@ -176,8 +176,9 @@ output zipLeft: . left-1 . left-2 |
 output zipRight: . right-1 . right-2 |
 ```
 
-Every output waits for its matching partner. The first lane completion ends pairing and discards
-unmatched inputs. `zipWith`, `zipLeft`, and `zipRight` change the output representation, not this
+Every output waits for its matching partner. A completed lane can still supply its queued values;
+pairing ends when a completion marker is reached after those values. Remaining unmatched inputs
+are discarded. `zipWith`, `zipLeft`, and `zipRight` change the output representation, not this
 clock. Unmatched inputs wait in queues; a fast lane can therefore retain substantial work.
 
 `mergeOrdered` solves a different ordering problem: subscribe to all lanes now but expose their

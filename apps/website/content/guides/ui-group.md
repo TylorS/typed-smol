@@ -19,17 +19,17 @@ import { Button } from "@typed/ui/Button";
 import { component } from "@typed/ui/Component";
 import * as Group from "@typed/ui/Group";
 
-export const PreviewActions = component(function* () {
+export const PreviewActions = component(function* (labelId: string) {
   const rotation = yield* RefSubject.make(45);
   const scale = yield* RefSubject.make(150);
   return html`<section>
     <p>Rotation: ${rotation} degrees. Scale: ${scale}%.</p>
     ${Group.Label({
       content: "Preview controls",
-      props: { id: "preview-control-label", class: "control-group-label" },
+      props: { id: labelId, class: "control-group-label" },
     })}
     ${Group.Group({
-      labelledBy: "preview-control-label",
+      labelledBy: labelId,
       props: { class: "preview-actions" },
       content: [
         Button({ content: "Reset rotation", onclick: RefSubject.set(rotation, 0) }),
@@ -40,7 +40,7 @@ export const PreviewActions = component(function* () {
 });
 ```
 
-The two commands reset independent parts of the preview state, and the readout makes each result visible. The label ID is passed explicitly to `labelledBy`, producing `aria-labelledby` on the group's div. Use unique IDs for repeated groups. When no visible label is appropriate, `label` supplies `aria-label`; avoid supplying conflicting names through both routes.
+The two commands reset independent parts of the preview state, and the readout makes each result visible. The label ID is passed explicitly to `labelledBy`, producing `aria-labelledby` on the group's div. Pass a stable, distinct label ID to each `PreviewActions` instance. When no visible label is appropriate, `label` supplies `aria-label`; avoid supplying conflicting names through both routes.
 
 ## Match grouping strength to the task
 

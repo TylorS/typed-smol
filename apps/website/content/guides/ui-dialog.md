@@ -12,7 +12,7 @@ Start with [component construction](/explore/ui-component) and [overlay selectio
 
 ## Build an archive confirmation
 
-The action is supplied as an Effect. A recoverable rejection stays inside the dialog; only success closes it. The busy guard coordinates this mounted instance.
+Supply the real archive Effect and a stable, page-unique instance ID. Its service requirements remain in the returned view. A recoverable rejection appears in the dialog; success closes it.
 
 ```ts
 import { Data, Effect } from "effect";
@@ -26,39 +26,45 @@ class ArchiveRejected extends Data.TaggedError("ArchiveRejected")<{
   readonly message: string;
 }> {}
 
-const ArchiveProject = component(function* (
-  archive: Effect.Effect<void, ArchiveRejected>,
-) {
+const ArchiveProject = component(function* <R>(id: string, archive: Effect.Effect<void, ArchiveRejected, R>) {
   const state = yield* Dialog.makeState();
   const busy = yield* RefSubject.make(false);
   const message = yield* RefSubject.make("");
-  const confirm = Effect.gen(function* () {
-    if (yield* busy) return;
-    yield* RefSubject.set(busy, true);
-    yield* RefSubject.set(message, "Archiving…");
-    yield* archive.pipe(
-      Effect.andThen(Dialog.close(state)),
-      Effect.catchTag("ArchiveRejected", ({ message: text }) => RefSubject.set(message, text)),
-      Effect.ensuring(RefSubject.set(busy, false)),
-    );
-  });
+  const confirm = Effect.acquireUseRelease(
+    // Protect the busy claim and its release from interruption.
+    RefSubject.modify(busy, (running) => [!running, true] as const),
+    (acquired) => acquired
+      ? Effect.gen(function* () {
+          yield* RefSubject.set(message, "Archiving…");
+          yield* archive;
+          yield* RefSubject.set(message, "Archived.");
+          yield* Dialog.close(state);
+        }).pipe(
+          Effect.catchTag("ArchiveRejected", (error) => RefSubject.set(message, error.message)),
+          Effect.asVoid,
+        )
+      : Effect.void,
+    // A competing click must not release the active operation's claim.
+    (acquired) => acquired ? RefSubject.set(busy, false) : Effect.void,
+  );
   return [
     Dialog.Trigger({ state, content: "Archive project" }),
     Dialog.Content({
       state,
-      labelledBy: "archive-title",
+      labelledBy: `${id}-title`,
       content: html`
-        <h2 id="archive-title">Archive project</h2>
+        <h2 id=${`${id}-title`}>Archive project</h2>
         <p>You can restore this project later.</p>
         <p role="status">${message}</p>
-        ${Dialog.RequestClose({ state, content: "Keep project" })}
+        ${Dialog.RequestClose({ state, content: "Close dialog" })}
         ${Button.Button({ content: "Archive", disabled: busy, onclick: confirm })}
       `,
     }),
   ];
 });
-const archiveProject = ArchiveProject(Effect.void);
 ```
+
+Closing this dialog dismisses the view; it does not cancel an archive already underway. Reopening shows its current status. The handler belongs to the mounted component Scope, so removing that component interrupts the work. If archiving must survive navigation, let an application service own that operation.
 
 `RequestClose` invokes the registered element's native `requestClose()` when available. Its fallback dispatches a cancelable `cancel` event and closes only when accepted. With no mounted `Content`, the request does nothing. In contrast, `close` sets state false without asking permission; `Close` and its alias `Dismiss` provide that direct path. `Dialog.Dialog` aliases `Content`.
 

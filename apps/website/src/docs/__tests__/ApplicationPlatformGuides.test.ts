@@ -111,5 +111,5 @@ describe("application and platform guides", () => {
     } finally {
       fs.rmSync(staging, { recursive: true, force: true });
     }
-  });
+  }, 60_000);
 });

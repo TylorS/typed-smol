@@ -9,6 +9,7 @@ allowBuilds:
 
 catalog:
   effect: 4.0.0-rc.112
+  "@effect/platform-browser": 4.0.0-rc.112
   "@effect/platform-node": 4.0.0-rc.112
   "@effect/tsgo": 0.40.0
   oxlint: 1.81.0

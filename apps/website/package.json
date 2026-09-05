@@ -23,6 +23,7 @@
     "build:storybook": "pnpm --filter @typed/ui exec storybook build --output-dir ../../apps/website/public/storybook --disable-telemetry"
   },
   "dependencies": {
+    "@effect/platform-browser": "catalog:",
     "@effect/platform-node": "catalog:",
     "@typed/astro": "workspace:*",
     "@typed/async-data": "workspace:*",

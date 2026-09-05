@@ -1,64 +1,92 @@
 ---
 slug: resize-observer
 title: Measure a chart host with ResizeObserver
-summary: Turn element measurements into a scoped Fx without rebuilding a chart or measuring during server rendering.
+summary: Attach a scoped measurement stream to a template ref and keep the same chart host as its dimensions change.
 ---
 
-A chart inside a resizable dashboard panel needs its container's size, not just the window size. `ResizeObserver` tracks the element; Typed places the chart host and displays measurements; the adapter owns disconnecting the observer. This works with canvas and foreign chart libraries because they can keep their own descendants.
+A chart inside a resizable panel needs its container's size, not just the window size. Give that container a template `ref`: Typed passes the exact element to your observer, owns its subscription, and renders the measurements as reactive state.
 
-Read [DOM output](/integrate/dom-output) first. Prefer CSS container queries when the result is purely a styling choice. Use JavaScript measurement when a canvas or imperative renderer needs numeric dimensions.
+Prefer CSS container queries for styling alone. Reach for `ResizeObserver` when a canvas or chart renderer needs numeric dimensions.
 
-## Observe the actual container
+## Turn measurements into values
 
-This browser-only component creates one host, observes its content rectangle, and renders width and height outside it. It does not change the measured element's size in response to its own measurement, which avoids a common resize feedback loop.
+Keep the browser API at one small boundary. In `sizes.ts`, subscribing starts observation; stopping the subscription disconnects it.
 
-```ts
+```ts file="sizes.ts"
 import { Effect } from "effect";
 import * as Fx from "@typed/fx/Fx";
-import { html } from "@typed/template";
-import { DomRenderEvent } from "@typed/template/RenderEvent";
-import { component } from "@typed/ui/Component";
 
-type Size = { readonly width: number; readonly height: number };
+export interface Size {
+  readonly width: number;
+  readonly height: number;
+}
 
-const sizes = (element: Element) => Fx.callback<Size>((emit) => {
+export const sizes = (element: Element) => Fx.callback<Size>((emit) => {
   const observer = new ResizeObserver((entries) => {
     const entry = entries.find((entry) => entry.target === element);
-    if (entry !== undefined) {
-      emit.succeed({
-        width: entry.contentRect.width,
-        height: entry.contentRect.height,
-      });
-    }
+    if (entry === undefined) return;
+
+    // Report the content box in CSS pixels, without changing its size.
+    emit.succeed({
+      width: entry.contentRect.width,
+      height: entry.contentRect.height,
+    });
   });
   observer.observe(element);
+
+  // Fx runs this cleanup when the ref's subscription ends.
   return Effect.sync(() => observer.disconnect());
 });
+```
+
+A newly attached or hidden element can measure zero. Wait for usable dimensions before allocating a chart's drawing buffers; the first observation is not necessarily its final size.
+
+## Attach the stream to the template's host
+
+In `ChartHost.ts`, `ref` connects the observer to the `<div>` that Typed renders. The component owns the measurement state; the ref owns observation of that element.
+
+```ts file="ChartHost.ts"
+import { Fx, RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
+import { component } from "@typed/ui/Component";
+import { sizes, type Size } from "./sizes.js";
 
 export const MeasuredChartHost = component(function* () {
-  const host = document.createElement("div");
-  host.style.cssText = "width:100%;height:16rem;min-width:0";
-  host.setAttribute("aria-label", "Chart drawing area");
-  const dimensions = sizes(host).pipe(
-    Fx.map(({ width, height }) => `${Math.round(width)} × ${Math.round(height)} CSS pixels`),
+  const size = yield* RefSubject.make<Size | null>(null);
+  const measure = (element: HTMLDivElement) => sizes(element).pipe(
+    // A ref drains its returned Fx for the element's rendering lifetime.
+    Fx.tap((value) => RefSubject.set(size, value)),
   );
+  const caption = RefSubject.map(size, (value) => value === null
+    ? "Waiting for the chart's dimensions…"
+    : `${Math.round(value.width)} × ${Math.round(value.height)} CSS pixels`);
+
   return html`<figure>
-    ${Fx.sync(() => DomRenderEvent(host))}
-    <figcaption>${dimensions}</figcaption>
+    <div
+      ref=${measure}
+      role="img"
+      aria-label="Chart drawing area"
+      style="width:100%;height:16rem;min-width:0"
+    ></div>
+    <figcaption>${caption}</figcaption>
   </figure>`;
 });
 ```
 
-The observer installs when the caption's live value subscribes and disconnects when the render stops. A detached element may initially measure zero; do not initialize expensive drawing buffers from zero and assume that is its final size. The same host remains in the template while measurements change.
+Each rendered instance gets its own host and observer. Measurements update the caption without replacing the host. Removing the template closes the ref subscription and disconnects the observer. See [Reference the native element](/explore/template-references-and-element-access) for ref lifetime and replacement behavior.
 
-For a real chart, acquire its instance once and call its resize API from the measurement stream. Connect its `destroy`/dispose operation to the same component Scope. Creating another chart on every resize leaks renderer resources and resets zoom state. The exact chart API belongs in a library-specific adapter; `DomRenderEvent` only handles placement.
+Server rendering produces the same host and waiting caption without invoking the DOM ref. Observation begins during browser rendering or hydration. A ref provides the element while the renderer prepares it; it does not promise that layout has finished. Let the observer deliver measurements once the browser has them.
 
-## Distinguish CSS pixels from canvas pixels
+## Resize a chart without rebuilding it
 
-The example reports the content rectangle in CSS pixels. A high-density canvas may need backing-store dimensions based on device pixels, while its CSS box stays unchanged. Account for the drawing API's scaling contract before multiplying dimensions, and choose the observer box option deliberately. Borders and padding make content-box and border-box sizes different. The [ResizeObserver reference](https://developer.mozilla.org/en-US/docs/Web/API/ResizeObserver) describes these measurement surfaces and loop errors.
+For a real chart, acquire its instance once from the same element ref with `Effect.acquireRelease`, then consume `sizes(element)` to call its resize API. The release action destroys the chart when the ref's scope closes. Creating a chart for every measurement would discard its zoom state and accumulate renderer resources.
 
-## Verify a resize without recreating the host
+The example deliberately keeps a fixed host height and displays measurements outside it. If a resize callback changes the observed box, directly or through surrounding layout, it can trigger an observation loop. Deferring the write to another frame does not fix an unstable sizing equation.
 
-In a browser test, resize the parent panel, await a measurement satisfying the expected dimensions, and assert that the host is still the same node. Change sidebar width without resizing the window to catch implementations listening to the wrong event. Hide and reveal the panel, then remove it and confirm the observer disconnects.
+The stream reports CSS pixels. A high-density canvas may need different backing-store dimensions while its CSS box stays unchanged. Check the drawing API's scaling contract before multiplying by device pixel ratio. Content-box and border-box measurements also differ; choose the observer's box option deliberately. The [ResizeObserver reference](https://developer.mozilla.org/en-US/docs/Web/API/ResizeObserver) describes these surfaces.
 
-If the browser reports an observation loop, inspect whether your resize callback changes the observed box, directly or through surrounding layout. Scheduling a write for another frame may separate reads and writes, but it does not fix an unstable sizing equation. During SSR render a stable placeholder and start this component only at a browser boundary; use [Astro's client-only policy](/integrate/astro) when the component itself creates DOM during setup.
+## Check the lifetime as well as the numbers
+
+In a browser test, resize the parent panel and await the expected measurement. Keep the original host reference and assert that it is still the same node afterward. Change a sidebar's width without resizing the window to catch implementations observing the wrong thing.
+
+Render two instances to check that their measurements stay independent. Hide and reveal one panel, then remove it and verify that its observer disconnects while the other instance continues receiving updates.

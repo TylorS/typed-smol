@@ -22,7 +22,7 @@ import { component } from "@typed/ui/Component";
 import * as Collection from "@typed/ui/Collection";
 import * as Composite from "@typed/ui/Composite";
 
-const ReportStrip = component(function* (run: (command: string) => Effect.Effect<void>) {
+const ReportStrip = <E, R>(run: (command: string) => Effect.Effect<void, E, R>) => component(function* () {
   const state = yield* Composite.makeState({ activeId: "strip-print", orientation: "horizontal" });
   const collection = yield* Collection.makeState<string, HTMLButtonElement>();
   const options = { state, collection };

@@ -512,7 +512,22 @@ function removeChildren(where: HTMLElement, previous: Rendered) {
 }
 
 function replaceChildren(where: HTMLElement, wire: Rendered) {
-  where.replaceChildren(...getNodesFromRendered(wire));
+  const nodes = getNodesFromRendered(wire);
+  const current = Array.from(where.childNodes);
+  let index = 0;
+  for (const node of current) {
+    if (node === nodes[index]) index++;
+  }
+  // Hydration adopts nodes already in place. Removing only the surrounding
+  // markers preserves focus and other browser-owned state inside those nodes.
+  if (index === nodes.length) {
+    const retained = new Set(nodes);
+    for (const node of current) {
+      if (!retained.has(node)) where.removeChild(node);
+    }
+  } else {
+    where.replaceChildren(...nodes);
+  }
 }
 
 function getNodesFromRendered(rendered: Rendered): Array<globalThis.Node> {

@@ -181,7 +181,7 @@ Effect when you need to know the final destination has committed.
 
 ```ts
 import { Effect, Fiber } from "effect"
-import { RefSubject } from "@typed/fx"
+import { Fx, RefSubject } from "@typed/fx"
 import { Navigation } from "@typed/navigation"
 import { useBlockNavigation } from "@typed/navigation/Blocking"
 import { TestRouter } from "@typed/router/RouterTest"
@@ -192,9 +192,9 @@ const confirmJourney = Effect.scoped(Effect.gen(function* () {
   const initiallyBlocking = yield* blocker.isBlocking
   // Navigation cannot finish until this test settles the blocker, so run it concurrently.
   const navigation = yield* Effect.forkScoped(Navigation.navigate("/issues", { history: "push" }))
-  while (!(yield* blocker.isBlocking)) yield* Effect.yieldNow
+  // A Filtered emits when a decision exists; await that value without polling.
+  const decision = yield* Fx.first(blocker).pipe(Effect.flatMap(Effect.fromOption))
   const before = yield* Navigation.currentEntry
-  const decision = yield* blocker
   yield* decision.confirm
   // Confirming releases the decision; joining observes the actual destination commit.
   const after = yield* Fiber.join(navigation)
