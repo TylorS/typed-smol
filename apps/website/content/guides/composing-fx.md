@@ -71,7 +71,7 @@ operator: concat / continueWith
 output: cached . . live |
 ```
 
-The live lane's `^` follows cache completion. An infinite cache lane would prevent live subscription
+The live lane’s start chevron follows the cache lane’s return bar. An infinite cache lane would prevent live subscription
 entirely. `continueWith` chooses the next producer at that boundary; `concat` already has it.
 For constant status markers, framing operators express the same sequence:
 

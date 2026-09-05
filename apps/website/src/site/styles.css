@@ -166,6 +166,11 @@ kbd {
   font-weight: 400;
   color: var(--muted);
 }
+.search-trigger__icon {
+  display: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
 .search-trigger kbd {
   font-size: 0.7rem;
   opacity: 0.8;
@@ -1016,17 +1021,19 @@ html[data-theme="matrix-light"] .astro-code span {
     grid-column: 2;
     grid-row: 1;
   }
-  .theme-toggle {
-    width: 2rem;
-  }
+  .theme-toggle,
   .search-trigger {
-    font-size: 0;
-    width: 2rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
     padding: 0;
+    justify-content: center;
   }
-  .search-trigger::before {
-    content: "⌕";
-    font-size: 1.3rem;
+  .search-trigger > span {
+    display: none;
+  }
+  .search-trigger__icon {
+    display: block;
   }
 }
 @media (prefers-reduced-motion: reduce) {

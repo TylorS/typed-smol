@@ -99,15 +99,16 @@ describe("marble playback", () => {
         .querySelector('.fx-marble__row--input [data-tick="2"]')
         ?.getAttribute("data-phase"),
     ).toBe("future");
+    expect(figure.querySelector("select")?.value).toBe("1");
     await click("play");
-    await advance(1000); // Default 0.5x: one illustrated tick per two seconds.
+    await advance(500); // Default 1x: one illustrated tick per second.
     expect(figure.style.getPropertyValue("--fx-marble-time")).toBe("0.5");
     expect(
       figure
         .querySelector('.fx-marble__row--output [data-tick="1"]')
         ?.getAttribute("data-phase"),
     ).toBe("future");
-    await advance(1000);
+    await advance(500);
     expect(
       figure
         .querySelector('.fx-marble__row--output [data-tick="1"]')
@@ -121,19 +122,19 @@ describe("marble playback", () => {
   it("keeps replacement and cleanup events after another lane is interrupted or returns", async () => {
     const { figure, click } = await mount();
     await click("play");
-    await advance(4000);
+    await advance(2000);
     expect(
       figure
         .querySelector(".fx-marble__event--cancelled")
         ?.getAttribute("data-phase"),
     ).toBe("current");
-    await advance(2000);
+    await advance(1000);
     expect(
       figure
         .querySelector('.fx-marble__row--output [data-tick="3"]')
         ?.getAttribute("data-phase"),
     ).toBe("current");
-    await advance(4000);
+    await advance(2000);
     expect(figure.dataset.playing).toBe("false");
     expect(pendingFrames.size).toBe(0);
     expect(figure.querySelector("[data-play-label]")?.textContent).toBe(
@@ -153,12 +154,12 @@ describe("marble playback", () => {
   it("pauses exactly, resumes without counting paused time, and preserves position when speed changes", async () => {
     const { figure, click } = await mount();
     await click("play");
-    await advance(3000);
+    await advance(1500);
     await click("play");
     expect(figure.style.getPropertyValue("--fx-marble-time")).toBe("1.5");
     await advance(10000);
     await click("play");
-    await advance(1000);
+    await advance(500);
     expect(figure.style.getPropertyValue("--fx-marble-time")).toBe("2");
     const speed = figure.querySelector<HTMLSelectElement>("select")!;
     speed.value = "0.25";
@@ -198,7 +199,7 @@ describe("marble playback", () => {
       defaultSource,
     );
     await first.click("play");
-    await advance(4000);
+    await advance(2000);
     expect(first.figure.dataset.playing).toBe("true");
     await second.click("play");
     expect(first.figure.dataset.playing).toBe("false");
@@ -206,7 +207,7 @@ describe("marble playback", () => {
     await first.click("play");
     expect(second.figure.dataset.playing).toBe("false");
     await vi.waitFor(() => expect(pendingFrames.size).toBe(1));
-    await advance(4000);
+    await advance(2000);
 
     expect(
       first.figure
@@ -299,9 +300,9 @@ describe("marble playback", () => {
     } as unknown as MediaQueryList);
     const { figure, click } = await mount();
     await click("play");
-    await advance(1000);
+    await advance(500);
     expect(figure.style.getPropertyValue("--fx-marble-time")).toBe("0");
-    await advance(1000);
+    await advance(500);
     expect(figure.style.getPropertyValue("--fx-marble-time")).toBe("1");
     await disposers.pop()!();
     expect(

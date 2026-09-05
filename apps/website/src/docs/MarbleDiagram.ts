@@ -151,9 +151,9 @@ export const diagramTicks = (diagram: FxMarbleDiagram) =>
   );
 export const diagramSlotWidth = (diagram: FxMarbleDiagram) =>
   Math.min(
-    7,
+    10,
     Math.max(
-      3.25,
+      3.5,
       Math.max(
         1,
         ...diagramTimelines(diagram).flatMap((timeline) =>
@@ -162,8 +162,8 @@ export const diagramSlotWidth = (diagram: FxMarbleDiagram) =>
           ),
         ),
       ) *
-        0.32 +
-        1,
+        0.46 +
+        1.75,
     ),
   );
 export const tickDescription = (diagram: FxMarbleDiagram, tick: number) => {

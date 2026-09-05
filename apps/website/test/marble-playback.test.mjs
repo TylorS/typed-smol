@@ -47,6 +47,7 @@ test(
     await figure.scrollIntoViewIfNeeded();
     await figure.locator('[data-action="play"]').waitFor();
     assert.equal(await figure.getAttribute("data-enhanced"), "true");
+    assert.equal(await figure.getByLabel("Playback speed").inputValue(), "1");
     const range = figure.getByRole("slider", { name: "Timeline position" });
     await range.focus();
     assert.equal(
@@ -71,16 +72,16 @@ test(
     // measuring speed so a busy CI runner cannot add time to runFor().
     await page.clock.pauseAt(new Date(clockStart.getTime() + 60_000));
     await figure.getByRole("button", { name: "Play", exact: true }).click();
-    await page.clock.runFor(1000);
+    await page.clock.runFor(500);
     const halfway = await figure.evaluate((node) =>
       Number(node.style.getPropertyValue("--fx-marble-time")),
     );
     assert(
       halfway > 0.45 && halfway < 0.55,
-      `one second at 0.5x must be half a tick, got ${halfway}`,
+      `half a second at 1x must be half a tick, got ${halfway}`,
     );
     assert.equal(await range.inputValue(), "0");
-    await page.clock.runFor(1050);
+    await page.clock.runFor(550);
     assert.equal(
       await range.inputValue(),
       "1",
@@ -225,7 +226,17 @@ test(
     const playButton = figure.locator('[data-action="play"]');
     await playButton.click();
     const playingOuterScroll = await page.evaluate(() => window.scrollY);
-    await page.clock.runFor(12050);
+    await page.clock.runFor(6050);
+    const lookahead = await figure.evaluate((node) => {
+      const viewportElement = node.querySelector(".fx-marble__viewport");
+      const cursorElement = node.querySelector(".fx-marble__playhead");
+      if (!viewportElement || !cursorElement) throw new Error("Expected viewport and playhead");
+      const viewport = viewportElement.getBoundingClientRect();
+      const cursor = cursorElement.getBoundingClientRect();
+      return viewport.right - cursor.right;
+    });
+    assert(lookahead >= 80, `playback should leave upcoming events visible, got ${lookahead}px`);
+    await page.clock.runFor(6000);
     assert.equal(await range.inputValue(), "6");
     await assertCurrentTickVisible();
     assert.equal(await playButton.evaluate((node) => document.activeElement === node), true);
@@ -243,5 +254,20 @@ test(
     assert.equal(await staticFigure.locator(".fx-marble__controls").isVisible(), false);
     assert.equal(await staticFigure.locator(".fx-marble__event").first().isVisible(), true);
     assert.equal(await staticFigure.locator(".fx-marble__legend").isVisible(), true);
+    const contents = staticPage.locator(".marble-contents:not(.marble-contents--sidebar)");
+    await contents.locator(":scope > summary").click();
+    const group = contents.locator(".marble-contents__group").first();
+    await group.locator("summary").click();
+    const destination = group.locator("a").nth(1);
+    const anchor = await destination.getAttribute("href");
+    await destination.click();
+    assert.equal(new URL(staticPage.url()).hash, anchor);
+    const append = staticPage.locator('.fx-marble[data-fx-operators="append"]');
+    await append.scrollIntoViewIfNeeded();
+    const valueHeight = await append.locator(".fx-marble__event--value").first().evaluate((node) => ({
+      height: node.getBoundingClientRect().height,
+      line: Number.parseFloat(getComputedStyle(node).lineHeight),
+    }));
+    assert(valueHeight.height < valueHeight.line * 2, "short values stay on one line on mobile");
   },
 );

@@ -23,7 +23,7 @@ export interface MarbleState {
 
 export const initialMarbleState: MarbleState = {
   position: 0,
-  speed: 0.5,
+  speed: 1,
   playing: false,
   enhanced: false,
   reducedMotion: false,
@@ -42,10 +42,20 @@ export interface MarbleActions {
   ) => Effect.Effect<void, never, Scope.Scope>;
 }
 
-const eventGlyph = (event: Exclude<TimelineEvent, { readonly tag: "gap" }>) =>
-  event.tag === "value"
-    ? event.value
-    : { start: "^", complete: "|", error: "!", cancelled: "x" }[event.tag];
+const eventGlyph = (event: Exclude<TimelineEvent, { readonly tag: "gap" }>) => {
+  if (event.tag === "value") return event.value;
+  // The legend uses these same shapes, so its key matches every rendered lane.
+  const path = {
+    start: "M5 15L12 8L19 15",
+    complete: "M12 4V20",
+    error: "M12 5V13M12 18V19",
+    cancelled: "M6 6L18 18M18 6L6 18",
+  }[event.tag];
+  return html`<svg class="fx-marble__marker" viewBox="0 0 24 24"
+    width="24" height="24" fill="none" stroke="currentColor"
+    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+    aria-hidden="true"><path d=${path}></path></svg>`;
+};
 
 const eventPhase = (state: MarbleState, tick: number) => {
   if (!state.enhanced) return undefined;
@@ -64,17 +74,33 @@ const timelineDescription = ({ label, events }: Timeline) => {
   return `${label} timeline: ${descriptions.join(", ") || "empty"}`;
 };
 
+const legendEvent = (
+  event: Exclude<TimelineEvent, { readonly tag: "gap" }>,
+  phase?: "current" | "future",
+) => html`<span class="fx-marble__legend-sample" aria-hidden="true">
+  <span class="fx-marble__legend-event fx-marble__event--${event.tag}"
+    data-legend-phase=${phase}>${eventGlyph(event)}</span>
+</span>`;
+
 const legend = html`<details class="fx-marble__legend">
-  <summary>Read this diagram</summary>
-  <p>Illustrated ticks start at 0 and share one clock across every lane. Events aligned vertically happen at the same tick. Ticks show order; captions specify a duration when timing matters. At 1×, playback advances one illustrated tick per second, regardless of the caption’s real duration.</p>
+  <summary>Read this diagram <span class="fx-marble__legend-preview" aria-hidden="true">
+    ${legendEvent({ tag: "value", value: "a" })}
+    ${legendEvent({ tag: "start" })}
+    ${legendEvent({ tag: "complete" })}
+  </span></summary>
+  <p>Follow each lane from left to right. Events stacked vertically share a tick; the green cursor marks the current time across every lane.</p>
   <ul>
-    <li><span aria-hidden="true">○</span> a value</li>
-    <li><span aria-hidden="true">^</span> work starts</li>
-    <li><span aria-hidden="true">|</span> run returns</li>
-    <li><span aria-hidden="true">!</span> a cause is delivered</li>
-    <li><span aria-hidden="true">x</span> work is interrupted</li>
+    <li>${legendEvent({ tag: "value", value: "a" })}<span><strong>A value</strong><br />The text inside the pill is the emitted value.</span></li>
+    <li>${legendEvent({ tag: "start" })}<span><strong>Work starts</strong><br />The raised chevron starts an inner run (<code>^</code> in the source).</span></li>
+    <li>${legendEvent({ tag: "complete" })}<span><strong>The run returns</strong><br />The vertical bar ends this lane’s run.</span></li>
+    <li>${legendEvent({ tag: "error" })}<span><strong>A cause is delivered</strong><br />The exclamation mark belongs to this lane.</span></li>
+    <li>${legendEvent({ tag: "cancelled" })}<span><strong>Work is interrupted</strong><br />The cross marks cancellation of this run.</span></li>
+    <li><span class="fx-marble__legend-sample fx-marble__legend-cursor" aria-hidden="true"></span><span><strong>Current time</strong><br />The line and diamond move together across all lanes.</span></li>
+    <li>${legendEvent({ tag: "value", value: "a" }, "current")}<span><strong>Happening now</strong><br />A highlighted event is at the current tick.</span></li>
+    <li>${legendEvent({ tag: "value", value: "b" }, "future")}<span><strong>Still ahead</strong><br />Muted, dashed values have not happened yet.</span></li>
+    <li><span class="fx-marble__legend-sample fx-marble__legend-continuation" aria-hidden="true">›</span><span><strong>Time continues</strong><br />The lane’s arrow is not a return marker. An empty stretch can be quiet work that is still running.</span></li>
   </ul>
-  <p>A cause or interruption belongs to its lane. Other work may continue. Dashed and muted events lie ahead of the playhead; scroll the diagram to inspect long timelines.</p>
+  <p>Illustrated ticks start at 0. At 1×, one illustrated tick takes one second; captions specify real durations when timing matters. A cause or interruption belongs to its lane, and other work may continue. Scroll horizontally to inspect the rest of a long timeline.</p>
 </details>`;
 
 /** Markdown and the browser render this same template and its native controls. */
@@ -227,8 +253,8 @@ export const MarbleView = (
         <span>Speed</span>
         <select aria-label="Playback speed" .value=${read((state) => String(state.speed))} @change=${onSpeed}>
           <option value="0.25">0.25×</option>
-          <option value="0.5" selected>0.5×</option>
-          <option value="1">1×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
           <option value="2">2×</option>
         </select>
       </label>

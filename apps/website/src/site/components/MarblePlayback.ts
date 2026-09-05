@@ -76,9 +76,15 @@ const follow = (figure: HTMLElement, state: MarbleState, ticks: number) =>
       : state.position;
     const cellWidth = track.width / ticks;
     const center = track.left + (time + 0.5) * cellWidth;
-    const padding = Math.min(cellWidth / 2 + 4, (right - left) / 2);
+    const available = right - left;
+    const behind = Math.min(cellWidth / 2 + 4, available / 2);
+    // Leave upcoming events in view instead of waiting for the cursor to hit the edge.
+    const ahead = Math.min(
+      Math.max(cellWidth * 1.5, available * 0.45),
+      available - behind,
+    );
     viewport.scrollLeft +=
-      center - Math.max(left + padding, Math.min(right - padding, center));
+      center - Math.max(left + behind, Math.min(right - ahead, center));
   });
 
 const makePlayback = Effect.fn(function* (

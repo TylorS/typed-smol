@@ -47,13 +47,13 @@ output: request !timeout x`);
       "Input timeline: tick 0 request, tick 1 cause: timeout, tick 2 cancelled",
     );
     expect(
-      host.querySelector('.fx-marble__event--error[aria-hidden="true"]')
-        ?.textContent,
-    ).toBe("!");
+      host.querySelector('.fx-marble__row .fx-marble__event--error svg path')
+        ?.getAttribute("d"),
+    ).toBe("M12 5V13M12 18V19");
     expect(
-      host.querySelector('.fx-marble__event--cancelled[aria-hidden="true"]')
-        ?.textContent,
-    ).toBe("x");
+      host.querySelector('.fx-marble__row .fx-marble__event--cancelled svg path')
+        ?.getAttribute("d"),
+    ).toBe("M6 6L18 18M18 6L6 18");
   });
 
   it("uses one shared clock for named fx-marble timelines", async () => {
@@ -103,8 +103,11 @@ output: . a1 . b1 . b2 |`);
       "A timeline: tick 0 start, tick 1 a1, tick 2 cancelled",
     );
     expect(
-      rows[0]?.querySelector(".fx-marble__event--start")?.textContent,
-    ).toBe("^");
+      rows[0]?.querySelector(".fx-marble__event--start svg path")?.getAttribute("d"),
+    ).toBe("M5 15L12 8L19 15");
+    expect(
+      host.querySelector(".fx-marble__legend .fx-marble__event--start svg path")?.getAttribute("d"),
+    ).toBe(rows[0]?.querySelector(".fx-marble__event--start svg path")?.getAttribute("d"));
     const cancelled = rows[0]?.querySelector<HTMLElement>(
       ".fx-marble__event--cancelled",
     );

@@ -148,7 +148,8 @@ consumers should use one active connection.
 The [API reference](/reference/modules/%40typed%2Ffx) provides complete signatures. The lessons
 explain which contract your feature needs before you choose its overload.
 
-In their timelines, `.` is silence, `^` starts a subscription, `|` completes normally, `!error`
-reports a failure, and `x` interrupts a run. Read vertically to find the input that caused an output
-or cancellation. Columns are logical moments unless the caption gives a duration. Inner lanes
+Open **Read this diagram** beneath a timeline to match its visual markers to their meanings.
+Value pills show emissions, raised chevrons start runs, vertical bars mark returns, exclamation
+marks report causes, and crosses mark interruption. Empty stretches contain no event. Read
+vertically to find the input that caused an output or cancellation. Columns are logical moments unless the caption gives a duration. Inner lanes
 represent separate runs; their lifetime matters as much as their values.

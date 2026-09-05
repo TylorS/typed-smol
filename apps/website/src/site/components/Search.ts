@@ -159,10 +159,14 @@ export default component(function* () {
 
   return html`<div ref=${attach}>
     ${Button.Button({
-      content: html`<span>Search docs</span><kbd>⌘ K</kbd>`,
+      content: html`<svg class="search-trigger__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m16 16 4.5 4.5" />
+        </svg><span>Search docs</span><kbd>⌘ K</kbd>`,
       onclick: Dialog.setOpen(state, true),
       props: {
         class: "search-trigger btn btn-ghost",
+          "aria-label": "Search docs",
         "aria-haspopup": "dialog",
         "aria-controls": "docs-search",
         "aria-expanded": RefSubject.map(state, ({ open }) => open),

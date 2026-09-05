@@ -1,6 +1,7 @@
 ---
 import Base from "./Base.astro";
 import Sidebar from "../components/Sidebar.astro";
+import MarbleContents from "../components/MarbleContents.astro";
 import { siteHref } from "../../SiteHref.js";
 
 interface Props {
@@ -39,6 +40,11 @@ const {
           {summary}
         </p>
       </header>
+      {
+        current === "fx-operator-atlas" && (
+          <MarbleContents headings={headings} />
+        )
+      }
       <article class="prose"><slot /></article>
       <nav class="article-footer" aria-label="Continue learning">
         {
@@ -54,13 +60,17 @@ const {
     <nav class="toc" aria-label="On this page">
       <h2>On this page</h2>
       {
-        headings
-          .filter(({ depth }) => depth < 4)
-          .map(({ slug, text, depth }) => (
-            <a href={`#${slug}`} class={`depth-${depth}`}>
-              {text}
-            </a>
-          ))
+        current === "fx-operator-atlas" ? (
+          <MarbleContents headings={headings} sidebar />
+        ) : (
+          headings
+            .filter(({ depth }) => depth < 4)
+            .map(({ slug, text, depth }) => (
+              <a href={`#${slug}`} class={`depth-${depth}`}>
+                {text}
+              </a>
+            ))
+        )
       }
       {
         source && (
