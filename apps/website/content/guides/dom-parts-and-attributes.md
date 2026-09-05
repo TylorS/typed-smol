@@ -1,8 +1,8 @@
 ---
-title: DOM scalar parts and attributes
-summary: See which exact DOM location each scalar template interpolation owns and what one push changes.
-section: DOM and platform
-kind: deep-dive
+title: "DOM scalar parts and attributes"
+summary: "See which exact DOM location each scalar template interpolation owns and what one push changes."
+section: "DOM and platform"
+kind: "deep-dive"
 order: 5.1
 ---
 
@@ -38,8 +38,9 @@ attribute. Neither rebuilds the input or searches the surrounding document.
 | `onclick=${handler}` | one native event registration | register it in the render Scope |
 | `...${properties}` | properties contributed by this spread | reconcile that local property set |
 
-These updates are O(1) with respect to the surrounding page. Collection-valued class, data, and
-spread parts cost the size of their own local collection.
+Scalar writes are O(1) with respect to the surrounding page. Collection-valued class, data, and
+spread parts cost the size of their own local collection. Event setup also depends on the registered
+entries and concrete delegation roots; it is not an O(1) scalar write.
 
 ## Attributes and properties are different contracts
 

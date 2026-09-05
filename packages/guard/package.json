@@ -2,7 +2,6 @@
   "name": "@typed/guard",
   "version": "1.0.0-beta.6",
   "description": "Composable Effect-based guards for validation, parsing, and route matching.",
-  "license": "MIT",
   "keywords": [
     "effect",
     "guard",
@@ -12,6 +11,7 @@
   ],
   "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/guard#readme",
   "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TylorS/typed-smol.git",
@@ -22,10 +22,15 @@
     "examples"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./getGuard": {
+      "types": "./dist/getGuard.d.ts",
+      "import": "./dist/getGuard.js"
     }
   },
   "publishConfig": {

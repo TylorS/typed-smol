@@ -1,7 +1,7 @@
 ---
 slug: svelte
-title: Use Svelte 5 and Typed together
-summary: Keep one renderer responsible for each DOM range, its state, and its lifetime.
+title: "Use Svelte 5 and Typed together"
+summary: "Keep one renderer responsible for each DOM range, its state, and its lifetime."
 ---
 
 Svelte and Typed compose at an empty host element. Its owner may update every descendant; the other renderer

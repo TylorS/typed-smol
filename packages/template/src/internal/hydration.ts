@@ -156,6 +156,9 @@ export class HydrationElement implements Inspectable {
 }
 
 export class HydrationTemplate implements Inspectable {
+  // A parsed SSR range belongs to one template instance, including equal-hash siblings.
+  claimed = false;
+
   readonly _tag = "template" as const;
 
   readonly hash: string;
@@ -288,7 +291,7 @@ export function findHydrationTemplate(
   while (index < toProcess.length) {
     const node = toProcess[index++];
 
-    if (node._tag === "template" && node.hash === templateHash) {
+    if (node._tag === "template" && node.hash === templateHash && !node.claimed) {
       return node;
     } else if (node._tag === "element") {
       const childNodes = node.childNodes;

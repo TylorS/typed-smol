@@ -1,8 +1,8 @@
 ---
 title: "Route: typed URL inputs"
-summary: Define path and query contracts as Effect Schema codecs before application code runs.
-section: Applications
-kind: guide
+summary: "Define path and query contracts as Effect Schema codecs before application code runs."
+section: "Applications"
+kind: "guide"
 order: 6.7
 ---
 
@@ -36,10 +36,10 @@ that construct the public [`RouteAst`](/reference/modules/%40typed%2Frouter%2FAS
 `Parse` turns a literal route pattern into a typed value. Parameter names become object keys without
 an interface or cast beside the route.
 
-Its path syntax follows Effect's native `unstable/http/FindMyWay` matcher, the routing engine behind
-`HttpRouter`. A Route only describes that syntax and its codecs here; the
-[Router guide](/explore/router-navigation-live-selection) covers how Matcher uses the same engine to
-select application work from a URL.
+Its path syntax supports literals, parameters, constrained parameters, optional segments, and a
+terminal wildcard. A Route only describes that syntax and its codecs here; the
+[Router guide](/explore/router-navigation-live-selection) covers how Matcher selects application
+work from a URL.
 
 | Pattern | Meaning | Decoded fields |
 | --- | --- | --- |
@@ -163,6 +163,35 @@ value later.
 `Slash`, `Wildcard`, `Param`, `Int`, `Number`, `ParamWithSchema`, `Parse`, and `Join` all produce the
 same Route interface. Choose constructors for reusable fragments and `Parse` for a route whose shape
 is clearest as one pattern.
+
+## Generate a URL from decoded parameters
+
+A Route Codec encodes a parameter record; it does not turn that record into a complete URL.
+Keep those two steps explicit. For a small application, one helper beside the route can encode
+its domain value and construct its URL without maintaining another input interface:
+
+```ts
+import { Effect, Schema } from "effect";
+import * as Route from "@typed/router/Route";
+
+const Issue = Route.Join(Route.Parse("/issues"), Route.Int("issueId"));
+
+const issueHref = (params: Route.Type<typeof Issue>) =>
+  Schema.encodeEffect(Issue.paramsSchema)(params).pipe(
+    Effect.map(({ issueId }) => `/issues/${encodeURIComponent(issueId)}`),
+  );
+
+const link = issueHref({ issueId: 42 });
+```
+
+Encoding can fail or require services, so the helper returns an Effect. For query strings, use
+`URLSearchParams` after encoding rather than joining unescaped `key=value` fragments. Omit absent
+optional query values instead of serializing the string `"undefined"`. Treat path parameters as
+individual segments when encoding; encoding the whole URL would also escape its separators.
+
+For user-facing navigation, render the resulting href through
+[UI Link](/reference/modules/%40typed%2Fui%2FLink) or an ordinary anchor. Keep canonical URL
+construction near the route declaration so browser links, server redirects, and tests agree.
 
 ## Read a Route's types
 

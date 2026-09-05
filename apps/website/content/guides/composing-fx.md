@@ -1,8 +1,8 @@
 ---
-title: Composing Fx
-summary: Coordinate independent producers, then recognize when a value starts work of its own.
-section: Fx
-kind: guide
+title: "Composing Fx"
+summary: "Coordinate independent producers, then recognize when a value starts work of its own."
+section: "Fx"
+kind: "guide"
 order: 1.5
 ---
 

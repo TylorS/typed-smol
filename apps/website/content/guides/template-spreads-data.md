@@ -1,8 +1,8 @@
 ---
-title: Spread props and data records
-summary: Combine native attributes, DOM properties, dataset values, and event handlers without losing their individual semantics.
-section: Templates
-kind: guide
+title: "Spread props and data records"
+summary: "Combine native attributes, DOM properties, dataset values, and event handlers without losing their individual semantics."
+section: "Templates"
+kind: "guide"
 order: 3.25
 ---
 
@@ -72,14 +72,14 @@ cleaned up.
 ```ts
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
-import { EventHandler, html } from "@typed/template";
+import { html } from "@typed/template";
 
 const saveProps = {
   "aria-label": "Save draft",
   "?disabled": Fx.succeed(false),
   ".value": "Save",
   ".data": { action: "save" },
-  onclick: EventHandler.make(() => Effect.sync(() => console.log("saved"))),
+  onclick: Effect.log("Saved draft"),
 } as const;
 
 const SaveButton = html`<button ...${saveProps}>Save</button>`;
@@ -118,9 +118,11 @@ the spread removes that key, it cannot distinguish a later write by another owne
 ## Server rendering has a smaller surface
 
 The HTML renderer serializes safe attributes, booleans, classes, `.data`, and nested spreads. It
-escapes dynamic strings and omits events, refs, DOM properties, unsafe names, and invalid attribute
+escapes dynamic strings and omits events, ordinary callback refs, DOM properties, unsafe names, and invalid attribute
 names because those have no HTML-attribute equivalent. `Effect`, `Stream`, and `Fx` values are
 sampled for the finite server render; the browser renderer is the one that keeps them live.
+Hydration refs have an explicit serialization protocol; see
+[Reference the native element](/explore/template-references-and-element-access) for that exception.
 
 Read [DOM scalar parts and attributes](/explore/dom-parts-and-attributes) for the single-part cost
 model, [class names without className replacement](/explore/dom-class-names) for token ownership,

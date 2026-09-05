@@ -1,8 +1,8 @@
 ---
-title: Render your first template
-summary: Write a static template, add one live value, and mount it in the browser.
-section: Templates
-kind: guide
+title: "Render your first template"
+summary: "Write a static template, add one live value, and mount it in the browser."
+section: "Templates"
+kind: "guide"
 order: 3
 ---
 
@@ -70,11 +70,15 @@ import { component } from "@typed/ui/Component";
 const Counter = component(function* () {
   const count = yield* RefSubject.make(0);
 
-  return html`<p>Count: ${count}</p>`;
+  return html`<section>
+    <p>Count: ${count}</p>
+    <button type="button" onclick=${RefSubject.increment(count)}>Increment</button>
+  </section>`;
 });
 ```
 
-Replace `page` in the mount with `Counter` to render it. The `${count}` hole is a scalar DOM part:
+Replace `page` in the mount with `Counter` to render it. The button receives the increment Effect
+directly, so each click updates the same subject. The `${count}` hole is a scalar DOM part:
 after the first render, the DOM renderer retains its exact text target and updates that target when the
 state changes. It does not walk the surrounding document.
 

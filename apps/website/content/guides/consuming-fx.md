@@ -1,8 +1,8 @@
 ---
-title: Consuming Fx
-summary: Choose the runner that matches what your application needs from a producer.
-section: Fx
-kind: guide
+title: "Consuming Fx"
+summary: "Choose the runner that matches what your application needs from a producer."
+section: "Fx"
+kind: "guide"
 order: 1.99
 ---
 
@@ -77,7 +77,9 @@ const preview = Fx.collectUpTo(importedRows, 2);
 ```
 
 `collectUpTo(fx, n)` is the bounded version: it retains at most `n` values and stops upstream at
-that bound. Neither collector is a fit for an open event source.
+that bound. It is useful for a finite sample of an open event source, provided that many values
+will actually arrive. Use `observe` for continuous processing and `collectAll` only when completion
+is part of the source contract.
 
 ## I only need completion
 

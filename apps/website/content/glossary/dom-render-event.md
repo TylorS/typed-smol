@@ -1,7 +1,7 @@
 ---
 id: dom-render-event
-term: DomRenderEvent
-definition: A RenderEvent containing already-rendered DOM values.
+term: "DomRenderEvent"
+definition: "A RenderEvent containing already-rendered DOM values."
 aliases: []
 related: [render-event, wire, dynamic-range, cooperative-ownership]
 links: []

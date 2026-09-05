@@ -1,7 +1,7 @@
 ---
 id: effect
-term: Effect
-definition: A typed description of work with success, error, and required-service channels.
+term: "Effect"
+definition: "A typed description of work with success, error, and required-service channels."
 aliases: []
 related: [fx, scope, subject]
 links: [https://www.effect.website/docs/v4/getting-started/the-effect-type/]

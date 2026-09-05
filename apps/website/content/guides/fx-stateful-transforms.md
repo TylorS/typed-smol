@@ -1,8 +1,8 @@
 ---
-title: Derive transitions and bounded batches
-summary: Carry only the local history a transform needs, then expose transitions, changes, and groups explicitly.
-section: Fx
-kind: guide
+title: "Derive transitions and bounded batches"
+summary: "Carry only the local history a transform needs, then expose transitions, changes, and groups explicitly."
+section: "Fx"
+kind: "guide"
 order: 1.3
 ---
 

@@ -1,8 +1,8 @@
 ---
-title: Transforming Fx
-summary: Turn pushed values into useful domain data without hiding failures, services, or timing.
-section: Fx
-kind: guide
+title: "Transforming Fx"
+summary: "Turn pushed values into useful domain data without hiding failures, services, or timing."
+section: "Fx"
+kind: "guide"
 order: 1.2
 ---
 
@@ -236,5 +236,5 @@ is to bound frequency rather than wait for silence. Test time-dependent pipeline
 The practical rule is small: begin with `map`, `filter`, or `filterMap`; move to an Effectful variant
 when work can fail or needs services; add per-run state or timing only when it is observable product
 behavior. Continue with [Composing Fx](/explore/composing-fx) when one value starts another Fx and
-cancellation or concurrency becomes the decision. The [Fx API reference](/reference/packages/%40typed%2Ffx)
+cancellation or concurrency becomes the decision. The [Fx API reference](/reference/modules/%40typed%2Ffx)
 contains the complete signatures.

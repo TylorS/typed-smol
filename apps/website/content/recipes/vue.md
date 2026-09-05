@@ -1,7 +1,7 @@
 ---
 slug: vue
-title: Use Vue and Typed together
-summary: Give Vue and Typed separate DOM ranges and connect their lifetimes at one stable host.
+title: "Use Vue and Typed together"
+summary: "Give Vue and Typed separate DOM ranges and connect their lifetimes at one stable host."
 ---
 
 Vue owns every descendant of its mount element. Typed may place, move, or remove that empty host, but never

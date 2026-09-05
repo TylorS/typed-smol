@@ -1,0 +1,45 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { siteHref } from "../../../SiteHref.js";
+const recipes = (await getCollection("recipes")).sort((a, b) =>
+  a.id === "astro"
+    ? -1
+    : b.id === "astro"
+      ? 1
+      : a.data.title.localeCompare(b.data.title),
+);
+---
+
+<Base
+  title="Integrate Typed"
+  description="Use Typed in Astro or alongside React, Svelte, Vue, custom elements, and existing DOM."
+>
+  <main class="page-container" id="main-content" tabindex="-1">
+    <header class="page-intro">
+      <p class="eyebrow">INTEGRATE / KEEP WHAT WORKS</p><h1 class="page-title">
+        Bring your stack.
+      </h1><p>
+        Use Typed for one island or build the whole interface. Each integration
+        makes the same decisions explicit: who creates the output, who updates
+        it, and who cleans it up.
+      </p>
+    </header>
+    <div class="path-grid">
+      {
+        recipes.map((entry) => (
+          <article class="path-card">
+            <>
+              <p class="eyebrow">{entry.data.slug}</p>
+              <h3>{entry.data.title}</h3>
+              <p>{entry.data.summary}</p>
+              <a href={siteHref(`/integrate/${entry.data.slug}`)}>
+                Open the integration →
+              </a>
+            </>
+          </article>
+        ))
+      }
+    </div>
+  </main>
+</Base>

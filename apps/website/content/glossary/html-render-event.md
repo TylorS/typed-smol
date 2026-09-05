@@ -1,7 +1,7 @@
 ---
 id: html-render-event
-term: HtmlRenderEvent
-definition: A branded chunk of trusted, renderer-owned HTML output.
+term: "HtmlRenderEvent"
+definition: "A branded chunk of trusted, renderer-owned HTML output."
 aliases: []
 related: [render-event, ssr, fx]
 links: []

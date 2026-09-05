@@ -1,15 +1,15 @@
 ---
-title: Direct updates, local reconciliation
-summary: What the DOM renderer creates, mounts, hydrates, and reconciles—and the local size each cost depends on.
-section: DOM and platform
-kind: deep-dive
+title: "Direct updates, local reconciliation"
+summary: "What the DOM renderer creates, mounts, hydrates, and reconciles—and the local size each cost depends on."
+section: "DOM and platform"
+kind: "deep-dive"
 order: 5
 ---
 
 `html` is renderer-independent; the DOM behavior here is provided by
-[`DomRenderTemplate`](/reference/%40typed%2Ftemplate%2FRender%23DomRenderTemplate). Use
-[`render`](/reference/%40typed%2Ftemplate%2FRender%23render) to give that output a root, and
-[`many`](/reference/%40typed%2Ftemplate%2Fmany%23many) when collection identity matters.
+[`DomRenderTemplate`](/reference/modules/%40typed%2Ftemplate%2FRender). Use
+[`render`](/reference/modules/%40typed%2Ftemplate%2FRender) to give that output a root, and
+[`many`](/reference/modules/%40typed%2Ftemplate%2Fmany) when collection identity matters.
 
 Start with the distinction this page measures:
 
@@ -26,7 +26,7 @@ const items = Fx.succeed([
 const rows = many(
   items,
   (item) => item.id,
-  (item) => html`<li>${RefSubject.map(item, (value) => value.label)}</li>`,
+  (item) => html`<li>${item.pipe(RefSubject.map((value) => value.label))}</li>`,
 );
 
 const view = html`<p>${status}</p><ul>${rows}</ul>`;
@@ -44,7 +44,8 @@ There is no page-wide `n` in this renderer. Each row below names its own local s
 - `t` is the static nodes plus dynamic parts in one template literal.
 - `h` is the existing DOM inspected to build or search a hydration tree below the supplied root.
 - `c` is the class-token count; `d` is the data-key count; `p` is the accepted spread-key count
-  enumerated once while the template part is installed.
+  enumerated when the containing record is installed or replaced. A reactive value inside a retained
+  key updates its captured part without enumerating the outer record again.
 - `r` is the number of concrete nodes in one dynamic range (the interval before its end comment).
 - `a` and `b` are the previous and next keyed-array lengths. `Δ` is the number of items whose
   lifecycle or position actually changes; an item renderer's own work is additional.
@@ -89,7 +90,8 @@ insertion preserves every browser-managed state.
 
 ## Reading construction, mount, hydration, and update separately
 
-Construction parses and caches a static literal/fragment. Mounting clones that fragment, connects
+Calling `html` constructs an inert description. The first renderer interpretation parses and caches
+the static literal/fragment. Mounting clones that fragment, connects
 all parts, and attaches delegated listeners. Hydration first reads existing marked DOM and adopts it
 only when the template hash and markers match; it is a compatibility check and setup pass, not a
 free scalar update. Updates happen afterward through the retained part target or the dynamic range.

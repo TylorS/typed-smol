@@ -5,17 +5,17 @@ import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
-import { renderGuideMarkdown } from "../RenderMarkdown.js";
+import { renderMarkdown } from "../../site/Markdown.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const guideFile = "fx-dynamic-producers.md";
 const guidePath = path.join(websiteRoot, "content/guides", guideFile);
 
 describe("dynamic Fx producers guide", () => {
-  it("places the guide in the construction sequence and covers every public combinator", () => {
+  it("places the guide in the construction sequence and covers every public combinator", async () => {
     const source = fs.readFileSync(guidePath, "utf8");
     const guide = parseGuideDocumentation(guideFile, source);
-    const rendered = renderGuideMarkdown(guide.body).html;
+    const rendered = (await renderMarkdown(guide.body)).code;
 
     expect(guide).toMatchObject({
       slug: "fx-dynamic-producers",

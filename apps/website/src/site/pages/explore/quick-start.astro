@@ -1,0 +1,41 @@
+---
+import { getCollection, render } from "astro:content";
+import Article from "../../layouts/Article.astro";
+import Demo from "../../components/CurriculumDemo.js";
+const sections = await Promise.all(
+  (await getCollection("learn"))
+    .sort((a, b) => a.data.order - b.data.order)
+    .map(async (entry) => ({ entry, ...(await render(entry)) })),
+);
+const headings = sections.map(({ entry }) => ({
+  depth: 2,
+  slug: entry.data.id,
+  text: entry.data.title,
+}));
+---
+
+<Article
+  title="Build your first Typed application"
+  summary="Start with a view, give it state, then render the same template on the server and hydrate it in the browser."
+  section="QUICK START"
+  current="quick-start"
+  headings={headings}
+  next={{ href: "/explore/tutorial", title: "Build TodoMVC" }}
+>
+  <p>
+    You need a working knowledge of TypeScript and a little <a
+      href="https://effect.website/docs/v4/">Effect</a
+    >. You can stop after the browser example and already have a useful
+    application. Server rendering comes next, when you need it.
+  </p>
+  {
+    sections.map(({ entry, Content }) => (
+      <section aria-labelledby={entry.data.id}>
+        <h2 id={entry.data.id}>{entry.data.title}</h2>
+        <p>{entry.data.summary}</p>
+        <Content />
+        {entry.data.demo && <Demo id={entry.data.demo} client:visible />}
+      </section>
+    ))
+  }
+</Article>

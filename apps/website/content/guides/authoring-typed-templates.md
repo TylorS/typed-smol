@@ -1,14 +1,14 @@
 ---
-title: Authoring Typed templates
-summary: Write renderer-neutral structure with html, then choose the exact dynamic part and browser behavior you mean.
-section: Templates
-kind: concept
+title: "Authoring Typed templates"
+summary: "Write renderer-neutral structure with html, then choose the exact dynamic part and browser behavior you mean."
+section: "Templates"
+kind: "concept"
 order: 3.1
 ---
 
 `html` is a template tag, not a DOM constructor. It records authored static markup and the positions
 of dynamic values, then returns an inert `Fx<RenderEvent, E, R>`. A later
-[`RenderTemplate`](/reference/%40typed%2Ftemplate%2FRenderTemplate%23RenderTemplate) service decides
+[`RenderTemplate`](/reference/modules/%40typed%2Ftemplate%2FRenderTemplate) service decides
 whether that program becomes browser DOM or HTML for a response. Use a template whenever you can say
 which markup is fixed and which exact platform field changes over time.
 

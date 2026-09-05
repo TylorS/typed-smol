@@ -29,7 +29,7 @@ import {
   type RouteGuardError,
   type Router,
 } from "@typed/router";
-import { Ids } from "@typed/id";
+import { Uuid7State } from "@typed/id/Uuid7";
 import { initialMemory, type Navigation } from "@typed/navigation";
 import { renderToHtml, renderToHtmlString, type RenderEvent } from "@typed/template";
 
@@ -291,7 +291,7 @@ function toRoute<E, R>(
       );
       const provided = Layer.mergeAll(
         initialMemory({ url: requestUrl, origin: requestUrl.origin }).pipe(
-          Layer.provide(Ids.Default),
+          Layer.provide(Uuid7State.Default),
         ),
         Layer.succeed(
           CurrentRoute,

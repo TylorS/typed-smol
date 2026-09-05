@@ -14,12 +14,12 @@ import {
 } from "effect";
 import { Fx } from "@typed/fx";
 import * as Uuid7 from "@typed/id/Uuid7";
+import { IdsTest } from "@typed/id/IdsTest";
 import { type BlockNavigation, type Blocking, useBlockNavigation } from "../Blocking.js";
 import { getUrl } from "../_core.js";
 import { fromWindow } from "../fromWindow.js";
 import { initialMemory, memory } from "../memory.js";
 import { CurrentPath, Navigation } from "../Navigation.js";
-import { Ids } from "@typed/id";
 import { BeforeNavigationEvent, RedirectError } from "../model.js";
 
 describe("typed/navigation", () => {
@@ -43,8 +43,10 @@ describe("typed/navigation", () => {
           assert.equal(origin, "https://example.com");
           assert.equal(base, "/app/");
         }),
-        fromWindow(mockWindow({ baseHref: "https://example.com/app/" })),
-      ).pipe(Effect.provide(Ids.Default)),
+        fromWindow(mockWindow({ baseHref: "https://example.com/app/" })).pipe(
+          Layer.provide(Uuid7.Uuid7State.Default),
+        ),
+      ),
     ));
 
   it("fromWindow layer provides Navigation service", () =>
@@ -57,14 +59,14 @@ describe("typed/navigation", () => {
           assert.ok(Uuid7.isUuid7(dest.key), "key should be UUID v7");
           assert.equal(dest.url.href, "https://example.com/");
         }),
-        fromWindow(mockWindow()),
-      ).pipe(Effect.provide(Ids.Default)),
+        fromWindow(mockWindow()).pipe(Layer.provide(Uuid7.Uuid7State.Default)),
+      ),
     ));
 
   it("maps ID generation failures to NavigationError", () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const invalidIds = Ids.Test({ currentTime: 2 ** 48 });
+        const invalidIds = IdsTest({ currentTime: 2 ** 48 });
         const browserResult = yield* Effect.provide(
           Navigation.currentEntry,
           fromWindow(mockWindow()).pipe(Layer.provideMerge(invalidIds)),
@@ -112,7 +114,7 @@ describe("typed/navigation", () => {
               createDestination("http://localhost/2"),
             ],
             currentIndex: 1,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -130,7 +132,7 @@ describe("typed/navigation", () => {
             base: "/app/",
             entries: [createDestination("https://custom.test/home")],
             currentIndex: 0,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -151,7 +153,7 @@ describe("typed/navigation", () => {
           initialMemory({
             url: "http://localhost/initial-test",
             state: { test: "initial-data" },
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -171,7 +173,7 @@ describe("typed/navigation", () => {
           memory({
             entries: [createDestination("http://localhost/1")],
             currentIndex: 0,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -187,7 +189,7 @@ describe("typed/navigation", () => {
             assert.deepInclude(yield* Navigation.back(), { id: second.id, key: second.key });
             assert.deepInclude(yield* Navigation.forward(), { id: third.id, key: third.key });
           }),
-          initialMemory({ url: "http://localhost/1" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/1" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -208,7 +210,7 @@ describe("typed/navigation", () => {
             assert.deepEqual(reloaded.state, state);
             assert.deepEqual((yield* Navigation.currentEntry).state, state);
           }),
-          initialMemory({ url: "http://localhost/1" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/1" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -226,7 +228,7 @@ describe("typed/navigation", () => {
             }
             assert.isTrue(Option.isNone(yield* navigation.transition.asComputed()));
           }),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -244,7 +246,7 @@ describe("typed/navigation", () => {
             }
             assert.equal((yield* navigation.currentEntry).key, current.key);
           }),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -264,7 +266,7 @@ describe("typed/navigation", () => {
               assert.equal((yield* navigation.currentEntry).url.pathname, "/allowed");
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -287,7 +289,7 @@ describe("typed/navigation", () => {
               assert.isTrue(Option.isNone(yield* navigation.transition.asComputed()));
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -315,7 +317,7 @@ describe("typed/navigation", () => {
               assert.equal((yield* navigation.currentEntry).url.pathname, "/first");
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -335,7 +337,7 @@ describe("typed/navigation", () => {
               assert.isFalse(yield* blocking.isBlocking);
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -361,7 +363,7 @@ describe("typed/navigation", () => {
               assert.equal((yield* navigation.currentEntry).url.pathname, "/redirected");
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -383,7 +385,7 @@ describe("typed/navigation", () => {
               assert.equal((yield* navigation.currentEntry).url.pathname, "/");
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -443,7 +445,7 @@ describe("typed/navigation", () => {
                 if (action !== "dispose") yield* Scope.close(blockerScope, Exit.void);
               }),
             ),
-            initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+            initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
           ),
         ),
     );
@@ -471,7 +473,7 @@ describe("typed/navigation", () => {
                 assert.equal((yield* navigation.currentEntry).url.pathname, "/second");
               }),
             ),
-            initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+            initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
           ),
         ),
       1_000,
@@ -495,7 +497,7 @@ describe("typed/navigation", () => {
               entries: [createDestination("http://localhost/")],
               commit: () =>
                 Deferred.succeed(commitStarted, undefined).pipe(Effect.andThen(Effect.never)),
-            }).pipe(Layer.provideMerge(Ids.Test())),
+            }).pipe(Layer.provideMerge(IdsTest())),
           );
         }),
       ));
@@ -513,7 +515,7 @@ describe("typed/navigation", () => {
               assert.isTrue(Option.isNone(yield* navigation.transition.asComputed()));
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -537,7 +539,7 @@ describe("typed/navigation", () => {
                 assert.isTrue(Option.isNone(yield* navigation.transition.asComputed()));
               }),
             ),
-            initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+            initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
           );
         }),
       ));
@@ -559,7 +561,7 @@ describe("typed/navigation", () => {
               assert.isTrue(Option.isNone(yield* navigation.transition.asComputed()));
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -584,7 +586,7 @@ describe("typed/navigation", () => {
               assert.isTrue(Option.isNone(yield* navigation.transition.asComputed()));
             }),
           ),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -627,7 +629,7 @@ describe("typed/navigation", () => {
                 Effect.as(destination),
               );
             },
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });
@@ -651,7 +653,7 @@ describe("typed/navigation", () => {
               createDestination("http://localhost/2"),
             ],
             currentIndex: 1,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -674,7 +676,7 @@ describe("typed/navigation", () => {
               createDestination("http://localhost/2"),
             ],
             currentIndex: 0,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -701,7 +703,7 @@ describe("typed/navigation", () => {
             entries: [createDestination("http://localhost/1")],
             currentIndex: 0,
             maxEntries: 3,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -728,7 +730,7 @@ describe("typed/navigation", () => {
             ],
             currentIndex: 2,
             maxEntries: 2,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -751,7 +753,7 @@ describe("typed/navigation", () => {
             ],
             currentIndex: 0,
             maxEntries: 2,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -775,7 +777,7 @@ describe("typed/navigation", () => {
             ],
             currentIndex: 1,
             maxEntries: 0,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -796,7 +798,7 @@ describe("typed/navigation", () => {
             entries: [createDestination("http://localhost/1")],
             currentIndex: 0,
             maxEntries: 2,
-          }).pipe(Layer.provideMerge(Ids.Test())),
+          }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -816,7 +818,7 @@ describe("typed/navigation", () => {
             assert.equal((yield* Navigation.entries).length, 1);
           }),
           initialMemory({ url: "http://localhost/profile", state: { version: "initial" } }).pipe(
-            Layer.provideMerge(Ids.Test()),
+            Layer.provideMerge(IdsTest()),
           ),
         ),
       ));
@@ -831,7 +833,7 @@ describe("typed/navigation", () => {
             assert.equal(destination.key, current.key);
             assert.isFalse(yield* Navigation.canGoBack);
           }),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -845,7 +847,7 @@ describe("typed/navigation", () => {
             assert.equal(destination.key, current.key);
             assert.isFalse(yield* Navigation.canGoForward);
           }),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -859,7 +861,7 @@ describe("typed/navigation", () => {
             assert.equal(destination.key, current.key);
             assert.isTrue(Option.isNone(yield* Navigation.transition.asComputed()));
           }),
-          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
 
@@ -873,7 +875,7 @@ describe("typed/navigation", () => {
             yield* Navigation.navigate("/next?tab=2", { history: "replace" });
             assert.equal(yield* CurrentPath, "/next?tab=2");
           }),
-          initialMemory({ url: "http://localhost/start" }).pipe(Layer.provideMerge(Ids.Test())),
+          initialMemory({ url: "http://localhost/start" }).pipe(Layer.provideMerge(IdsTest())),
         ),
       ));
   });
@@ -890,7 +892,7 @@ describe("typed/navigation", () => {
       return Effect.runPromise(
         Effect.provide(
           Navigation.navigate("/managed", { history: "push", state: userState }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       ).then(() =>
         Effect.runPromise(
@@ -898,7 +900,7 @@ describe("typed/navigation", () => {
             Effect.gen(function* () {
               assert.deepEqual((yield* Navigation.currentEntry).state, userState);
             }),
-            fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+            fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
           ),
         ),
       );
@@ -921,7 +923,7 @@ describe("typed/navigation", () => {
             assert.equal(current.url.href, "https://example.com/");
             assert.deepEqual(current.state, persisted);
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });
@@ -957,7 +959,7 @@ describe("typed/navigation", () => {
         const current = await Effect.runPromise(
           Effect.provide(
             Navigation.currentEntry,
-            fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+            fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
           ),
         );
         assert.deepEqual(current.state, persisted);
@@ -984,7 +986,7 @@ describe("typed/navigation", () => {
             assert.isAtMost(Math.max(...sizes) - Math.min(...sizes), 8);
             assert.isAtMost((yield* Navigation.entries).length, 50);
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });
@@ -1073,7 +1075,7 @@ describe("typed/navigation", () => {
               assert.equal((yield* Fiber.join(back)).key, initial.key);
               assert.equal((yield* Navigation.currentEntry).url.pathname, "/");
             }),
-            fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+            fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
           );
         }),
       ));
@@ -1095,7 +1097,7 @@ describe("typed/navigation", () => {
             assert.deepEqual(current.state, secondState);
             assert.equal((yield* Navigation.entries).length, 1);
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });
@@ -1121,7 +1123,7 @@ describe("typed/navigation", () => {
             );
             assert.equal(window.historyEntries.length, 3);
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });
@@ -1153,7 +1155,7 @@ describe("typed/navigation", () => {
             assert.notEqual(current.key, "foreign-key");
             assert.deepEqual(current.state, foreignState);
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });
@@ -1189,7 +1191,7 @@ describe("typed/navigation", () => {
                 assert.equal((yield* Navigation.currentEntry).key, initial.key);
                 assert.isTrue(yield* Navigation.canGoForward);
               }),
-              fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+              fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
             );
           }),
         ),
@@ -1218,7 +1220,7 @@ describe("typed/navigation", () => {
                 assert.isTrue(Option.isNone(yield* Navigation.transition.asComputed()));
                 assert.equal((yield* Navigation.currentEntry).url.pathname, "/managed");
               }),
-              fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+              fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
             );
           }),
         ),
@@ -1261,7 +1263,7 @@ describe("typed/navigation", () => {
                 assert.equal((yield* Navigation.traverseTo(third.key)).key, third.key);
                 assert.equal(goIndex, 2);
               }),
-              fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+              fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
             );
           }),
         ),
@@ -1283,7 +1285,7 @@ describe("typed/navigation", () => {
             assert.deepEqual(reloaded.state, state);
             assert.deepEqual((yield* Navigation.currentEntry).state, state);
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
 
@@ -1293,7 +1295,7 @@ describe("typed/navigation", () => {
             Effect.gen(function* () {
               assert.deepEqual((yield* Navigation.currentEntry).state, state);
             }),
-            fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+            fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
           ),
         ),
       );
@@ -1315,7 +1317,7 @@ describe("typed/navigation", () => {
             }
             assert.isTrue(Option.isNone(yield* Navigation.transition.asComputed()));
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });
@@ -1337,7 +1339,7 @@ describe("typed/navigation", () => {
             }
             assert.isTrue(Option.isNone(yield* Navigation.transition.asComputed()));
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });
@@ -1360,7 +1362,7 @@ describe("typed/navigation", () => {
             assert.equal(window.location.pathname, "/committed");
             assert.isTrue(Option.isNone(yield* navigation.transition.asComputed()));
           }),
-          fromWindow(window).pipe(Layer.provideMerge(Ids.Test())),
+          fromWindow(window).pipe(Layer.provideMerge(IdsTest())),
         ),
       );
     });

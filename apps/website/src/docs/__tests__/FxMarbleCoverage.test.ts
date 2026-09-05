@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractFxMarbleOperators, validateFxMarbleCoverage } from "../FxMarbleCoverage.js";
-import { renderGuideMarkdown } from "../RenderMarkdown.js";
+import { renderMarkdown } from "../../site/Markdown.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -52,7 +52,7 @@ output: 3 |
     expect(report.unexpected).toEqual(["internalMap"]);
   });
 
-  it("covers every public @typed/fx/Fx combinator exactly once", () => {
+  it("covers every public @typed/fx/Fx combinator exactly once", async () => {
     const inventory = JSON.parse(
       fs.readFileSync(path.join(websiteRoot, "src/generated/reference.json"), "utf8"),
     ) as {
@@ -83,8 +83,9 @@ output: 3 |
     expect(report).toMatchObject({ duplicates: [], missing: [], unexpected: [] });
     expect(report.appearances).toHaveLength(publicOperators.length);
 
-    const renderedOperators = guides.flatMap(({ body }) =>
-      [...renderGuideMarkdown(body).html.matchAll(/data-fx-operators="([^"]+)"/gu)].flatMap(
+    const rendered = await Promise.all(guides.map(({ body }) => renderMarkdown(body)));
+    const renderedOperators = rendered.flatMap(({ code }) =>
+      [...code.matchAll(/data-fx-operators="([^"]+)"/gu)].flatMap(
         ([, names]) => names!.split(" "),
       ),
     );

@@ -1,8 +1,8 @@
 ---
-title: Composing RefSubject state
-summary: Combine writable state, read-only projections, conditional views, services, and external sources without copying values between stores.
-section: State
-kind: guide
+title: "Composing RefSubject state"
+summary: "Combine writable state, read-only projections, conditional views, services, and external sources without copying values between stores."
+section: "State"
+kind: "guide"
 order: 2.1
 ---
 
@@ -79,12 +79,14 @@ specialized modules are covered in [Choosing specialized RefSubject modules](/ex
 ## Adapt a source once
 
 `fromEffect`, `fromFx`, and `fromStream` create current state from Effect ecosystem producers.
-`fromOption` and `fromNullable` create a `Filtered` boundary when an initial value may not exist.
+`fromOption` and `fromNullable` store optional values in writable state; apply `compact` when a
+consumer needs a `Filtered` view of present values.
 Creation requires `Scope`; that Scope owns the live source subscription and interruption.
 
 Do not subscribe to a source and manually copy every value into another ref. Use the constructor
-whose source contract is already true. The source's `E` and `R` channels remain visible on current
-reads and pushed updates.
+whose source contract is already true. The source's errors remain visible on current reads and pushed updates. Source services are
+required and captured when constructing the ref; later reads do not require those services again.
+See [sources and lifetime](/explore/refsubject-sources-equality-and-lifetime) for initialization timing.
 
 ## Put shared state in Context
 
@@ -102,7 +104,7 @@ consumers need the same state and lifetime.
 - `reset` returns to the initializer's current value.
 - `update` and `updateEffect` compute the next value atomically.
 - `modify` and `modifyEffect` commit state and return a separate result.
-- `runUpdates` applies an Fx of transition functions in order.
+- `runUpdates` runs a callback inside one serialized transaction.
 
 All writes are serialized. If a domain already has a named operation—`toggle`, `append`, `setSome`,
 `addEdge`—prefer the specialized module's operation because it communicates the invariant directly.

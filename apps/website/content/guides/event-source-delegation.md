@@ -1,8 +1,8 @@
 ---
-title: Delegate browser events from a renderer
-summary: Use EventSource when a renderer needs scoped, native delegation across the concrete elements it produced.
-section: Integration
-kind: deep-dive
+title: "Delegate browser events from a renderer"
+summary: "Use EventSource when a renderer needs scoped, native delegation across the concrete elements it produced."
+section: "Integration"
+kind: "deep-dive"
 order: 10.15
 ---
 
@@ -30,6 +30,7 @@ import { makeEventSource } from "@typed/template/EventSource";
 const events = makeEventSource();
 const root = document.createElement("section");
 const menu = document.createElement("div");
+menu.setAttribute("role", "menu");
 const close = document.createElement("button");
 close.textContent = "Close";
 menu.append(close);
@@ -37,8 +38,8 @@ root.append(menu);
 
 const closeMenu = EventHandler.make(
   Effect.fn("closeMenu")(function* (event: MouseEvent) {
-    const button = event.currentTarget as HTMLButtonElement;
-    yield* Effect.sync(() => button.closest("[role=menu]")?.setAttribute("hidden", ""));
+    const menu = event.currentTarget as HTMLDivElement;
+    yield* Effect.sync(() => menu.setAttribute("hidden", ""));
   }),
 );
 

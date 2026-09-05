@@ -1,7 +1,7 @@
 ---
 id: local-reconciliation
-term: Local reconciliation
-definition: Updating only the concrete nodes inside one dynamic range when structural output changes.
+term: "Local reconciliation"
+definition: "Updating only the concrete nodes inside one dynamic range when structural output changes."
 aliases: []
 related: [dynamic-part, dynamic-range, many]
 links: []

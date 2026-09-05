@@ -1,0 +1,54 @@
+---
+import { getCollection } from "astro:content";
+import Article from "../../../layouts/Article.astro";
+import Demo from "../../../components/CurriculumDemo.js";
+import { siteHref } from "../../../../SiteHref.js";
+const steps = (await getCollection("tutorial")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+---
+
+<Article
+  title="Build TodoMVC one boundary at a time"
+  summary="A complete client application: domain rules, reactive state, keyed views, filters, persistence, and tests."
+  section="TUTORIAL"
+  current="tutorial"
+  next={{
+    href: `/explore/tutorial/${steps[0]!.data.slug}`,
+    title: steps[0]!.data.title,
+  }}
+>
+  <p>
+    A todo list is small enough to understand and large enough to need real
+    decisions. Where does state live? Which code knows about the browser? What
+    happens when a list changes?
+  </p>
+  <p>
+    Each chapter includes a working snapshot. Keep the files from the previous
+    chapter and replace the files shown. The examples use <a
+      href="https://effect.website/docs/v4/">Effect v4</a
+    >; follow the install versions in the Quick Start.
+  </p>
+  <Demo id="todo-10" client:only="@typed/astro"
+    ><p slot="fallback">
+      The completed todo application loads in the browser.
+    </p></Demo
+  >
+  <h2>The route through the application</h2><ol>
+    {
+      steps.map((entry) => (
+        <li>
+          <a href={siteHref(`/explore/tutorial/${entry.data.slug}`)}>
+            {entry.data.title}
+          </a>{" "}
+          — {entry.data.summary}
+        </li>
+      ))
+    }
+  </ol>
+  <p>
+    This tutorial stays client-only. <a href={siteHref("/explore/quick-start")}
+      >Quick Start</a
+    > covers server rendering and hydration.
+  </p>
+</Article>

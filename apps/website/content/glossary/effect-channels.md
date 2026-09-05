@@ -1,7 +1,7 @@
 ---
 id: effect-channels
-term: Effect channels
-definition: The success, expected-error, and required-service type parameters carried by Effect and Fx.
+term: "Effect channels"
+definition: "The success, expected-error, and required-service type parameters carried by Effect and Fx."
 aliases: [A E R, success error requirements]
 related: [effect, service, scope]
 links: [https://www.effect.website/docs/v4/getting-started/the-effect-type/]

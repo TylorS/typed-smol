@@ -2,7 +2,7 @@ import type * as Template from "./Template.js";
 import * as Array from "effect/Array";
 import { constVoid } from "effect/Function";
 import * as Order from "effect/Order";
-import { isObject } from "effect/Predicate";
+import { isNullish, isObject } from "effect/Predicate";
 import { renderToEscapedString, renderToString } from "./internal/encoding.js";
 import { keyToPartType } from "./internal/keyToPartType.js";
 import { TEMPLATE_END_COMMENT, TEMPLATE_START_COMMENT } from "./internal/meta.js";
@@ -561,7 +561,7 @@ const attributeMap: AttributeMap = {
     builder.text(addAttributeSpace(`${attribute.name}`, placement)),
   attr: (builder, attribute, placement) =>
     builder.part(attribute, (v) =>
-      addAttributeSpace(`${attribute.name}="${renderToEscapedString(v, "")}"`, placement),
+      addAttributeSpace(renderAttribute(attribute.name, v), placement),
     ),
   "sparse-attr": (builder, attribute, placement) =>
     builder.sparsePart(attribute, (v) =>
@@ -571,7 +571,7 @@ const attributeMap: AttributeMap = {
     builder.part(attribute, (v) => addAttributeSpace(v ? `${attribute.name}` : "", placement)),
   "className-part": (builder, attribute, placement) =>
     builder.part(attribute, (v) =>
-      addAttributeSpace(`class="${renderToEscapedString(v, " ")}"`, placement),
+      addAttributeSpace(isNullish(v) ? "" : `class="${renderToEscapedString(v, " ")}"`, placement),
     ),
   "sparse-class-name": (builder, attribute, placement) =>
     builder.sparsePart(attribute, (v) =>
@@ -581,7 +581,7 @@ const attributeMap: AttributeMap = {
     builder.part(attribute, (v) => addAttributeSpace(renderDataAttributes(v), placement)),
   property: (builder, attribute, placement) =>
     builder.part(attribute, (v) =>
-      addAttributeSpace(`${attribute.name}="${renderToEscapedString(v, "")}"`, placement),
+      addAttributeSpace(renderAttribute(attribute.name, v), placement),
     ),
   properties: (builder, attribute, placement) =>
     builder.part(attribute, (v) => {
@@ -785,5 +785,5 @@ function isSerializableAttributeName(name: string): boolean {
 }
 
 function renderAttribute(name: string, value: unknown): string {
-  return value === undefined ? name : `${name}="${renderToEscapedString(value, "")}"`;
+  return isNullish(value) ? "" : `${name}="${renderToEscapedString(value, "")}"`;
 }

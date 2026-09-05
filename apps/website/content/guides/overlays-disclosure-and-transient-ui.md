@@ -1,8 +1,8 @@
 ---
-title: Overlays, disclosure, and transient UI
-summary: Choose the smallest public UI contract for expanded content, top-layer information, modal work, and commands.
-section: UI
-kind: guide
+title: "Overlays, disclosure, and transient UI"
+summary: "Choose the smallest public UI contract for expanded content, top-layer information, modal work, and commands."
+section: "UI"
+kind: "guide"
 order: 4.4
 ---
 
@@ -125,6 +125,50 @@ native dialog also reports `cancel`, `close`, and `toggle` back into `state.open
 clear exit and a sensible first focusable control; verify the browser's resulting focus behavior for
 the task rather than recreating a focus trap around an ordinary `div`.
 
+### Close after the application action succeeds
+
+The example above demonstrates dialog controls; its “Delete” control only closes the dialog.
+Closing is not deletion. For actual work, pass an Effect to a native Button and compose the domain
+action before `Dialog.close`. A failed action then leaves the dialog available for recovery.
+
+```ts
+import { Effect } from "effect";
+import { component } from "@typed/ui/Component";
+import * as Button from "@typed/ui/Button";
+import * as Dialog from "@typed/ui/Dialog";
+
+const ConfirmArchive = component(function* (archive: Effect.Effect<void>) {
+  const state = yield* Dialog.makeState();
+  const confirm = archive.pipe(Effect.andThen(Dialog.close(state)));
+
+  return [
+    Dialog.Trigger({ state, content: "Archive project" }),
+    Dialog.Content({
+      state,
+      label: "Archive project",
+      content: [
+        "The project will remain available in your archive.",
+        Dialog.RequestClose({ state, content: "Keep project" }),
+        Button.Button({ content: "Archive", onclick: confirm }),
+      ],
+    }),
+  ];
+});
+
+const archiveDialog = ConfirmArchive(Effect.void);
+```
+
+This example accepts work whose expected failures have already been handled. When archive can
+fail, render that failure beside the confirmation and close only the success branch. Use the
+[busy-state pattern](/explore/building-ui-components) when repeated activation could submit twice.
+Do not equate Escape, cancellation, successful submission, and route removal: each may need a
+different application result even though all can leave the surface closed.
+
+The trigger and content need one shared state, but not an extra application-wide overlay manager.
+Create independent state for independent dialogs. If nested surfaces must coordinate dismissal,
+make that relationship explicit at their owner and test where focus returns when an inner surface
+closes or its trigger disappears.
+
 ## Keep a tooltip descriptive; use a hovercard for interaction
 
 `Tooltip.makeState` and `Hovercard.makeState` require a stable `id`. It is the server/client-safe
@@ -203,3 +247,11 @@ focused browser test at the native boundary:
 
 That split keeps application policy independently testable while proving the browser behavior that
 only a real `<details>`, Popover API host, or `<dialog>` can provide.
+
+For the exact options and native lifecycle hooks, see
+[Dialog](/reference/modules/%40typed%2Fui%2FDialog),
+[Disclosure](/reference/modules/%40typed%2Fui%2FDisclosure),
+[Popover](/reference/modules/%40typed%2Fui%2FPopover),
+[Tooltip](/reference/modules/%40typed%2Fui%2FTooltip), and
+[Hovercard](/reference/modules/%40typed%2Fui%2FHovercard).
+Their state transitions are ordinary [Effect v4](https://effect.website/docs/v4) programs.

@@ -1,7 +1,7 @@
 ---
 slug: web-component
-title: Use Web Components and Typed together
-summary: Render custom elements as ordinary HTML, or host a scoped Typed render inside an element.
+title: "Use Web Components and Typed together"
+summary: "Render custom elements as ordinary HTML, or host a scoped Typed render inside an element."
 ---
 
 Web Components work in both directions. A custom element placed inside Typed owns its own descendants; a

@@ -44,6 +44,7 @@ for CUID or UUID v5 generation.
 
 ```ts
 import { Ids, Uuid5Namespace } from "@typed/id";
+import { IdsTest } from "@typed/id/IdsTest";
 import * as Effect from "effect/Effect";
 
 const program = Effect.gen(function* () {
@@ -62,7 +63,8 @@ const ids = await Effect.runPromise(Effect.provide(program, Ids.Default));
 console.log(ids);
 ```
 
-Use `Ids.Test()` instead of `Ids.Default` when the same program needs deterministic test data.
+Use `IdsTest()` from `@typed/id/IdsTest` instead of `Ids.Default` when the same program needs
+deterministic test data.
 
 ## Values and serialization
 
@@ -102,7 +104,7 @@ The standalone generators have narrower requirements:
 
 `RandomValues.Default` uses Web Crypto and is the production entropy source. `RandomValues.Random`
 derives bytes from Effect's current `Random` service and is intended for controlled tests or
-simulations, not as a cryptographic entropy source. `Ids.Test()` supplies fixed internal entropy
+simulations, not as a cryptographic entropy source. `IdsTest()` supplies fixed internal entropy
 and a controllable clock; its output is for repeatable tests, not production IDs. Service state is
 process-local and is not a serialization format or a persistence mechanism.
 
@@ -135,9 +137,9 @@ This provider is deterministic and is therefore test-only. Application code norm
 
 ## API reference
 
-### Ids
+### Ids and IdsTest
 
-Unified service for generating all ID types. Requires `DateTimes`, `RandomValues`, `CuidState`, and `Uuid7State` (use `Ids.Default` or `Ids.Test()` to provide them).
+Unified service for generating all ID types. Requires `DateTimes`, `RandomValues`, `CuidState`, and `Uuid7State` (use `Ids.Default` or `IdsTest()` to provide them).
 
 | Member               | Type                                                            | Description                                                                                             |
 | -------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -149,12 +151,12 @@ Unified service for generating all ID types. Requires `DateTimes`, `RandomValues
 | `Ids.uuid5`          | `(name, namespace) => Effect<Uuid5, IllegalArgumentError, Ids>` | Generate a UUID v5; namespaces not exactly 16 bytes fail. Also has `.dns`, `.url`, `.oid`, and `.x500`. |
 | `Ids.uuid7`          | `Effect<Uuid7, IllegalArgumentError, Ids>`                      | Generate a UUID v7; timestamps outside its 48-bit field fail before state mutation.                     |
 | `Ids.Default`        | `Layer<Ids \| DateTimes \| RandomValues>`                       | Layer that provides `Ids` with default Cuid/Uuid7/DateTimes/RandomValues.                               |
-| `Ids.Test(options?)` | `Layer<Ids \| DateTimes \| RandomValues, IllegalArgumentError>` | Reproducible test layer; invalid `currentTime` values fail.                                             |
+| `IdsTest(options?)` | `Layer<Ids \| DateTimes \| RandomValues, IllegalArgumentError>` | Reproducible test layer; invalid `currentTime` values fail.                                             |
 
-**TestOptions:**
+**IdsTestOptions:**
 `{ currentTime?: number | string | Date; envData?: string }`
 
-`Ids.Test()` defaults to time `1_400_000_000_000` and uses fixed internal test entropy.
+`IdsTest()` defaults to time `1_400_000_000_000` and uses fixed internal test entropy.
 
 ---
 

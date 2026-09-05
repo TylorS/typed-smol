@@ -1,7 +1,7 @@
 ---
 slug: dom-output
-title: Pass existing DOM into Typed
-summary: Keep the nodes your renderer created. Typed places them without taking over their descendants.
+title: "Pass existing DOM into Typed"
+summary: "Keep the nodes your renderer created. Typed places them without taking over their descendants."
 ---
 
 Use `DomRenderEvent` when an adapter already has real DOM. It passes those exact objects into a Typed

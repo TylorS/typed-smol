@@ -1,8 +1,8 @@
 ---
-title: Building UI components
-summary: Author one lazy, stateful UI component from public Typed primitives and test its state and browser boundaries separately.
-section: UI
-kind: guide
+title: "Building UI components"
+summary: "Author one lazy, stateful UI component from public Typed primitives and test its state and browser boundaries separately."
+section: "UI"
+kind: "guide"
 order: 4
 ---
 
@@ -133,6 +133,84 @@ inside the component silently supplies or catches them. A static label emits onc
 label continues to update its button content. Do not accept a writable RefSubject merely to display
 it—the component has no reason to mutate caller-owned label state.
 
+### Give an asynchronous save a complete interaction policy
+
+The earlier examples isolate construction and typing. A real save needs to prevent repeated
+activation, report a recoverable rejection, and leave its busy state when the work finishes.
+Keep that policy next to the interaction. Expected failure becomes visible content; unexpected
+failures still belong to the application's error boundary.
+
+```ts
+import { Data, Effect } from "effect";
+import { RefSubject } from "@typed/fx";
+import { html } from "@typed/template";
+import { component } from "@typed/ui/Component";
+import * as Button from "@typed/ui/Button";
+
+class SaveRejected extends Data.TaggedError("SaveRejected")<{
+  readonly message: string;
+}> {}
+
+const SaveAccount = component(function* (
+  save: Effect.Effect<void, SaveRejected>,
+) {
+  const busy = yield* RefSubject.make(false);
+  const status = yield* RefSubject.make("Ready to save");
+
+  const submit = Effect.gen(function* () {
+    if (yield* busy) return;
+    yield* RefSubject.set(busy, true);
+    yield* RefSubject.set(status, "Saving…");
+    yield* save.pipe(
+      Effect.andThen(RefSubject.set(status, "Saved")),
+      Effect.catchTag("SaveRejected", ({ message }) => RefSubject.set(status, message)),
+      Effect.ensuring(RefSubject.set(busy, false)),
+    );
+  });
+
+  return html`<section aria-busy=${busy}>
+    ${Button.Button({ content: "Save account", disabled: busy, onclick: submit })}
+    <p role="status">${status}</p>
+  </section>`;
+});
+
+const accountSave = SaveAccount(Effect.void);
+```
+
+The disabled binding communicates availability through the native button. The Effect also checks
+busy state because the command may be invoked outside a click. For shared writes invoked from
+multiple components, put serialization or deduplication in the shared service; local button state
+only coordinates this instance. If navigation removes this component, its render lifetime owns the
+handler work. A save that must outlive the screen needs an explicitly longer-lived service owner.
+
+### Preserve the public host contract when adding styling
+
+Prefer `props` for classes and ordinary attributes. A custom host is useful for a design-system
+wrapper, but receives already-composed props: required semantics, events, and refs travel together.
+Spread the complete object onto the actual interactive element:
+
+```ts
+import { Effect } from "effect";
+import { html } from "@typed/template";
+import * as Button from "@typed/ui/Button";
+
+const Save = Button.Button(
+  {
+    content: "Save account",
+    props: { class: "button button-primary", "data-action": "save" },
+    onclick: Effect.log("save account"),
+  },
+  (props, content) => html`<button ...${props}><span>${content}</span></button>`,
+);
+```
+
+Do not move these props to the wrapper span, drop `ref`, or replace a native button with a `div`.
+The [Dom helpers](/reference/modules/%40typed%2Fui%2FDom) merge required internal props, compose
+events, and compose refs. A host can have only one hydration owner; two independent hydrated
+states cannot both restore themselves from the same element. Library authors defining a new
+semantic host can use `Dom.renderHost`; applications extending a family should use that family's
+host argument so its established behavior remains attached.
+
 ## 4. Test the transition, then the browser event
 
 The transition test needs no renderer or document:
@@ -166,7 +244,7 @@ rendered output and invokes the supplied save work.
 import { Effect } from "effect";
 import { Fx, RefSubject } from "@typed/fx";
 import { DomRenderTemplate, html, render } from "@typed/template";
-import { assert, it } from "vitest";
+import { assert, it, vi } from "vitest";
 import { component } from "@typed/ui/Component";
 import * as Button from "@typed/ui/Button";
 
@@ -194,10 +272,10 @@ const clicksSaveButton = Effect.fn("clicksSaveButton")(function* () {
   yield* render(SaveButton(Effect.sync(() => saves++)), document.body).pipe(Fx.take(1), Fx.drain);
 
   document.querySelector<HTMLButtonElement>("button")?.click();
-  yield* Effect.yieldNow;
-
-  assert.strictEqual(saves, 1);
-  assert.strictEqual(document.querySelector("output")?.textContent, "saved");
+  yield* Effect.promise(() => vi.waitFor(() => {
+    assert.strictEqual(saves, 1);
+    assert.strictEqual(document.querySelector("output")?.textContent, "saved");
+  }));
 });
 
 it("updates the status after a real click", () =>
@@ -212,3 +290,8 @@ it("updates the status after a real click", () =>
 choose the right interaction. If this grows into form submission, a dialog, or a command menu,
 compose the appropriate public Form, Dialog, or Menu family rather than adding ad-hoc roles and
 handlers to this component.
+
+Read [choosing UI components](/explore/choosing-ui-components) before inventing a new interaction,
+[Component](/reference/modules/%40typed%2Fui%2FComponent) for generator overloads, and
+[Effect v4](https://effect.website/docs/v4) for error and service composition. Use
+[testing Typed systems](/explore/testing-typed-systems) when turning the examples into application tests.

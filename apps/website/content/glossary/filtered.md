@@ -1,7 +1,7 @@
 ---
 id: filtered
-term: Filtered
-definition: A conditional read-only state view whose current value may be absent.
+term: "Filtered"
+definition: "A conditional read-only state view whose current value may be absent."
 aliases: []
 related: [computed, refsubject, fx]
 links: []

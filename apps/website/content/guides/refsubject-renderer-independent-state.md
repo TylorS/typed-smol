@@ -1,8 +1,8 @@
 ---
-title: RefSubject: state without a renderer
-summary: Keep a current value and named transitions outside the UI that happens to show them.
-section: State
-kind: concept
+title: "RefSubject: state without a renderer"
+summary: "Keep a current value and named transitions outside the UI that happens to show them."
+section: "State"
+kind: "concept"
 order: 2
 ---
 `RefSubject` is state you can build, derive, and test before anything renders. Put the model and
@@ -100,3 +100,12 @@ Source-backed refs are lazy in the same important sense as Effect: an `Effect`, 
 source does no work until the `RefSubject` creation Effect runs. What starts after construction, how
 each source initializes, and how its lifetime ends are covered in
 [State sources, equality, and lifetime](/explore/refsubject-sources-equality-and-lifetime).
+
+## Continue with the shape your feature needs
+
+- [Sources, equality, and lifetime](/explore/refsubject-sources-equality-and-lifetime) explains when initializers run and what counts as a new publication.
+- [Derived and conditional state](/explore/derived-conditional-and-accumulated-state) keeps read-only queries connected to their source.
+- [Specialized state](/explore/specialized-refsubject-state) gives arrays, optional selection, and object fields named operations.
+- [Async data](/explore/async-data) represents first loads, refreshes, failures, and optimistic edits.
+- [Shared contracts](/explore/shared-state-contracts) supplies state through Effect Context.
+- [Versioned state](/explore/versioned-state) adapts a producer whose writes belong to another owner.

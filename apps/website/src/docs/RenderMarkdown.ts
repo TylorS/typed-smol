@@ -1,102 +1,5 @@
 import type { SymbolDocumentation } from "./Model.js";
-import { renderFxMarble } from "./FxMarble.js";
-import { highlightCode, normalizeLanguage } from "./SyntaxHighlight.js";
-import { HtmlRenderEvent } from "@typed/template";
-import { Marked, Renderer } from "marked";
-import { siteHref } from "../SiteHref.js";
-
-export interface MarkdownRenderOptions {
-  /** Exact, unambiguous Typed symbol names to their generated declaration ids. */
-  readonly typedSymbolIds?: Readonly<Record<string, string>>;
-}
-
-const webPlatformApiUrls: Readonly<Record<string, string>> = {
-  DocumentFragment: "https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment",
-  Element: "https://developer.mozilla.org/en-US/docs/Web/API/Element",
-  EventTarget: "https://developer.mozilla.org/en-US/docs/Web/API/EventTarget",
-  HTMLElement: "https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement",
-  Node: "https://developer.mozilla.org/en-US/docs/Web/API/Node",
-  ParentNode: "https://developer.mozilla.org/en-US/docs/Web/API/ParentNode",
-};
-
-const defaultTypedSymbolIds: Readonly<Record<string, string>> = {
-  Wire: "@typed/template#Wire",
-};
-
-const htmlAttribute = (value: string): string =>
-  value.replace(/[&<>"']/gu, (character) => {
-    switch (character) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      default:
-        return "&#39;";
-    }
-  });
-
-const htmlText = (value: string): string => htmlAttribute(value);
-
-const ownValue = <A>(record: Readonly<Record<string, A>>, key: string): A | undefined =>
-  Object.hasOwn(record, key) ? record[key] : undefined;
-
-const inlineCodeLink = (
-  value: string,
-  options: MarkdownRenderOptions | undefined,
-): string | undefined => {
-  const external = ownValue(webPlatformApiUrls, value);
-  if (external !== undefined) {
-    return `<code class="inline-code-link"><a href="${htmlAttribute(external)}" rel="external">${htmlText(value)}</a></code>`;
-  }
-  const typedId =
-    (options?.typedSymbolIds === undefined ? undefined : ownValue(options.typedSymbolIds, value)) ??
-    ownValue(defaultTypedSymbolIds, value);
-  return typedId === undefined
-    ? undefined
-    : `<code class="inline-code-link"><a href="${htmlAttribute(siteHref(`/reference/${encodeURIComponent(typedId)}`))}">${htmlText(value)}</a></code>`;
-};
-
-const baseHeadingId = (value: string): string =>
-  value
-    .toLocaleLowerCase()
-    .replace(/<[^>]*>/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-export const headingId = (value: string, prefix?: string): string => {
-  const heading = baseHeadingId(value);
-  const scope = prefix === undefined ? "" : baseHeadingId(prefix);
-  return scope === "" ? heading : `${scope}-${heading}`;
-};
-
-const markdownFor = (prefix?: string, options?: MarkdownRenderOptions): Marked => {
-  const renderer = new Renderer();
-  renderer.heading = function ({ tokens, depth }) {
-    const content = this.parser.parseInline(tokens);
-    return `<h${depth} id="${headingId(content, prefix)}">${content}</h${depth}>\n`;
-  };
-  renderer.code = ({ text, lang }) => {
-    if (lang?.trim().toLowerCase() === "fx-marble") {
-      const diagram = renderFxMarble(text);
-      if (diagram !== undefined) return `${diagram}\n`;
-    }
-    const language = normalizeLanguage(lang);
-    return `<pre class="code-block code-block--${language}"><code class="language-${language}">${highlightCode(language, text)}</code></pre>\n`;
-  };
-  renderer.codespan = ({ text }) =>
-    inlineCodeLink(text, options) ?? `<code>${htmlText(text)}</code>`;
-  return new Marked({ gfm: true, renderer });
-};
-
-export const renderGuideMarkdown = (
-  markdown: string,
-  prefix?: string,
-  options?: MarkdownRenderOptions,
-) => HtmlRenderEvent(markdownFor(prefix, options).parse(markdown, { async: false }), true);
+import { resolveMarkdownLinks } from "./MarkdownLinks.js";
 
 const renderExample = (language: string, code: string): string => {
   const normalized = code.trim();
@@ -138,4 +41,6 @@ export const renderSymbolBodyMarkdown = (symbol: SymbolDocumentation): string =>
 };
 
 export const renderSymbolMarkdown = (symbol: SymbolDocumentation): string =>
-  `# ${symbol.exportName}\n\n${symbol.summary}\n\n${renderSymbolBodyMarkdown(symbol)}`;
+  resolveMarkdownLinks(
+    `# ${symbol.exportName}\n\n${symbol.summary}\n\n${renderSymbolBodyMarkdown(symbol)}`,
+  );

@@ -1,8 +1,8 @@
 ---
-title: Building Fx values
-summary: Start with the smallest constructor that matches your producer, then add typed failure, services, and cleanup where they actually exist.
-section: Fx
-kind: guide
+title: "Building Fx values"
+summary: "Start with the smallest constructor that matches your producer, then add typed failure, services, and cleanup where they actually exist."
+section: "Fx"
+kind: "guide"
 order: 1.1
 ---
 

@@ -1,8 +1,8 @@
 ---
-title: Shared reactive contracts
-summary: Use Effect Context to share exactly the reactive capability another subsystem needs.
-section: State
-kind: guide
+title: "Shared reactive contracts"
+summary: "Use Effect Context to share exactly the reactive capability another subsystem needs."
+section: "State"
+kind: "guide"
 order: 2.35
 ---
 

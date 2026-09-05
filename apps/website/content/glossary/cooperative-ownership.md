@@ -1,7 +1,7 @@
 ---
 id: cooperative-ownership
-term: Cooperative ownership
-definition: Updating only the DOM and lifetime a participant owns.
+term: "Cooperative ownership"
+definition: "Updating only the DOM and lifetime a participant owns."
 aliases: []
 related: [dynamic-range, scope, wire]
 links: []

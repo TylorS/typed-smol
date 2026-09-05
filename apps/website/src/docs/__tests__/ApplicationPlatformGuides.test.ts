@@ -31,8 +31,7 @@ describe("application and platform guides", () => {
     expect(route.source).toContain('from "@typed/router/Route"');
     expect(route.source).toContain("Route.Type");
     expect(route.source).toContain("RouteDecodeError");
-    expect(route.source).toContain("Effect's native `unstable/http/FindMyWay` matcher");
-    expect(route.source).toContain("`HttpRouter`");
+    expect(route.source).toContain("constrained parameters");
     expect(route.source).not.toContain("## Matching performs the decode");
     const routeCode = extractTypeScriptFences(route.guide.body).join("\n");
     for (const routeApi of [
@@ -56,8 +55,7 @@ describe("application and platform guides", () => {
     expect(router.source).toContain("ServerRouter");
     expect(router.source).toContain("TestRouter");
     expect(router.source).toContain("Navigation.currentEntry");
-    expect(router.source).toContain("Effect's native `unstable/http/FindMyWay` matcher");
-    expect(router.source).toContain("`HttpRouter`");
+    expect(router.source).toContain("compact application matcher");
     expect(router.source).toMatch(/Effect.*Stream.*Fx/s);
     expect(router.source).toContain("Guard");
     expect(router.source).toContain("dependencies");
@@ -106,7 +104,7 @@ describe("application and platform guides", () => {
     }
 
     expect(dom.source).toContain("DomRenderTemplate");
-    expect(dom.source).toContain("render(page, document.body)");
+    expect(dom.source).toContain("render(host)");
     expect(dom.source).not.toContain("ssrForHttp");
 
     expect(html.source).toContain("renderToHtml");
@@ -120,8 +118,7 @@ describe("application and platform guides", () => {
     expect(http.source).toContain("ssrForHttp");
     expect(http.source).toContain("streamingSsrForHttp");
     expect(http.source).toContain("handleHttpServerError");
-    expect(http.source).toContain("ssrToHttp");
-    expect(http.source).toMatch(/no public.*ssrToHttp/is);
+    expect(http.source).toContain("HttpRouter.serve");
     expect(http.guide.order).toBe(10.2);
   });
 

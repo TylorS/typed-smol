@@ -1,4 +1,4 @@
-import { Ids } from "@typed/id";
+import { IdsTest } from "@typed/id/IdsTest";
 import { Effect, Layer } from "effect";
 import { assert, describe, it } from "vitest";
 import { initialMemory } from "../memory.js";
@@ -40,7 +40,7 @@ describe("Navigation.navigate history auto selection", () => {
           assert.equal(destination.url.href, to);
           assert.equal(destination.key === initial.key, preservesKey);
         }),
-        initialMemory({ url: from, origin: "https://example.com" }).pipe(Layer.provide(Ids.Test())),
+        initialMemory({ url: from, origin: "https://example.com" }).pipe(Layer.provide(IdsTest())),
       ),
     ),
   );

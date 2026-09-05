@@ -1,8 +1,8 @@
 ---
-title: State transactions and bidirectional views
-summary: Make one serialized change, return a useful result, or expose a writable lens without copying state.
-section: State
-kind: guide
+title: "State transactions and bidirectional views"
+summary: "Make one serialized change, return a useful result, or expose a writable lens without copying state."
+section: "State"
+kind: "guide"
 order: 2.25
 ---
 

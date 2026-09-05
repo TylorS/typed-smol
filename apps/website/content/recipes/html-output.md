@@ -1,7 +1,7 @@
 ---
 slug: html-output
-title: Pass trusted HTML into Typed SSR
-summary: Preserve a renderer's serialized output and its real chunk boundaries.
+title: "Pass trusted HTML into Typed SSR"
+summary: "Preserve a renderer's serialized output and its real chunk boundaries."
 ---
 
 `HtmlRenderEvent(html, last)` carries HTML already produced by a trusted renderer. Use it for an SSR
@@ -100,4 +100,4 @@ trusted chunk and whether that chunk finishes the render.
 
 - [`HtmlRenderEvent`](/reference/%40typed%2Ftemplate%2FRenderEvent%23HtmlRenderEvent)
 - [`streamingSsrForHttp`](/reference/%40typed%2Fui%2FHttpRouter%23streamingSsrForHttp)
-- [Effect `HttpServerResponse`](https://effect.website/docs/v4/api/effect-unstable-http/HttpServerResponse)
+- [Effect `HttpServerResponse`](https://effect.website/docs/v4/api/effect/unstable/http/HttpServerResponse)

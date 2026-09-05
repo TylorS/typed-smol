@@ -1,8 +1,8 @@
 ---
-title: Flatten Fx with an explicit policy
-summary: Choose whether inner Fx overlap, wait, replace one another, or are ignored.
-section: Fx
-kind: guide
+title: "Flatten Fx with an explicit policy"
+summary: "Choose whether inner Fx overlap, wait, replace one another, or are ignored."
+section: "Fx"
+kind: "guide"
 order: 1.4
 ---
 

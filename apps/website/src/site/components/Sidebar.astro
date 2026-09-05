@@ -1,0 +1,54 @@
+---
+import { getCollection } from "astro:content";
+import { siteHref } from "../../SiteHref.js";
+
+interface Props {
+  current?: string;
+}
+const { current } = Astro.props;
+const guides = (await getCollection("guides")).sort(
+  (a, b) => a.data.order - b.data.order || a.id.localeCompare(b.id),
+);
+const groups = Map.groupBy(guides, (entry) => entry.data.section);
+const starters = [
+  ["quick-start", "Quick Start"],
+  ["tutorial", "Build TodoMVC"],
+];
+---
+
+<nav aria-label="Documentation">
+  <div class="sidebar-group">
+    <h2>Start building</h2>
+    {
+      starters.map(([slug, title]) => (
+        <a
+          href={siteHref(`/explore/${slug}`)}
+          aria-current={current === slug ? "page" : undefined}
+        >
+          {title}
+        </a>
+      ))
+    }
+  </div>
+  {
+    [...groups].map(([section, entries]) => (
+      <div class="sidebar-group">
+        <h2>{section}</h2>
+        {entries.map((entry) => (
+          <a
+            href={siteHref(`/explore/${entry.id}`)}
+            aria-current={current === entry.id ? "page" : undefined}
+          >
+            {entry.data.title}
+          </a>
+        ))}
+      </div>
+    ))
+  }
+  <div class="sidebar-group">
+    <h2>Keep close</h2>
+    <a href={siteHref("/reference")}>All packages and APIs</a>
+    <a href={siteHref("/integrate/astro")}>Astro integration</a>
+    <a href="https://effect.website/docs/v4/">Effect v4 ↗</a>
+  </div>
+</nav>

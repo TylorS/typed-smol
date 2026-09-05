@@ -2,9 +2,9 @@
   "name": "@typed/id",
   "version": "1.0.0-beta.6",
   "description": "Branded ID generators and facades for Typed applications.",
-  "license": "MIT",
   "homepage": "https://github.com/TylorS/typed-smol/tree/main/packages/id#readme",
   "bugs": "https://github.com/TylorS/typed-smol/issues",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TylorS/typed-smol.git",
@@ -31,6 +31,10 @@
     "./Ids": {
       "types": "./dist/Ids.d.ts",
       "import": "./dist/Ids.js"
+    },
+    "./IdsTest": {
+      "types": "./dist/IdsTest.d.ts",
+      "import": "./dist/IdsTest.js"
     },
     "./Ksuid": {
       "types": "./dist/Ksuid.d.ts",

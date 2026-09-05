@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import * as Effect from "effect/Effect";
 import { Navigation } from "@typed/navigation/Navigation";
 import { CurrentRoute } from "../CurrentRoute.js";
-import { ServerRouter, TestRouter } from "../Router.js";
+import { ServerRouter } from "../Router.js";
+import { TestRouter } from "../RouterTest.js";
 import * as Route from "../Route.js";
 
 describe("typed/router/CurrentRoute", () => {

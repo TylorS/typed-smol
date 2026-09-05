@@ -2,22 +2,28 @@
 
 > **Beta:** This repository and all packages are in **beta**.
 
-**Typed** is a fully **Effect-native UI framework** for building typed, reliable web applications.
+**Typed** is an Effect-native toolkit for reactive state, HTML templates, routing, and accessible UI.
+Use the pieces you need, with explicit dependencies and scoped lifetimes.
+
+Start with the [documentation](https://tylors.github.io/typed-smol/),
+[Quick Start](https://tylors.github.io/typed-smol/explore/quick-start/), or
+[package reference](https://tylors.github.io/typed-smol/reference/).
+Typed builds on [Effect](https://effect.website/).
 
 ## Documentation website
 
-`apps/website` is the production SSR marketing and documentation application. It is itself built
-with Typed and exposes one normalized first-slice corpus as semantic HTML, negotiated/direct
-Markdown, JSON, deterministic search, a read-only MCP endpoint, WebMCP tools, a glossary, and agent
-discovery artifacts.
+`apps/website` is an Astro static site for GitHub Pages. Guides, integration recipes, the Quick
+Start, and TodoMVC tutorial live in Markdown. The API reference is generated from public package
+exports and source documentation. Interactive examples, search, and theme controls use Typed
+islands through the new `@typed/astro` workspace package.
 
 ```sh
 pnpm --filter typed-website docs:generate
 pnpm --filter typed-website test:docs
 pnpm --filter typed-website typecheck
 pnpm --filter typed-website test:production
+pnpm --filter typed-website dev
 ```
 
-The documentation extractor intentionally uses TypeScript 6.0's compiler API under the
-`typescript-compiler` alias. The workspace and website continue to compile with TypeScript 7;
-only 7's changed package-root compiler API is avoided by the extractor.
+See [website development](apps/website/README.md) and the
+[@typed/astro integration](packages/astro/README.md) for commands and rendering contracts.

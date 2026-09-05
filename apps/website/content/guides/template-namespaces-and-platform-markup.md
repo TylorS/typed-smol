@@ -1,8 +1,8 @@
 ---
-title: Namespace-aware platform markup
-summary: Author SVG and MathML directly; Typed builds the native namespace transitions and attributes the platform expects.
-section: Templates
-kind: deep-dive
+title: "Namespace-aware platform markup"
+summary: "Author SVG and MathML directly; Typed builds the native namespace transitions and attributes the platform expects."
+section: "Templates"
+kind: "deep-dive"
 order: 3.375
 ---
 

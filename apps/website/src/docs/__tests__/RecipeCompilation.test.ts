@@ -6,7 +6,7 @@ import {
   recipes,
   validateRecipeExamples,
 } from "../Recipes.js";
-import { renderGuideMarkdown } from "../RenderMarkdown.js";
+import { renderMarkdown } from "../../site/Markdown.js";
 
 describe("integration recipes", () => {
   const domRecipe = recipes.find(({ slug }) => slug === "dom-output")!;
@@ -97,14 +97,15 @@ hydrateRoot(document.body, <main />)
     }
   });
 
-  it("scopes repeated Markdown headings and local navigation by recipe slug", () => {
-    const dom = renderGuideMarkdown("## Ownership\n\nDOM", "dom-output");
-    const html = renderGuideMarkdown("## Ownership\n\nHTML", "html-output");
+  it("gives repeated headings unique anchors within one rendered page", async () => {
+    const rendered = await renderMarkdown("## Ownership\n\nDOM\n\n## Ownership\n\nHTML");
 
-    expect(dom.html).toContain('id="dom-output-ownership"');
-    expect(html.html).toContain('id="html-output-ownership"');
-    expect(dom.html).not.toContain('id="ownership"');
-    expect(html.html).not.toContain('id="ownership"');
+    expect(rendered.code).toContain('id="ownership"');
+    expect(rendered.code).toContain('id="ownership-1"');
+    expect(rendered.metadata.headings.map(({ slug }) => slug)).toEqual([
+      "ownership",
+      "ownership-1",
+    ]);
   });
 
   it("rejects compile-only scaffolding in reader-facing examples", () => {

@@ -74,6 +74,7 @@ describe("Markdown content generation", () => {
 
     const bySection = Map.groupBy(guides, ({ section }) => section!);
     expect([...bySection.keys()]).toEqual([
+      "Learning paths",
       "Fx",
       "State",
       "Templates",
@@ -87,6 +88,7 @@ describe("Markdown content generation", () => {
         [...bySection].map(([section, entries]) => [section, entries.map(({ slug }) => slug)]),
       ),
     ).toEqual({
+      "Learning paths": ["application-developers", "library-developers"],
       Fx: [
         "fx-push-reactivity",
         "building-fx",
@@ -110,8 +112,11 @@ describe("Markdown content generation", () => {
         "composing-refsubject-state",
         "derived-conditional-and-accumulated-state",
         "specialized-refsubject-state",
+        "versioned-state",
         "state-transactions-and-bidirectional-views",
         "shared-state-contracts",
+        "async-data",
+        "id",
       ],
       Templates: [
         "render-your-first-template",
@@ -147,6 +152,7 @@ describe("Markdown content generation", () => {
         "hydrating-typed-html",
       ],
       Applications: [
+        "guard",
         "route-typed-url-inputs",
         "router-navigation-live-selection",
         "navigation-as-an-effect-service",

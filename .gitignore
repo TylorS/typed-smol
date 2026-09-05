@@ -56,3 +56,6 @@ tmp-*/
 graphify-out/
 .superpowers/
 docs/superpowers/
+
+# Astro generated content and type declarations
+.astro/

@@ -347,14 +347,17 @@ function renderPart<E, R>(
     if (isObject(renderable) && !isEffectLike(renderable)) {
       return setup(renderable);
     }
-    return Fx.switchMap(liftRenderableToFx<E, R>(renderable, isStatic), (props) => {
-      if (isObject(props)) return setup(props);
-      return Fx.empty;
-    });
+    return Fx.switchMap(
+      liftRenderableToFx<E, R>(renderable, isStatic, undefined, false),
+      (props) => {
+        if (isObject(props)) return setup(props);
+        return Fx.empty;
+      },
+    );
   }
 
   // Otherwise we're going to coerce to a string
-  return Fx.filterMap(liftRenderableToFx<E, R>(renderable, isStatic), (value) => {
+  return Fx.filterMap(liftRenderableToFx<E, R>(renderable, isStatic, undefined, false), (value) => {
     const s = render(value);
     return s ? some(HtmlRenderEvent(s, last)) : none();
   });
@@ -383,10 +386,13 @@ function setupProperties<E, R>(
         );
       }
       if (!isSerializableSpreadKey(key)) return Fx.empty;
-      return Fx.filterMap(liftRenderableToFx<E, R>(renderable, isStatic, new Set()), (value) => {
-        const s = render({ [key]: value });
-        return s ? some(HtmlRenderEvent(s, last && i === lastIndex)) : none();
-      });
+      return Fx.filterMap(
+        liftRenderableToFx<E, R>(renderable, isStatic, new Set(), false),
+        (value) => {
+          const s = render({ [key]: value });
+          return s ? some(HtmlRenderEvent(s, last && i === lastIndex)) : none();
+        },
+      );
     }),
   );
 }
@@ -449,7 +455,7 @@ function renderSparsePart<E, R>(
   return Fx.tuple(
     ...node.nodes.map((node) => {
       if (node._tag === "text") return Fx.succeed(node.value);
-      return liftRenderableToFx<E, R>(values[node.index], isStatic);
+      return liftRenderableToFx<E, R>(values[node.index], isStatic, undefined, false);
     }),
   ).pipe(
     Fx.take(1),
@@ -461,37 +467,47 @@ function liftRenderableToFx<E, R>(
   renderable: Renderable<unknown, E, R>,
   isStatic: boolean,
   propertyAncestors?: ReadonlySet<object>,
+  nodeContext = true,
 ): Fx.Fx<any, E, R> {
   switch (typeof renderable) {
     case "function":
       return Fx.isFx(renderable)
         ? takeOneIfNotRenderEvent(renderable)
-        : isStatic
-          ? Fx.empty
-          : Fx.succeed(HtmlRenderEvent(TEXT_START, true));
+        : !nodeContext
+          ? Fx.succeed(undefined)
+          : isStatic
+            ? Fx.empty
+            : Fx.succeed(HtmlRenderEvent(TEXT_START, true));
     case "undefined":
     case "object": {
       if (isNullish(renderable)) {
-        return isStatic ? Fx.empty : Fx.succeed(HtmlRenderEvent(TEXT_START, true));
+        // Empty node positions need a hydration marker; attribute serializers need the absent value.
+        return !nodeContext
+          ? Fx.succeed(renderable)
+          : isStatic
+            ? Fx.empty
+            : Fx.succeed(HtmlRenderEvent(TEXT_START, true));
       } else if (isMany(renderable)) {
         return renderHtml`${renderable}` as Fx.Fx<any, E, R>;
       } else if (Array.isArray(renderable)) {
         const ancestors = addPropertyAncestor(renderable, propertyAncestors);
         if (ancestors === null) return Fx.empty;
         return Fx.mergeOrdered(
-          ...renderable.map((r) => liftRenderableToFx<E, R>(r, isStatic, ancestors)),
+          ...renderable.map((r) => liftRenderableToFx<E, R>(r, isStatic, ancestors, nodeContext)),
         );
       } else if (isOption(renderable)) {
         return isNone(renderable)
           ? Fx.empty
-          : liftRenderableToFx(renderable.value, isStatic, propertyAncestors);
+          : liftRenderableToFx(renderable.value, isStatic, propertyAncestors, nodeContext);
       } else if (isStream(renderable)) {
         return takeOneIfNotRenderEvent(fromStream(renderable)) as Fx.Fx<any, E, R>;
       } else if (Fx.isFx(renderable)) {
         return takeOneIfNotRenderEvent(renderable);
       } else if (Effect.isEffect(renderable)) {
         return Fx.unwrap(
-          Effect.map(renderable, (r) => liftRenderableToFx<E, R>(r, isStatic, propertyAncestors)),
+          Effect.map(renderable, (r) =>
+            liftRenderableToFx<E, R>(r, isStatic, propertyAncestors, nodeContext),
+          ),
         );
       } else if (isHtmlRenderEvent(renderable)) {
         return Fx.succeed(renderable);
@@ -499,7 +515,11 @@ function liftRenderableToFx<E, R>(
         const ancestors = addPropertyAncestor(renderable, propertyAncestors);
         if (ancestors === null) return Fx.empty;
         return Fx.take(
-          Fx.struct(mapRecord(renderable, (_) => liftRenderableToFx<E, R>(_, isStatic, ancestors))),
+          Fx.struct(
+            mapRecord(renderable, (_) =>
+              liftRenderableToFx<E, R>(_, isStatic, ancestors, nodeContext),
+            ),
+          ),
           1,
         );
       }

@@ -1,14 +1,13 @@
-import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
-import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import { Explore } from "../../pages/Explore.js";
-import { QuickStart, TutorialStepPage } from "../../pages/Curriculum.js";
 import { quickStartSections, tutorialSteps } from "../../tutorial/Content.js";
 
-const render = (value: unknown) =>
-  Effect.runPromise(
-    Effect.scoped(renderToHtmlString(value as never).pipe(Effect.provide(HtmlRenderTemplate))),
-  );
+const fileAt = (slug: string, name: string): string => {
+  const source = tutorialSteps
+    .find((step) => step.slug === slug)
+    ?.files.find((file) => file.name === name)?.source;
+  if (source === undefined) throw new Error(`Missing ${name} in tutorial step ${slug}`);
+  return source;
+};
 
 describe("Quick Start and TodoMVC curriculum", () => {
   it("keeps every authored step addressable and ordered", () => {
@@ -41,75 +40,38 @@ describe("Quick Start and TodoMVC curriculum", () => {
     ]);
   });
 
-  it("server-renders a distinct Counter for each progressive milestone", async () => {
-    const output = await render(QuickStart);
-
-    expect(output).toContain('data-curriculum-demo="counter-reactive"');
-    expect(output).toContain('data-curriculum-demo="counter-component"');
-    expect(output).toContain('data-curriculum-demo="counter-hydrated"');
-    expect(output).toContain("Reactive Counter");
-    expect(output).toContain("Component Counter");
-    expect(output).toContain("Hydrated Counter");
-    expect(output).toContain(">Decrease</button>");
-    expect(output).toContain(">Increase</button>");
-    expect(output).toContain("data-typed-refsubject");
-    expect(output).toContain("curriculum-file--diff");
-    expect(output).toContain("changes since step");
-    expect(output).toContain("View current file");
+  it("introduces Counter state, component scope, and hydration as distinct milestones", () => {
+    expect(
+      quickStartSections.filter(({ demo }) => demo).map(({ id, demo }) => ({ id, demo })),
+    ).toEqual([
+      { id: "reactive-state", demo: "counter-reactive" },
+      { id: "component-lifetime", demo: "counter-component" },
+      { id: "hydrate-state", demo: "counter-hydrated" },
+    ]);
+    const hydration = quickStartSections.find(({ id }) => id === "hydrate-state")!;
+    expect(hydration.files.map(({ name }) => name)).toEqual(["src/Counter.ts", "src/client.ts"]);
+    expect(hydration.files[0]!.source).toContain("RefSubject.hydrate");
+    expect(hydration.files[1]!.source).toContain("DomRenderTemplate.using(document)");
   });
 
-  it("discovers both curricula from Explore", async () => {
-    const output = await render(Explore);
-
-    expect(output).toContain('href="/explore/quick-start"');
-    expect(output).toContain('href="/explore/tutorial"');
-  });
-
-  it("server-renders a resettable Todo preview for a cumulative milestone", async () => {
-    const step = tutorialSteps.find(({ slug }) => slug === "render-keyed-items")!;
-    const output = await render(TutorialStepPage(step));
-
-    expect(output).toContain('data-curriculum-demo="todo-5"');
-    expect(output).toContain('placeholder="What needs to be done?"');
-    expect(output).toContain(">Reset preview</button>");
-    expect(output).toContain("Learn Typed");
-  });
-
-  it("does not render TodoMVC before the presentation milestone", async () => {
-    const domain = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "model-the-domain")!),
-    );
-    const application = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "application-state")!),
-    );
-    const create = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "create-a-todo")!),
-    );
-    const shell = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "render-the-shell")!),
-    );
-
-    expect(domain).not.toContain("data-curriculum-demo");
-    expect(application).not.toContain("data-curriculum-demo");
-    expect(create).not.toContain("data-curriculum-demo");
-    expect(create).not.toContain('placeholder="What needs to be done?"');
-    expect(shell).toContain("Keyed item rendering arrives next");
-    expect(shell).toContain('data-curriculum-demo="todo-4"');
+  it("introduces TodoMVC previews only when there is presentation to exercise", () => {
+    expect(tutorialSteps.slice(0, 3).every(({ demo }) => demo === undefined)).toBe(true);
+    expect(tutorialSteps.slice(3).map(({ demo }) => demo)).toEqual([
+      "todo-4",
+      "todo-5",
+      "todo-6",
+      "todo-7",
+      "todo-8",
+      "todo-9",
+      "todo-10",
+    ]);
+    const shell = fileAt("render-the-shell", "src/presentation.ts");
     expect(shell).toContain('placeholder="What needs to be done?"');
-    expect(shell).not.toContain("todo-demo__list");
+    expect(shell).not.toContain("many(");
+    expect(fileAt("render-keyed-items", "src/presentation.ts")).toContain("many(App.TodoList");
   });
 
-  it("keeps the TodoMVC progression client-only while adding keyed presentation", async () => {
-    const keyed = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "render-keyed-items")!),
-    );
-    const routed = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "route-the-filter")!),
-    );
-    const persisted = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "persist-the-list")!),
-    );
-    const pages = await Promise.all(tutorialSteps.map((step) => render(TutorialStepPage(step))));
+  it("keeps the TodoMVC progression client-only", () => {
     const authoredTutorial = tutorialSteps
       .flatMap(({ title, summary, body, files }) => [
         title,
@@ -119,35 +81,23 @@ describe("Quick Start and TodoMVC curriculum", () => {
       ])
       .join("\n");
 
-    expect(keyed).toContain("todo-demo__list");
-    expect(routed).not.toContain("data-typed-refsubject");
-    expect(persisted).not.toContain("data-typed-refsubject");
-    expect(pages.every((page) => !page.includes("data-typed-refsubject"))).toBe(true);
     expect(authoredTutorial).not.toMatch(/hydrat/iu);
+    expect(fileAt("assemble-the-application", "src/main.ts")).toContain(
+      "render(TodoApp, document.body)",
+    );
   });
 
-  it("renders repeated TodoMVC files as milestone diffs", async () => {
-    const applicationStateStep = tutorialSteps.find(({ slug }) => slug === "application-state")!;
-    const keyedStep = tutorialSteps.find(({ slug }) => slug === "render-keyed-items")!;
-    const create = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "create-a-todo")!),
+  it("adds complete file snapshots at the milestone that introduces each responsibility", () => {
+    expect(fileAt("application-state", "src/application.ts")).not.toContain(
+      "export const Todos = TodoList",
     );
-    const keyed = await render(TutorialStepPage(keyedStep));
-    const persisted = await render(
-      TutorialStepPage(tutorialSteps.find(({ slug }) => slug === "persist-the-list")!),
-    );
-
-    expect(
-      applicationStateStep.files.find(({ name }) => name === "src/application.ts")?.source,
-    ).not.toContain("export const Todos = TodoList");
-    expect(create).toContain("curriculum-file--diff");
-    expect(create).toContain("createTodo");
-    expect(create).not.toContain("toggleTodoCompleted");
-    expect(keyed).toContain("toggleTodoCompleted");
-    expect(keyedStep.files.find(({ name }) => name === "src/presentation.ts")?.source).toContain(
-      "App.TodoList",
-    );
-    expect(persisted).toContain("changes since step");
-    expect(persisted).toContain("KeyValueStore");
+    const creation = fileAt("create-a-todo", "src/application.ts");
+    expect(creation).toContain("createTodo");
+    expect(creation).not.toContain("toggleTodoCompleted");
+    expect(fileAt("render-keyed-items", "src/application.ts")).toContain("toggleTodoCompleted");
+    expect(fileAt("render-keyed-items", "src/presentation.ts")).toContain("App.TodoList");
+    expect(fileAt("route-the-filter", "src/presentation.ts")).toContain("App.Todos");
+    expect(fileAt("persist-the-list", "src/infrastructure.ts")).toContain("Schema.encodeEffect");
+    expect(fileAt("persist-the-list", "src/infrastructure.ts")).toContain("localStorage.setItem");
   });
 });

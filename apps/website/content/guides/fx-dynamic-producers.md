@@ -1,8 +1,8 @@
 ---
-title: Choose an Fx producer dynamically
-summary: Use setup Effects to select or construct an Fx, then choose whether its Scope belongs to the caller or the subscription.
-section: Fx
-kind: guide
+title: "Choose an Fx producer dynamically"
+summary: "Use setup Effects to select or construct an Fx, then choose whether its Scope belongs to the caller or the subscription."
+section: "Fx"
+kind: "guide"
 order: 1.15
 ---
 
@@ -53,19 +53,25 @@ return the `Fx` to run. It is useful when selection depends on several typed val
 the final `return` is the producer boundary, not another output event.
 
 ```ts
-import { Effect } from "effect";
+import { Context, Effect } from "effect";
 import { Fx } from "@typed/fx";
 
+class FeedConfig extends Context.Service<FeedConfig, {
+  readonly mode: "cached" | "live";
+  readonly label: string;
+}>()("app/FeedConfig") {}
+
 const generated = Fx.gen(function* () {
-  const mode = yield* Effect.succeed<"cached" | "live">("live");
-  const label = yield* Effect.succeed("feed");
+  const { mode, label } = yield* FeedConfig;
 
   return mode === "cached"
     ? Fx.succeed(`${label}:cached`)
     : Fx.fromIterable([`${label}:connected`, `${label}:ready`]);
 });
 
-const values = Fx.collectAll(generated);
+const values = Fx.collectAll(generated).pipe(
+  Effect.provideService(FeedConfig, { mode: "live", label: "activity" }),
+);
 ```
 
 `gen` keeps the setup and producer in one readable block. Conceptually, it is `unwrap` applied to

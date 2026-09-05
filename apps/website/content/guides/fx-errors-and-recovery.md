@@ -1,8 +1,8 @@
 ---
-title: Recover typed failures without losing causes
-summary: Translate expected errors, retry subscriptions, and materialize complete outcomes deliberately.
-section: Fx
-kind: guide
+title: "Recover typed failures without losing causes"
+summary: "Translate expected errors, retry subscriptions, and materialize complete outcomes deliberately."
+section: "Fx"
+kind: "guide"
 order: 1.8
 ---
 
@@ -90,6 +90,39 @@ value resets the retry schedule, so it is a fit for a retryable producer—not f
 arbitrary per-value callback. Give the schedule a bounded retry and backoff policy appropriate to
 the operation. The retried source is still ordinary producer composition; see
 [Composing Fx](/explore/composing-fx) when another producer also enters the decision.
+
+## Recover one request without ending the input source
+
+On a search screen, a failed request should usually leave the query listener alive. Put recovery
+inside the function that creates that request. Catching outside the flattened pipeline replaces
+the whole failed subscription, including its connection to future input.
+
+```ts
+import { Effect } from "effect"
+import { Fx } from "@typed/fx"
+
+type SearchResult =
+  | { readonly _tag: "Results"; readonly query: string; readonly items: ReadonlyArray<string> }
+  | { readonly _tag: "Unavailable"; readonly query: string }
+
+const search = (query: string): Effect.Effect<ReadonlyArray<string>, "Offline"> =>
+  query === "offline" ? Effect.fail("Offline" as const) : Effect.succeed([`Result for ${query}`])
+
+const request = (query: string) => search(query).pipe(
+  Effect.map((items): SearchResult => ({ _tag: "Results", query, items })),
+  Effect.catch(() => Effect.succeed<SearchResult>({ _tag: "Unavailable", query })),
+  Fx.fromEffect,
+)
+
+const results = Fx.fromIterable(["typed", "offline", "effect"]).pipe(Fx.concatMap(request))
+const values = await Effect.runPromise(Effect.scoped(Fx.collectAll(results)))
+// Results, Unavailable, Results: one failure did not stop later input.
+```
+
+This finite example uses `concatMap` to make every result observable. A live search usually uses
+`switchMap(request)` so newer input also cancels obsolete requests. Recovery placement and
+concurrency policy are separate decisions. For loading and refreshing alongside the result, use
+[AsyncData](/explore/async-data) as the value model.
 
 ## Let the owner decide what a complete cause means
 

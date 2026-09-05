@@ -1,7 +1,7 @@
 ---
 id: wire
-term: Wire
-definition: A stable group of DOM nodes treated as one rendered value.
+term: "Wire"
+definition: "A stable group of DOM nodes treated as one rendered value."
 aliases: []
 related: [dom-render-event, keyed-identity, dynamic-range]
 links: []

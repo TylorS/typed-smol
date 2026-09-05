@@ -1,7 +1,7 @@
 ---
 id: service
-term: Service
-definition: A dependency named in an Effect or Fx requirement channel and supplied at a composition boundary.
+term: "Service"
+definition: "A dependency named in an Effect or Fx requirement channel and supplied at a composition boundary."
 aliases: [requirement, environment]
 related: [effect, effect-channels, scope]
 links: [https://www.effect.website/docs/v4/requirements-management/services/]

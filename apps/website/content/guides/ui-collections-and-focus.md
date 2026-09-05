@@ -1,8 +1,8 @@
 ---
-title: UI collections, focus, and keyboard behavior
-summary: Understand the Collection and Composite contracts shared by menus, tabs, comboboxes, trees, grids, and toolbars.
-section: UI
-kind: deep-dive
+title: "UI collections, focus, and keyboard behavior"
+summary: "Understand the Collection and Composite contracts shared by menus, tabs, comboboxes, trees, grids, and toolbars."
+section: "UI"
+kind: "deep-dive"
 order: 4.2
 ---
 
@@ -104,6 +104,59 @@ focused element. Do not add `aria-activedescendant` to this toolbar: `Toolbar.Ro
 Choose the component family whose focus model matches the interaction, rather than toggling a shared
 low-level setting after the fact.
 
+## Separate active focus from selected content
+
+Tabs show why active identity and committed selection are separate. Automatic activation selects
+when focus moves; manual activation lets someone inspect tab names with the arrow keys and commit
+with Enter or Space. Choose that behavior explicitly, especially if opening a panel starts work.
+
+```ts
+import { component } from "@typed/ui/Component";
+import * as Tabs from "@typed/ui/Tabs";
+
+const ProjectTabs = component(function* () {
+  const state = yield* Tabs.makeState({
+    selectedId: "project-overview",
+    activationMode: "manual",
+  });
+  const collection = yield* Tabs.makeCollection();
+
+  return [
+    Tabs.List({
+      state,
+      collection,
+      label: "Project details",
+      content: [
+        Tabs.Tab({ state, collection, id: "project-overview", panelId: "project-overview-panel", content: "Overview" }),
+        Tabs.Tab({ state, collection, id: "project-activity", panelId: "project-activity-panel", content: "Activity" }),
+      ],
+    }),
+    Tabs.Panel({ state, id: "project-overview-panel", tabId: "project-overview", content: "Project summary" }),
+    Tabs.Panel({ state, id: "project-activity-panel", tabId: "project-activity", content: "Recent activity" }),
+  ];
+});
+```
+
+Keep tab and panel relationships stable across SSR and hydration. A panel's content may be live;
+that does not require rebuilding the tablist. Use routing when a choice should navigate to a new
+location, and Tabs when it switches a related panel within the same interaction.
+
+## Know when a collection is not enough
+
+`Collection` records mounted elements and their metadata. It is not a data loader or a virtualized
+list model. An unmounted row is unavailable for DOM focus and typeahead even if it exists in your
+application array. A virtualized collection must coordinate scrolling, mounting, and active identity
+before moving focus; rendering fewer nodes alone does not supply that policy.
+
+Hierarchical and spatial widgets need their family's richer contract. `Tree` carries parent and
+expansion relationships; `Grid` carries row/column positions; `TreeGrid` combines those concerns.
+Do not implement them by assigning tree or grid roles to Toolbar items. Likewise, keep disabled
+items' semantics separate from missing/hidden items, and verify navigation after either changes.
+
+For a library wrapper, preserve all of the family's item props and ref on the element that actually
+receives focus. Registering a wrapper while moving focus to its child gives the collection a
+misleading element identity.
+
 ## Test state and browser behavior at their boundaries
 
 The collection unit tests prove registration ownership, replacement safety, disabled filtering, and
@@ -114,7 +167,7 @@ focused node. This is the focused toolbar pattern used by the package tests.
 import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderTemplate, render } from "@typed/template";
-import { assert, it } from "vitest";
+import { assert, it, vi } from "vitest";
 import * as Toolbar from "@typed/ui/Toolbar";
 
 it("moves focus through enabled commands", async () => {
@@ -148,7 +201,9 @@ it("moves focus through enabled commands", async () => {
     const italic = document.querySelector("#italic") as HTMLDivElement;
     bold.focus();
     bold.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-    yield* Effect.sleep(0);
+    yield* Effect.promise(() => vi.waitFor(() => {
+      assert.strictEqual(document.activeElement, italic);
+    }));
 
     const currentState = yield* state;
     assert.strictEqual(currentState.activeId, "italic");
@@ -161,3 +216,9 @@ For a dynamic-list test, update `commands`, wait for the rendered change, then a
 IDs or DOM order and—when a retained item had focus—that the same DOM node is still focused. For
 `Combobox`, assert the inverse focus relationship: the input remains
 `document.activeElement` while its `aria-activedescendant` changes.
+
+Use [Collection](/reference/modules/%40typed%2Fui%2FCollection) and
+[Composite](/reference/modules/%40typed%2Fui%2FComposite) when implementing a new family;
+use [Tabs](/reference/modules/%40typed%2Fui%2FTabs), [Tree](/reference/modules/%40typed%2Fui%2FTree),
+and [Grid](/reference/modules/%40typed%2Fui%2FGrid) for their existing interactions.
+The collection lifetime follows the surrounding [Effect v4](https://effect.website/docs/v4) Scope.

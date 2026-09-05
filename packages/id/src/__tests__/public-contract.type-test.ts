@@ -3,6 +3,7 @@ import type * as Effect from "effect/Effect";
 import type * as Layer from "effect/Layer";
 import { CuidState, type Cuid, type CuidSeed } from "../Cuid.js";
 import { Ids } from "../Ids.js";
+import { IdsTest, type IdsTestOptions } from "../IdsTest.js";
 import type { Ksuid } from "../Ksuid.js";
 import type { NanoId } from "../NanoId.js";
 import type { Ulid } from "../Ulid.js";
@@ -73,13 +74,18 @@ type _IdsDefault = Assert<
     >
   >
 >;
+type _IdsHasNoTestLayer = Assert<Equal<"Test" extends keyof typeof Ids ? true : false, false>>;
+type _IdsTestOptions = Assert<
+  Equal<IdsTestOptions, { readonly currentTime?: number | string | Date; readonly envData?: string }>
+>;
 type _IdsTest = Assert<
   Equal<
-    ReturnType<typeof Ids.Test>,
+    ReturnType<typeof IdsTest>,
     Layer.Layer<
       | Ids
       | import("../DateTimes.js").DateTimes
       | import("../RandomValues.js").RandomValues
+      | import("../Uuid7.js").Uuid7State
       | import("effect/testing").TestClock.TestClock,
       Cause.IllegalArgumentError
     >

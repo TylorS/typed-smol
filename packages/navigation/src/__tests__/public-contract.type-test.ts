@@ -1,4 +1,3 @@
-import { Ids } from "@typed/id";
 import {
   type BeforeNavigationHandler,
   Navigation,
@@ -8,6 +7,7 @@ import {
   initialMemory,
   memory,
 } from "@typed/navigation";
+import { Uuid7State } from "@typed/id/Uuid7";
 import { Effect, Layer, Option } from "effect";
 import type * as Scope from "effect/Scope";
 
@@ -49,17 +49,19 @@ type _AfterRegistration = Assert<
 >;
 
 type _BrowserLayer = Assert<
-  Equal<ReturnType<typeof fromWindow>, Layer.Layer<Navigation, NavigationError, Ids>>
+  Equal<ReturnType<typeof fromWindow>, Layer.Layer<Navigation, NavigationError, Uuid7State>>
 >;
 type _InitialMemoryLayer = Assert<
-  Equal<ReturnType<typeof initialMemory>, Layer.Layer<Navigation, NavigationError, Ids>>
+  Equal<ReturnType<typeof initialMemory>, Layer.Layer<Navigation, NavigationError, Uuid7State>>
 >;
-type _MemoryLayer = Assert<Equal<ReturnType<typeof memory>, Layer.Layer<Navigation, never, Ids>>>;
+type _MemoryLayer = Assert<
+  Equal<ReturnType<typeof memory>, Layer.Layer<Navigation, never, Uuid7State>>
+>;
 
 void memory({ entries: [destination] });
 
 const NavigationLive = initialMemory({ url: "https://example.com/" }).pipe(
-  Layer.provide(Ids.Default),
+  Layer.provide(Uuid7State.Default),
 );
 
 const program = Effect.scoped(

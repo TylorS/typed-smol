@@ -1,8 +1,8 @@
 ---
-title: Interpolate into text-only elements
-summary: Keep textarea, title, script, and style content in the context the browser gives it, with explicit limits around escaping, closing tags, and trust.
-section: Templates
-kind: deep-dive
+title: "Interpolate into text-only elements"
+summary: "Keep textarea, title, script, and style content in the context the browser gives it, with explicit limits around escaping, closing tags, and trust."
+section: "Templates"
+kind: "deep-dive"
 order: 3.28
 ---
 

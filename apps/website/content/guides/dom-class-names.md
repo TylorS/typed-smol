@@ -1,8 +1,8 @@
 ---
-title: Class names without className replacement
-summary: Understand the local token ledger that lets Typed update its classes while preserving classes added by other code.
-section: DOM and platform
-kind: deep-dive
+title: "Class names without className replacement"
+summary: "Understand the local token ledger that lets Typed update its classes while preserving classes added by other code."
+section: "DOM and platform"
+kind: "deep-dive"
 order: 5.2
 ---
 

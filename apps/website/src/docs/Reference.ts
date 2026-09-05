@@ -52,6 +52,18 @@ export const referenceIdFromRouteSlug = (slug: string): string | undefined => {
 
 export const referencePath = (id: string): string => `/reference/symbols/${referenceRouteSlug(id)}`;
 
+/** Resolve readable public API links in authored Markdown to the static symbol route. */
+export const canonicalReferencePath = (path: string): string =>
+  path
+    .replace(
+      /^\/reference\/(modules|packages)\/([^?#]+)/u,
+      (_match, kind: string, specifier: string) =>
+        `/reference/${kind}/${encodeURI(decodeURIComponent(specifier))}`,
+    )
+    .replace(/^\/reference\/(%40typed%2F[^/?#]+)/iu, (_match, id: string) =>
+      referencePath(decodeURIComponent(id)),
+    );
+
 const route = (kind: ReferenceRoute["kind"], id: string, canonicalPath: string): ReferenceRoute => {
   const collection = kind === "exposure" ? "exposures" : `${kind}s`;
   const direct = `/docs/reference/${collection}/${referenceSlug(id)}`;
@@ -132,17 +144,13 @@ export const buildReferenceInventory = (
   });
   const routes: ReadonlyArray<ReferenceRoute> = [
     ...packages.map(({ packageName }) =>
-      route(
-        "package",
-        `package:${packageName}`,
-        `/reference/packages/${encodeURIComponent(packageName)}`,
-      ),
+      route("package", `package:${packageName}`, `/reference/packages/${encodeURI(packageName)}`),
     ),
     ...modules.map(({ consumerSpecifier }) =>
       route(
         "module",
         `module:${consumerSpecifier}`,
-        `/reference/modules/${encodeURIComponent(consumerSpecifier)}`,
+        `/reference/modules/${encodeURI(consumerSpecifier)}`,
       ),
     ),
     ...extraction.exposures.map(({ id }) => route("exposure", id, referencePath(id))),

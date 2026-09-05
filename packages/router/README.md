@@ -10,7 +10,7 @@
 
 - **Typed SPAs** — `BrowserRouter()` + `run(matcher)` for client-side routing; matcher cases yield Fx that switch as the path changes.
 - **SSR** — `ServerRouter({ initialMemory })` for server rendering with in-memory navigation.
-- **Tests** — `TestRouter()` with deterministic IDs for predictable route tests.
+- **Tests** — `TestRouter()` from `@typed/router/RouterTest` with deterministic IDs for predictable route tests.
 
 ## Architecture
 

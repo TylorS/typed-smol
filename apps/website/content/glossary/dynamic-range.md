@@ -1,7 +1,7 @@
 ---
 id: dynamic-range
-term: Dynamic range
-definition: The bounded DOM region controlled by one structural part.
+term: "Dynamic range"
+definition: "The bounded DOM region controlled by one structural part."
 aliases: []
 related: [keyed-identity, dom-render-event, cooperative-ownership]
 links: []

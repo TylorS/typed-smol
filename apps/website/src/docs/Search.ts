@@ -146,14 +146,14 @@ export const buildSearchIndex = (
       id: `package:${pkg.packageName}`,
       title: pkg.packageName,
       kind: "package" as const,
-      href: `/reference/packages/${encodeURIComponent(pkg.packageName)}`,
+      href: `/reference/packages/${encodeURI(pkg.packageName)}`,
       text: `${pkg.packageName} ${pkg.packageVersion}`,
     })),
     ...inventory.modules.map((module) => ({
       id: `module:${module.consumerSpecifier}`,
       title: module.consumerSpecifier,
       kind: "module" as const,
-      href: `/reference/modules/${encodeURIComponent(module.consumerSpecifier)}`,
+      href: `/reference/modules/${encodeURI(module.consumerSpecifier)}`,
       text: [
         module.consumerSpecifier,
         module.packageName,

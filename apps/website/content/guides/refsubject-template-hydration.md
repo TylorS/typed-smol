@@ -1,8 +1,8 @@
 ---
 title: "Hydrate RefSubject state through Template"
-summary: Carry Schema-checked RefSubject state from Typed HTML into the adopted browser DOM.
-section: State
-kind: guide
+summary: "Carry Schema-checked RefSubject state from Typed HTML into the adopted browser DOM."
+section: "State"
+kind: "guide"
 order: 2.04
 ---
 

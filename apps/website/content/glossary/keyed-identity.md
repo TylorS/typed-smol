@@ -1,7 +1,7 @@
 ---
 id: keyed-identity
-term: Keyed identity
-definition: A stable key associating data with an existing rendered node.
+term: "Keyed identity"
+definition: "A stable key associating data with an existing rendered node."
 aliases: []
 related: [dynamic-range, wire, dom-render-event]
 links: []

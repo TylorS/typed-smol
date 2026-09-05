@@ -1,7 +1,7 @@
 ---
 id: render-template
-term: RenderTemplate
-definition: The service that interprets templates for a target renderer.
+term: "RenderTemplate"
+definition: "The service that interprets templates for a target renderer."
 aliases: []
 related: [render-event, effect, scope]
 links: []

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { curriculumDiff } from "../../tutorial/Diff.js";
+import { curriculumDiff, curriculumFileDiffs } from "../../tutorial/Diff.js";
 
 describe("curriculumDiff", () => {
   it("marks additions and removals with both line-number spaces", () => {
@@ -26,5 +26,26 @@ describe("curriculumDiff", () => {
     expect(lines.filter(({ kind }) => kind === "skip")).toHaveLength(2);
     expect(lines.some((line) => line.kind === "context" && line.text === "line 0")).toBe(false);
     expect(lines.some((line) => line.kind === "context" && line.text === "line 5")).toBe(true);
+  });
+
+  it("compares existing files with their last snapshot and leaves new or unchanged files in the full chapter", () => {
+    const previous = [
+      { name: "domain.ts", language: "ts" as const, source: "export const name = 'Todo'" },
+      { name: "application.ts", language: "ts" as const, source: "export const count = 0" },
+    ];
+    const current = [
+      previous[0]!,
+      { ...previous[1]!, source: "export const count = 1" },
+      { name: "presentation.ts", language: "ts" as const, source: "export const view = 'Todo'" },
+    ];
+
+    const diffs = curriculumFileDiffs(previous, current);
+    expect(diffs.map(({ name }) => name)).toEqual(["application.ts"]);
+    expect(diffs[0]!.lines).toEqual([
+      { kind: "remove", text: "export const count = 0", oldLine: 1 },
+      { kind: "add", text: "export const count = 1", newLine: 1 },
+    ]);
+    expect(curriculumFileDiffs([], current)).toEqual([]);
+    expect(curriculumFileDiffs(previous, previous)).toEqual([]);
   });
 });

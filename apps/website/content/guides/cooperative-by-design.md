@@ -1,8 +1,8 @@
 ---
-title: Cooperative by design
-summary: Decide exactly which template parts, DOM ranges, and lifetimes Typed owns.
-section: DOM and platform
-kind: concept
+title: "Cooperative by design"
+summary: "Decide exactly which template parts, DOM ranges, and lifetimes Typed owns."
+section: "DOM and platform"
+kind: "concept"
 order: 6
 ---
 
@@ -94,22 +94,25 @@ import { Effect } from "effect";
 import { Fx } from "@typed/fx";
 import { DomRenderEvent } from "@typed/template/RenderEvent";
 
-const host = document.createElement("div");
-const mounted = Fx.unwrapScoped(
-  Effect.acquireRelease(
+const mounted = Fx.genScoped(function* () {
+  const node = yield* Effect.acquireRelease(
     Effect.sync(() => {
-      const node = document.createElement("x-editor");
-      host.append(node);
-      return { node, dispose: () => node.remove() };
+      const editor = document.createElement("x-editor");
+      editor.textContent = "Foreign editor output";
+      return editor;
     }),
-    (view) => Effect.sync(() => view.dispose()),
-  ).pipe(Effect.map((view) => Fx.succeed(DomRenderEvent(view.node)))),
-);
+    (editor) => Effect.sync(() => editor.remove()),
+  );
+
+  // Keep the resource alive after emitting its initial DOM output.
+  return Fx.succeed(DomRenderEvent(node)).pipe(Fx.concat(Fx.never));
+});
 ```
 
-The foreign `mount` operation does not need to return an `Fx`. `Fx.unwrapScoped` keeps the acquired
-view alive while its output is observed and releases it when the output completes, fails, or is
-interrupted. The receiving Typed range owns placement; the foreign renderer owns its internal
+The foreign `mount` operation does not need to return an `Fx`. `Fx.genScoped` keeps acquisition and
+observation in one Scope. The appended `Fx.never` keeps the resource alive after its initial output;
+returning only `Fx.succeed` would finish immediately and run the finalizer. Interruption closes that
+Scope and releases the resource. The receiving Typed range owns placement; the foreign renderer owns its internal
 resources.
 
 ## The DOM remains the platform
@@ -162,5 +165,5 @@ you are writing the adapter itself.
 
 The smallest useful test mounts `view` into a dedicated `slot` beside an unowned `aside`, changes
 the dynamic value, and checks both boundaries: the text changes, the `aside` is still the same
-object, and closing the render Scope removes only Typed's listeners and output. That is the
+object, and closing the render Scope removes Typed's listeners and runs the adapter's finalizers. That is the
 cooperative contract in a form you can verify without reproducing another renderer's implementation.

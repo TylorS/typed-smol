@@ -18,6 +18,7 @@
     "webworker.json"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     "./base": "./base.json",
     "./dom": "./dom.json",

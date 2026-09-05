@@ -1,8 +1,8 @@
 ---
-title: Change a keyed template collection
-summary: Keep one rendered range per stable key so insertions, removals, and moves preserve the browser state that belongs to an item.
-section: Templates
-kind: guide
+title: "Change a keyed template collection"
+summary: "Keep one rendered range per stable key so insertions, removals, and moves preserve the browser state that belongs to an item."
+section: "Templates"
+kind: "guide"
 order: 3.3
 ---
 
@@ -14,7 +14,8 @@ directly instead of flattening child output through a generic collection stream.
 
 For an initial, fixed list, an array of child templates is simpler. `many` pays for keyed lifetime
 management because it preserves a retained item's DOM nodes when the collection changes. That
-preserves focus, selection, custom-element state, and any native state attached to an existing node.
+preserves node identity. Browser state such as focus and selection also depends on the platform move
+operation; the fallback insertion path can disconnect and reconnect a retained node.
 
 ## Render each item from its RefSubject
 
@@ -44,8 +45,8 @@ export const taskList = component(function* () {
     (task) => task.id,
     (task, id) =>
       html`<li data-task-id=${id}>
-        <input type="checkbox" ?checked=${RefSubject.map(task, (value) => value.done)} />
-        <span>${RefSubject.map(task, (value) => value.title)}</span>
+        <input type="checkbox" .checked=${task.pipe(RefSubject.map((value) => value.done))} />
+        <span>${task.pipe(RefSubject.map((value) => value.title))}</span>
       </li>`,
   );
 

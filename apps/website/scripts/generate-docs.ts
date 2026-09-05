@@ -5,6 +5,8 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript-compiler";
 import { canonicalSiteOrigin } from "../src/Site.js";
+import { siteHref } from "../src/SiteHref.js";
+import { resolveMarkdownLinks } from "../src/docs/MarkdownLinks.js";
 import { curriculumSearchEntries } from "../src/tutorial/Content.js";
 import { validateCoverage } from "../src/docs/Coverage.js";
 import { replaceDirectoriesTransactionally } from "../src/docs/AtomicDirectories.js";
@@ -20,7 +22,6 @@ import {
   PublicApiExtractionSchema,
   ReferenceInventorySchema,
   type DocumentationModel,
-  type GuideDocumentation,
   type PackageDocumentation,
   type ReferenceInventory,
   type SymbolDocumentation,
@@ -28,6 +29,7 @@ import {
 import { discoverPublishedPackages, resolvePublicModules } from "../src/docs/Published.js";
 import {
   buildReferenceInventory,
+  canonicalReferencePath,
   projectSymbols,
   referencePath,
   referenceSlug,
@@ -37,7 +39,6 @@ import { documentationSchema } from "../src/docs/Schema.js";
 import { buildSearchArtifact, canonicalExposureIds } from "../src/docs/Search.js";
 import {
   extractTypeScriptFenceDocuments,
-  extractTypeScriptFences,
   validateAuthoredExampleQuality,
   validateRecipeExamples,
   type AuthoredExampleDocumentation,
@@ -52,6 +53,16 @@ const generated = path.join(root, "src/generated");
 const publicDocs = path.join(root, "public/docs");
 const publicSchemas = path.join(root, "public/schemas");
 const legacyPublicReference = path.join(root, "public/reference");
+
+// Machine-readable documents can be consumed away from the website. Keep their prose
+// links absolute and canonical while leaving executable examples untouched.
+const canonicalSite = new URL(canonicalSiteOrigin);
+const artifactUrl = (pathname: string): string =>
+  new URL(
+    siteHref(canonicalReferencePath(pathname), canonicalSite.pathname),
+    canonicalSite.origin,
+  ).href;
+const artifactMarkdown = (markdown: string): string => resolveMarkdownLinks(markdown, artifactUrl);
 
 const moduleName = (specifier: string, packageName: string): string =>
   specifier === packageName ? "." : specifier.slice(packageName.length + 1);
@@ -85,7 +96,7 @@ const generatedModule = (imports: string, values: Readonly<Record<string, unknow
 const packageMarkdown = (inventory: ReferenceInventory, packageName: string): string => {
   const pkg = inventory.packages.find((candidate) => candidate.packageName === packageName)!;
   return `# ${packageName}\n\nVersion ${pkg.packageVersion}. ${pkg.uniqueExportCount} unique exports across ${pkg.moduleSpecifiers.length} modules.\n\n${pkg.moduleSpecifiers
-    .map((specifier) => `- [${specifier}](/reference/modules/${encodeURIComponent(specifier)})`)
+    .map((specifier) => `- [${specifier}](/reference/modules/${encodeURI(specifier)})`)
     .join("\n")}\n`;
 };
 
@@ -102,6 +113,21 @@ const moduleMarkdown = (inventory: ReferenceInventory, consumerSpecifier: string
     )
     .join("\n\n")}\n`;
 };
+
+const fullReferenceMarkdown = (
+  inventory: ReferenceInventory,
+  symbols: ReadonlyArray<SymbolDocumentation>,
+): string => artifactMarkdown([
+  "# Typed complete API reference",
+  "Every public exposure is included with its own identity, signatures, documentation, and examples. Re-exported aliases remain included so each supported import path can be inspected independently.",
+  "# Packages",
+  ...inventory.packages.map((pkg) => packageMarkdown(inventory, pkg.packageName)),
+  "# Modules",
+  ...inventory.modules.map((module) => moduleMarkdown(inventory, module.consumerSpecifier)),
+  "# Public API",
+  ...symbols.map((symbol) =>
+    `[Public API: ${symbol.id}](${referencePath(symbol.id)})\n\n${renderSymbolMarkdown(symbol)}`),
+].join("\n\n---\n\n"));
 
 const deploymentPathKey = (value: string): string => value.normalize("NFD").toLowerCase();
 
@@ -277,8 +303,6 @@ const program = Effect.gen(function* () {
       resources: inventory.resources.length,
     },
     routes: inventory.routes,
-    api: `${canonicalSiteOrigin}/api/docs/openapi.json`,
-    mcp: `${canonicalSiteOrigin}/mcp`,
     schema: documentationSchema.$id,
   };
 
@@ -321,7 +345,7 @@ const program = Effect.gen(function* () {
     nodeFs.writeFileSync(path.join(generatedStage, "manifest.json"), json(manifest));
     nodeFs.writeFileSync(
       path.join(generatedStage, "manifest.ts"),
-      `export interface GeneratedManifest { readonly schemaVersion: number; readonly repositoryRevision: string; readonly canonical: string; readonly counts: Readonly<Record<string, number>>; readonly routes: ReadonlyArray<{ readonly kind: string; readonly id: string; readonly canonicalPath: string; readonly markdownPath: string; readonly jsonPath: string }>; readonly api: string; readonly mcp: string; readonly schema: string }\n\nexport const generatedManifest = JSON.parse(${JSON.stringify(JSON.stringify(manifest))}) as GeneratedManifest;\n`,
+      `export interface GeneratedManifest { readonly schemaVersion: number; readonly repositoryRevision: string; readonly canonical: string; readonly counts: Readonly<Record<string, number>>; readonly routes: ReadonlyArray<{ readonly kind: string; readonly id: string; readonly canonicalPath: string; readonly markdownPath: string; readonly jsonPath: string }>; readonly schema: string }\n\nexport const generatedManifest = JSON.parse(${JSON.stringify(JSON.stringify(manifest))}) as GeneratedManifest;\n`,
     );
     nodeFs.writeFileSync(
       path.join(generatedStage, "catalog.ts"),
@@ -341,13 +365,13 @@ const program = Effect.gen(function* () {
       })} as const;\n`,
     );
     for (const guide of guides) {
-      nodeFs.writeFileSync(path.join(docsStage, "guides", `${guide.slug}.md`), `${guide.body}\n`);
+      nodeFs.writeFileSync(path.join(docsStage, "guides", `${guide.slug}.md`), artifactMarkdown(`${guide.body}\n`));
     }
     for (const pkg of inventory.packages) {
       const name = referenceSlug(`package:${pkg.packageName}`);
       nodeFs.writeFileSync(
         path.join(referenceStage, "packages", `${name}.md`),
-        packageMarkdown(inventory, pkg.packageName),
+        artifactMarkdown(packageMarkdown(inventory, pkg.packageName)),
       );
       nodeFs.writeFileSync(
         path.join(referenceStage, "packages", `${name}.json`),
@@ -358,7 +382,7 @@ const program = Effect.gen(function* () {
       const name = referenceSlug(`module:${module.consumerSpecifier}`);
       nodeFs.writeFileSync(
         path.join(referenceStage, "modules", `${name}.md`),
-        moduleMarkdown(inventory, module.consumerSpecifier),
+        artifactMarkdown(moduleMarkdown(inventory, module.consumerSpecifier)),
       );
       nodeFs.writeFileSync(
         path.join(referenceStage, "modules", `${name}.json`),
@@ -388,23 +412,37 @@ const program = Effect.gen(function* () {
       const name = referenceSlug(exposure.id);
       nodeFs.writeFileSync(
         path.join(referenceStage, "exposures", `${name}.md`),
-        renderSymbolMarkdown(symbol),
+        artifactMarkdown(renderSymbolMarkdown(symbol)),
       );
       nodeFs.writeFileSync(path.join(referenceStage, "exposures", `${name}.json`), json(payload));
     }
-    nodeFs.writeFileSync(path.join(referenceStage, "manifest.json"), json(manifest));
+    nodeFs.writeFileSync(
+      path.join(referenceStage, "manifest.json"),
+      json({
+        ...manifest,
+        canonical: artifactUrl("/"),
+        routes: inventory.routes.map((route) => ({
+          ...route,
+          canonicalPath: artifactUrl(route.canonicalPath),
+          markdownPath: artifactUrl(route.markdownPath),
+          jsonPath: artifactUrl(route.jsonPath),
+        })),
+      }),
+    );
     nodeFs.writeFileSync(
       path.join(referenceStage, "sitemap.xml"),
-      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${inventory.routes.map(({ canonicalPath }) => `<url><loc>${canonicalSiteOrigin}${canonicalPath}</loc></url>`).join("")}</urlset>\n`,
+      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${inventory.routes.map(({ canonicalPath }) => `<url><loc>${artifactUrl(canonicalPath).replaceAll("&", "&amp;")}</loc></url>`).join("")}</urlset>\n`,
     );
     nodeFs.writeFileSync(
       path.join(referenceStage, "llms.txt"),
-      `# Typed API reference\n\n${inventory.packages.map((pkg) => `- ${pkg.packageName}: ${pkg.uniqueExportCount} unique exports`).join("\n")}\n`,
+      `# Typed API reference\n\n${inventory.packages.map((pkg) => `- [${pkg.packageName}](${artifactUrl(`/reference/packages/${encodeURI(pkg.packageName)}`)}): ${pkg.uniqueExportCount} unique exports`).join("\n")}\n`,
     );
-    nodeFs.writeFileSync(
-      path.join(referenceStage, "llms-full.txt"),
-      `${guides.map(({ title, summary, body }) => `# ${title}\n\n${summary}\n\n${body}`).join("\n\n---\n\n")}\n\n# API modules\n\n${inventory.modules.map(({ consumerSpecifier, uniqueExportCount }) => `- ${consumerSpecifier}: ${uniqueExportCount} unique exports`).join("\n")}\n`,
-    );
+    const completeReference = fullReferenceMarkdown(inventory, symbols);
+    const completeReferenceFenceErrors = validateMarkdownFences(completeReference);
+    if (completeReferenceFenceErrors.length > 0) {
+      throw new Error(`Invalid full-reference Markdown: ${completeReferenceFenceErrors.join("; ")}`);
+    }
+    nodeFs.writeFileSync(path.join(referenceStage, "llms-full.txt"), `${completeReference}\n`);
     nodeFs.writeFileSync(
       path.join(schemasStage, "documentation-v1.json"),
       json(documentationSchema),

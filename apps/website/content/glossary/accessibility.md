@@ -1,7 +1,7 @@
 ---
 id: accessibility
-term: Accessibility
-definition: Native semantic and interaction behavior that remains usable across input methods and assistive technology.
+term: "Accessibility"
+definition: "Native semantic and interaction behavior that remains usable across input methods and assistive technology."
 aliases: [a11y]
 related: [ui, template, cooperative-ownership]
 links: []

@@ -9,7 +9,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Queue from "effect/Queue";
 import { RefSubject } from "@typed/fx";
-import { Ids } from "@typed/id";
+import { Uuid7State, uuid7 } from "@typed/id/Uuid7";
 import { getUrl, makeNavigationCore, type NavigationState } from "./_core.js";
 import {
   type BeforeNavigationEvent,
@@ -81,7 +81,7 @@ function fromSerializableEntry(entry: SerializableEntry, origin: string): Destin
 
 function makeDestination(
   proposed: ProposedDestination,
-): Effect.Effect<Destination, NavigationError, Ids> {
+): Effect.Effect<Destination, NavigationError, Uuid7State> {
   return Effect.gen(function* () {
     const id = yield* navigationId;
     const key = proposed.key ?? (yield* navigationId);
@@ -95,7 +95,7 @@ function makeDestination(
   });
 }
 
-const navigationId = Ids.uuid7.pipe(Effect.mapError((error) => new NavigationError({ error })));
+const navigationId = uuid7.pipe(Effect.mapError((error) => new NavigationError({ error })));
 
 /**
  * Provides Navigation by adapting a browser Window's History API and `popstate` events.
@@ -107,7 +107,7 @@ const navigationId = Ids.uuid7.pipe(Effect.mapError((error) => new NavigationErr
  * assuming every entry was created by Typed.
  *
  * ## Ownership and lifetime
- * Layer acquisition reads and normalizes current history, allocates entry identity through `Ids`,
+ * Layer acquisition reads and normalizes current history, allocates entry identity through `Uuid7State`,
  * and installs the `popstate` listener. The Layer Scope owns that listener, pending traversals,
  * reactive state, and handler registrations. Browser calls, malformed URLs, and unknown traversal
  * state fail as `NavigationError`; interruption runs Effect finalizers but cannot undo a platform
@@ -129,11 +129,11 @@ const navigationId = Ids.uuid7.pipe(Effect.mapError((error) => new NavigationErr
 export const fromWindow = (window: Window = globalThis.window) =>
   Layer.effect(Navigation)(
     Effect.gen(function* () {
-      const ids = yield* Ids;
+      const ids = yield* Uuid7State;
       const origin = window.location.origin;
       const base = getBaseHref(window);
       const loaded = yield* getHistoryStateEffect(window, origin).pipe(
-        Effect.provideService(Ids, ids),
+        Effect.provideService(Uuid7State, ids),
       );
       let session = loaded.session;
       let currentPosition = loaded.position;
@@ -209,7 +209,7 @@ export const fromWindow = (window: Window = globalThis.window) =>
 
           yield* reconcilePopState(raw, href);
         }).pipe(
-          Effect.provideService(Ids, ids),
+          Effect.provideService(Uuid7State, ids),
           Effect.catchCause((cause) =>
             Effect.gen(function* () {
               if (pending !== undefined && pendingTraversal === pending) {
@@ -229,7 +229,7 @@ export const fromWindow = (window: Window = globalThis.window) =>
       yield* Effect.forkScoped(
         Effect.forever(
           Effect.flatMap(Queue.take(popstateEvents), (activation) =>
-            handlePopState(activation).pipe(Effect.provideService(Ids, ids)),
+            handlePopState(activation).pipe(Effect.provideService(Uuid7State, ids)),
           ),
         ),
       );
@@ -271,11 +271,11 @@ export const fromWindow = (window: Window = globalThis.window) =>
           case "push":
           case "replace":
             return navigateCommit(window, before, runHandlers, prepareMetadata, setMetadata).pipe(
-              Effect.provideService(Ids, ids),
+              Effect.provideService(Uuid7State, ids),
             );
           case "reload":
             return reloadCommit(window, before, runHandlers, prepareMetadata, setMetadata).pipe(
-              Effect.provideService(Ids, ids),
+              Effect.provideService(Uuid7State, ids),
             );
           case "traverse":
             return traverseCommit(before, runHandlers, (expected, delta) =>
@@ -376,7 +376,7 @@ function getTypedState(
 function getHistoryStateEffect(
   win: Window,
   origin: string,
-): Effect.Effect<LoadedHistoryState, NavigationError, Ids> {
+): Effect.Effect<LoadedHistoryState, NavigationError, Uuid7State> {
   const typed = getTypedState(win.history.state, origin);
   if (typed !== null) {
     return Effect.sync(() => {
@@ -581,7 +581,7 @@ function navigateCommit(
   runHandlers: (destination: Destination) => Effect.Effect<void>,
   prepareMetadata: (before: BeforeNavigationEvent, destination: Destination) => HistoryMetadata,
   setMetadata: (prepared: HistoryMetadata) => void,
-): Effect.Effect<Destination, NavigationError, Ids> {
+): Effect.Effect<Destination, NavigationError, Uuid7State> {
   return Effect.uninterruptibleMask((restore) =>
     Effect.gen(function* () {
       const destination = yield* restore(makeDestination(before.to));
@@ -610,7 +610,7 @@ function reloadCommit(
   runHandlers: (destination: Destination) => Effect.Effect<void>,
   prepareMetadata: (before: BeforeNavigationEvent, destination: Destination) => HistoryMetadata,
   setMetadata: (prepared: HistoryMetadata) => void,
-): Effect.Effect<Destination, NavigationError, Ids> {
+): Effect.Effect<Destination, NavigationError, Uuid7State> {
   return Effect.uninterruptibleMask((restore) =>
     Effect.gen(function* () {
       const destination = yield* restore(makeDestination(before.to));

@@ -7,7 +7,7 @@ import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
-const guideFile = "specialized-refsubject-state.md";
+const guideFile = "versioned-state.md";
 
 describe("Versioned guide", () => {
   it("documents the public Versioned contract with independently compilable examples", () => {
@@ -17,7 +17,7 @@ describe("Versioned guide", () => {
     );
 
     expect(guide).toMatchObject({
-      slug: "specialized-refsubject-state",
+      slug: "versioned-state",
       section: "State",
       kind: "guide",
     });

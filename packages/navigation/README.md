@@ -50,7 +50,7 @@ const program = Effect.scoped(
 await Effect.runPromise(program.pipe(Effect.provide(NavigationLive)));
 ```
 
-`memory`, `initialMemory`, and `fromWindow` require `Ids`. Provide `Ids.Default` for application code or `Ids.Test()` for deterministic tests. Hook registration requires `Scope.Scope`; `Effect.scoped` gives registrations an explicit lifetime instead of leaking them beyond the program that owns them.
+`memory`, `initialMemory`, and `fromWindow` require `Ids`. Provide `Ids.Default` for application code or `IdsTest()` from `@typed/id/IdsTest` for deterministic tests. Hook registration requires `Scope.Scope`; `Effect.scoped` gives registrations an explicit lifetime instead of leaking them beyond the program that owns them.
 
 For browser history, use the same ownership pattern with `fromWindow()`:
 

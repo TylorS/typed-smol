@@ -1,8 +1,8 @@
 ---
-title: Using DomRenderEvent
-summary: Carry exact Nodes, DocumentFragments, Wires, and nested rendered values through a Typed dynamic range without cloning them.
-section: DOM and platform
-kind: guide
+title: "Using DomRenderEvent"
+summary: "Carry exact Nodes, DocumentFragments, Wires, and nested rendered values through a Typed dynamic range without cloning them."
+section: "DOM and platform"
+kind: "guide"
 order: 5.3
 ---
 
@@ -34,8 +34,11 @@ return its cleanup Effect. The producer contract and the output representation a
 ## Supported content
 
 `content` is `Rendered`: a `Node`, `DocumentFragment`, `Wire`, or nested readonly collection of those
-values. `valueOf()` returns that exact content. `toString()` serializes its current DOM for diagnostics
-or an explicit non-streaming boundary; serialization does not change the event into HTML transport.
+values. `valueOf()` returns that exact content. `toString()` serializes its current DOM for an
+explicit non-streaming boundary; serialization does not change the event into HTML transport. For a
+`Wire`, serialization calls its consuming `valueOf()` conversion and gathers the range into a
+fragment. Do not call it as a harmless diagnostic on mounted Wire output; see
+[Preserve multi-node DOM output](/explore/wire-and-rendered-dom-output).
 
 A `DocumentFragment` is consumed by DOM insertion, as the platform specifies. Use a `Wire` when a
 multi-node value must retain a stable identity after insertion. Use nested collections when one
@@ -58,7 +61,7 @@ Creating a `DomRenderEvent` acquires nothing. A chart, editor, or framework root
 scoped producer that pairs mount with teardown. For Template/UI setup, use
 `component(function* (...args?) { ... })` from `@typed/ui/Component`; yield
 `Effect.acquireRelease` inside that generator when a resource needs explicit setup and teardown. The
-component is lazy, and the running Effect [Scope](https://effect.website/docs/v4/guides/essentials/scope/)
+component is lazy, and the running Effect [Scope](https://effect.website/docs/v4/resource-management/scope/)
 owns resources until the render is interrupted or its scope closes. For a lower-level
 listener/unsubscribe API, use `Fx.callback` and return its cleanup Effect. Do not attach disposal to
 the event and do not watch DOM removal as a second lifecycle system.

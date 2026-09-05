@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { loadRecipeContent } from "../Frontmatter.js";
 
 const recipe = (name: string): string =>
   readFileSync(
@@ -10,17 +11,24 @@ const recipe = (name: string): string =>
 
 describe("integration editorial focus", () => {
   it("lets readers choose a concrete output or framework recipe immediately", () => {
-    const page = readFileSync(
-      fileURLToPath(new URL("../../pages/Integrate.ts", import.meta.url)),
-      "utf8",
+    const recipes = loadRecipeContent(
+      fileURLToPath(new URL("../../../content/recipes/", import.meta.url)),
     );
-
-    expect(page).not.toContain("Four decisions every integration should publish");
-    expect(page).not.toContain("THE ADAPTER PIPELINE");
-    expect(page).not.toContain("One model for framework islands");
-    expect(page).toContain("DOM already exists");
-    expect(page).toContain("HTML already exists");
-    expect(page).toContain("React, Svelte, Vue, or a Web Component");
+    expect(recipes.map(({ slug }) => slug)).toEqual(
+      expect.arrayContaining([
+        "astro",
+        "dom-output",
+        "html-output",
+        "react",
+        "svelte",
+        "vue",
+        "web-component",
+      ]),
+    );
+    for (const recipe of recipes) {
+      expect(recipe.title.length, recipe.slug).toBeGreaterThan(0);
+      expect(recipe.summary.length, recipe.slug).toBeGreaterThan(0);
+    }
   });
 
   it("keeps the DOM-output recipe about exact DOM values and behavior", () => {

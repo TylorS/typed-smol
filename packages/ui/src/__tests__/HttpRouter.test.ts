@@ -3,7 +3,7 @@ import { assert, describe, it } from "vitest";
 import { Effect, Layer } from "effect";
 import type { Scope } from "effect/Scope";
 import { Fx } from "@typed/fx";
-import { Ids } from "@typed/id";
+import { IdsTest } from "@typed/id/IdsTest";
 import { Navigation, type Navigation as NavigationService } from "@typed/navigation";
 import { CurrentRoute } from "@typed/router/CurrentRoute";
 import * as Matcher from "@typed/router/Matcher";
@@ -21,7 +21,7 @@ import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
 import type { Matcher as RouterMatcher } from "@typed/router";
 
-const testServer = Layer.mergeAll(Ids.Test(), NodeHttpServer.layerTest);
+const testServer = Layer.mergeAll(IdsTest(), NodeHttpServer.layerTest);
 
 function bufferedSsrLive(
   matcher: RouterMatcher<RenderEvent, never, RenderTemplate | Scope>,
@@ -288,7 +288,7 @@ describe("typed/ui/HttpRouter", () => {
         }),
       ).pipe(
         EffectHttpRouter.serve,
-        Layer.provideMerge(Layer.mergeAll(Ids.Test(), NodeHttpServer.layerTest)),
+        Layer.provideMerge(Layer.mergeAll(IdsTest(), NodeHttpServer.layerTest)),
       );
 
       return Effect.gen(function* () {

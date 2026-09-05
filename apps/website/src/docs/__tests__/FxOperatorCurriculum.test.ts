@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import ts from "typescript-compiler";
 import { parseGuideDocumentation } from "../Frontmatter.js";
 import { extractTypeScriptFences } from "../Recipes.js";
-import { renderGuideMarkdown } from "../RenderMarkdown.js";
+import { renderMarkdown } from "../../site/Markdown.js";
 
 const websiteRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -126,13 +126,13 @@ describe("Fx operator curriculum", () => {
     }
   });
 
-  it("renders every higher-order policy before the secondary Effect callback variants", () => {
+  it("renders every higher-order policy before the secondary Effect callback variants", async () => {
     const source = fs.readFileSync(
       path.join(websiteRoot, "content/guides/fx-higher-order-and-concurrency.md"),
       "utf8",
     );
     const guide = parseGuideDocumentation("fx-higher-order-and-concurrency.md", source);
-    const rendered = renderGuideMarkdown(guide.body).html;
+    const rendered = (await renderMarkdown(guide.body)).code;
     const operators = [
       "flatMap(load)",
       "flatMapConcurrently(load, 2)",
@@ -152,13 +152,13 @@ describe("Fx operator curriculum", () => {
     expect(secondaryVariants).toBeGreaterThan(rendered.lastIndexOf('<figure class="fx-marble"'));
   });
 
-  it("visibly covers every public stateful transform with a marble diagram", () => {
+  it("visibly covers every public stateful transform with a marble diagram", async () => {
     const source = fs.readFileSync(
       path.join(websiteRoot, "content/guides/fx-stateful-transforms.md"),
       "utf8",
     );
     const guide = parseGuideDocumentation("fx-stateful-transforms.md", source);
-    const rendered = renderGuideMarkdown(guide.body).html;
+    const rendered = (await renderMarkdown(guide.body)).code;
     const operators = [
       "filterMapLoop",
       "filterMapLoopCause",

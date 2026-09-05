@@ -1,8 +1,8 @@
 ---
-title: Using HtmlRenderEvent
-summary: Carry ordered, trusted renderer-owned HTML chunks through Typed SSR while keeping completion and the trust boundary explicit.
-section: DOM and platform
-kind: guide
+title: "Using HtmlRenderEvent"
+summary: "Carry ordered, trusted renderer-owned HTML chunks through Typed SSR while keeping completion and the trust boundary explicit."
+section: "DOM and platform"
+kind: "guide"
 order: 5.4
 ---
 

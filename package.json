@@ -6,6 +6,7 @@
     "lint": "oxlint",
     "format": "oxfmt",
     "test": "pnpm -r run test",
+    "bundle:size": "node scripts/bundle-size.mjs",
     "publish:beta": "./scripts/publish-beta.sh",
     "prepare": "effect-tsgo patch --typescript --oxlint"
   },

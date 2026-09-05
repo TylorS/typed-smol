@@ -1,7 +1,7 @@
 ---
 id: renderable
-term: Renderable
-definition: A value that Template can normalize into rendered output while preserving its error and service channels.
+term: "Renderable"
+definition: "A value that Template can normalize into rendered output while preserving its error and service channels."
 aliases: []
 related: [template, render-event, fx]
 links: []

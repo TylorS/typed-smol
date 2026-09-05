@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateDocumentation } from "../Policy.js";
-import { renderGuideMarkdown, renderSymbolMarkdown } from "../RenderMarkdown.js";
+import { renderSymbolMarkdown } from "../RenderMarkdown.js";
+import { renderMarkdown } from "../../site/Markdown.js";
 import { documentationSchema } from "../Schema.js";
 import { buildSearchIndex, searchDocumentation } from "../Search.js";
 import type { SearchEntry } from "../Search.js";
@@ -165,8 +166,8 @@ describe("documentation model", () => {
     });
   });
 
-  it("renders authored guide Markdown with semantic anchors and code blocks", () => {
-    const rendered = renderGuideMarkdown(`
+  it("renders authored guide Markdown with semantic anchors and code blocks", async () => {
+    const rendered = await renderMarkdown(`
 ## Ownership and lifetime
 
 The producing **Scope** owns cleanup.
@@ -176,9 +177,10 @@ const output = DomRenderEvent(node)
 \`\`\`
 `);
 
-    expect(rendered.html).toContain('<h2 id="ownership-and-lifetime">');
-    expect(rendered.html).toContain("<strong>Scope</strong>");
-    expect(rendered.html).toContain('<code class="language-ts">');
-    expect(rendered.last).toBe(true);
+    expect(rendered.code).toContain('<h2 id="ownership-and-lifetime">');
+    expect(rendered.code).toContain("<strong>Scope</strong>");
+    expect(rendered.code).toContain("<pre");
+    expect(rendered.code).toContain("<code>");
+    expect(rendered.metadata.headings).toContainEqual({ depth: 2, slug: "ownership-and-lifetime", text: "Ownership and lifetime" });
   });
 });

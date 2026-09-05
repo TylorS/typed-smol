@@ -1,10 +1,6 @@
 import * as fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { Effect } from "effect";
-import { HtmlRenderTemplate, renderToHtmlString } from "@typed/template";
-import { Guide } from "../../pages/Guide.js";
-import { guides } from "../Content.js";
 import { uiAccessibilityFamilies } from "../UiAccessibility.js";
 
 const workspaceRoot = fileURLToPath(new URL("../../../../../", import.meta.url));
@@ -75,26 +71,5 @@ describe("@typed/ui accessibility registry", () => {
         );
       }
     }
-  });
-
-  it("renders the source-backed catalog only on the component-selection guide", async () => {
-    const guide = guides.find(({ slug }) => slug === "choosing-ui-components");
-    if (guide === undefined) throw new Error("Missing choosing-ui-components guide");
-
-    const output = await Effect.runPromise(
-      Effect.scoped(renderToHtmlString(Guide(guide)).pipe(Effect.provide(HtmlRenderTemplate))),
-    );
-
-    expect(output).toContain('id="ui-accessibility-catalog-title"');
-    for (const entry of uiAccessibilityFamilies) {
-      expect(output).toContain(`ui-family-${entry.id}`);
-      for (const reference of entry.references) expect(output).toContain(reference.href);
-      for (const family of entry.families) {
-        expect(output).toContain(`/reference/modules/${encodeURIComponent(`@typed/ui/${family}`)}`);
-      }
-    }
-
-    expect(output).toContain("What Typed can verify");
-    expect(output).toContain("What only an application can verify");
   });
 });

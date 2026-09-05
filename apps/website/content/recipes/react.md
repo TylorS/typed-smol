@@ -1,7 +1,7 @@
 ---
 slug: react
-title: Use React and Typed together
-summary: Stream React HTML through Typed, hydrate its range, and render Typed inside React.
+title: "Use React and Typed together"
+summary: "Stream React HTML through Typed, hydrate its range, and render Typed inside React."
 ---
 
 React and Typed can share a page as long as each renderer owns a distinct range. On the server,

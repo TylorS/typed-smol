@@ -1,8 +1,8 @@
 ---
 title: "Navigation: history as an Effect service"
-summary: Read, change, guard, and test history without coupling application behavior to a renderer.
-section: Applications
-kind: guide
+summary: "Read, change, guard, and test history without coupling application behavior to a renderer."
+section: "Applications"
+kind: "guide"
 order: 6.85
 ---
 
@@ -10,7 +10,8 @@ order: 6.85
 but Navigation is useful without a Matcher: a command palette can navigate, a form can prevent leaving
 with unsaved changes, and an analytics service can react after a destination commits.
 
-`BrowserRouter`, `ServerRouter`, and `TestRouter` provide the same Navigation contract. Browser
+`BrowserRouter` and `ServerRouter` from `@typed/router/Router`, and `TestRouter` from
+`@typed/router/RouterTest`, provide the same Navigation contract. Browser
 history, SSR memory, and deterministic tests therefore differ at the boundary, not throughout
 application code.
 
@@ -56,6 +57,32 @@ before/after handlers. `history: "auto"` is the default: same-origin navigation 
 pathname replaces the entry, so query and hash changes do not grow history. Choose `"push"` or
 `"replace"` when the product behavior should be explicit.
 
+### Use an anchor for ordinary navigation
+
+`Navigation.navigate` fits commands and workflows. Use `@typed/ui/Link` when the user should see an
+actual link with an href, browser context menu, and modified-click behavior:
+
+```ts
+import { Link } from "@typed/ui/Link";
+
+const projectLink = Link({
+  href: "/projects/typed",
+  content: "Open Typed project",
+});
+
+const filterLink = Link({
+  href: "/issues?status=open",
+  replace: true,
+  content: "Open issues",
+});
+```
+
+Link intercepts an eligible same-origin primary click and runs Navigation. Modified clicks,
+external HTTP destinations, downloads, and non-self targets retain their native paths. The href
+remains real in server-rendered HTML. Link uses push by default, while the lower-level
+`navigate` command defaults to `auto`; choose `replace` deliberately for filter/history behavior.
+Use the [Route encoding pattern](/explore/route-typed-url-inputs) when an href contains domain values.
+
 ## Observe committed and pending navigation separately
 
 `currentEntry` publishes only committed history. `transition` exists only while a proposed
@@ -90,7 +117,9 @@ import { Navigation } from "@typed/navigation";
 
 const reopenPrevious = Effect.fn("reopenPrevious")(function* () {
   const entries = yield* Navigation.entries;
-  const previous = entries.at(-2);
+  const current = yield* Navigation.currentEntry;
+  const index = entries.findIndex((entry) => entry.key === current.key);
+  const previous = index > 0 ? entries[index - 1] : undefined;
 
   return previous === undefined
     ? yield* Navigation.currentEntry
@@ -153,13 +182,43 @@ const makeEditorNavigation = Effect.fn("makeEditorNavigation")(function* () {
 });
 ```
 
-The owner renders or otherwise observes `blocker`. Reading it has no effect; an explicit
-`yield* blocker.confirm`, `yield* blocker.cancel`, or `yield* blocker.redirect("/discarded")`
-settles the pending transition. Closing the owning Scope unregisters the blocker and cancels any
-unsettled transition.
+`blocker` is a filtered RefSubject: it emits a `Blocking` value while a transition is blocked.
+Observing it does not settle that transition.
+Read or render that value, then run its `confirm`, `cancel`, or `redirect("/discarded")` Effect
+to settle the pending transition. `isBlocking` is the boolean view for a busy indicator.
+Closing the owning Scope unregisters the blocker and cancels any unsettled transition.
 
 Continue with [Router: live route selection](/explore/router-navigation-live-selection) to turn
 Navigation into typed route output, or [test Typed systems](/explore/testing-typed-systems) to run the
 same transitions against memory history. See [Navigation](/reference/modules/%40typed%2Fnavigation%2FNavigation),
 [Blocking](/reference/modules/%40typed%2Fnavigation%2FBlocking), and
 [Effect v4](https://www.effect.website/docs/v4).
+
+## Provide Navigation without a router
+
+A background workflow or small embedded control may need history without route selection.
+Use the navigation provider directly and supply its UUIDv7 dependency at that boundary:
+
+```ts
+import { Effect, Layer } from "effect";
+import { Uuid7State } from "@typed/id/Uuid7";
+import { Navigation } from "@typed/navigation/Navigation";
+import { initialMemory } from "@typed/navigation/memory";
+
+const History = initialMemory({ url: "https://example.com/inbox" }).pipe(
+  Layer.provide(Uuid7State.Default),
+);
+
+const destination = Navigation.navigate("/issues/42", { history: "push" }).pipe(
+  Effect.provide(History),
+);
+```
+
+The browser equivalent is `fromWindow(window)` from `@typed/navigation/fromWindow`, with the same
+`Uuid7State` dependency. Router layers already compose it; do not acquire another history provider
+inside every page. For deterministic IDs and memory history in tests, use
+[TestRouter and IdsTest](/explore/testing-typed-systems).
+
+An in-app blocker coordinates transitions that pass through Navigation. It is not a durable draft
+store or a promise that every tab close, process exit, or external navigation can be stopped.
+Persist recoverable work according to the editor's actual lifetime.

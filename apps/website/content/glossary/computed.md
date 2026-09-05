@@ -1,7 +1,7 @@
 ---
 id: computed
-term: Computed
-definition: A read-only, changing view derived from a RefSubject or another versioned source.
+term: "Computed"
+definition: "A read-only, changing view derived from a RefSubject or another versioned source."
 aliases: []
 related: [refsubject, filtered, fx]
 links: []

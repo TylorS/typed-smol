@@ -1,7 +1,7 @@
 ---
 id: ssr
-term: SSR
-definition: Rendering semantic HTML on the server.
+term: "SSR"
+definition: "Rendering semantic HTML on the server."
 aliases: [server-side rendering]
 related: [hydration, html-render-event, render-template]
 links: []

@@ -796,7 +796,7 @@ const wrapSignatureLine = (line: string): string => {
   const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, line);
   const breaks: Array<number> = [];
   for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
-    if (signatureBreakTokens.has(token)) breaks.push(scanner.getTextPos());
+    if (signatureBreakTokens.has(token)) breaks.push(scanner.getTokenEnd());
   }
   const parts: Array<string> = [];
   let start = 0;
@@ -986,6 +986,23 @@ const signaturesFor = (
   family: DeclarationFamily,
   declarations: ReadonlyArray<ts.Declaration>,
 ): ReadonlyArray<string> => {
+  // `default` names an export slot, not a declaration identifier. Keep the
+  // authored binding (or anonymous default declaration) and expose that binding.
+  if (name === "default") {
+    const declaration = declarations[0] as ts.NamedDeclaration | undefined;
+    const authoredName = declaration?.name?.getText();
+    if (authoredName === undefined || authoredName === "default") {
+      return declarations.map(declarationText);
+    }
+    const signatures = signaturesFor(checker, symbol, authoredName, family, declarations);
+    const hasDefaultModifier = declarations.some((candidate) =>
+      ts.canHaveModifiers(candidate) &&
+      ts.getModifiers(candidate)?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword),
+    );
+    return hasDefaultModifier
+      ? signatures
+      : signatures.map((signature) => `${signature}\nexport default ${authoredName};`);
+  }
   switch (family) {
     case "function": {
       const functions = declarations.filter(ts.isFunctionDeclaration);

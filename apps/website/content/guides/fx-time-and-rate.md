@@ -1,8 +1,8 @@
 ---
-title: Model time, repetition, and rate
-summary: Put clocks, quiet periods, rate windows, and retries in the Fx graph with explicit cancellation.
-section: Fx
-kind: guide
+title: "Model time, repetition, and rate"
+summary: "Put clocks, quiet periods, rate windows, and retries in the Fx graph with explicit cancellation."
+section: "Fx"
+kind: "guide"
 order: 1.7
 ---
 

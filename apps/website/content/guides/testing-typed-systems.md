@@ -1,8 +1,8 @@
 ---
-title: Testing Typed systems
-summary: Test each Typed contract at the smallest boundary that owns its behavior.
-section: Applications
-kind: guide
+title: "Testing Typed systems"
+summary: "Test each Typed contract at the smallest boundary that owns its behavior."
+section: "Applications"
+kind: "guide"
 order: 9
 ---
 
@@ -42,19 +42,24 @@ For a callback source, test the owner as well as delivery. A returned cleanup is
 subscription Scope, so interruption must release it:
 
 ```ts
-import { Effect, Fiber } from "effect"
+import { Deferred, Effect, Fiber } from "effect"
 import { expect, it } from "@effect/vitest"
 import * as Fx from "@typed/fx/Fx"
 
 it.effect("cleans up a live callback source", Effect.fn("cleansUpCallback")(function* () {
     let active = 0
-    const source = Fx.callback<number>(() => {
+    const ready = yield* Deferred.make<void>()
+    const source = Fx.callback<number>((emit) => {
       active++
+      void emit.succeed(1)
       return Effect.sync(() => active--)
     })
 
-    const fiber = yield* Fx.collectAllFork(source)
-    yield* Effect.yieldNow
+    const fiber = yield* source.pipe(
+      Fx.observe(() => Deferred.succeed(ready, undefined)),
+      Effect.forkScoped,
+    )
+    yield* Deferred.await(ready)
     expect(active).toBe(1)
     yield* Fiber.interrupt(fiber)
     expect(active).toBe(0)
@@ -101,6 +106,7 @@ import { Effect } from "effect"
 import { expect, it } from "@effect/vitest"
 import { Fx, RefSubject } from "@typed/fx"
 import { DomRenderTemplate, html, isHtmlElement, many, render } from "@typed/template"
+import { vi } from "vitest"
 
 const keepsKeyedIdentity = Effect.fn("keepsKeyedIdentity")(function* () {
   const initial = [
@@ -122,9 +128,10 @@ const keepsKeyedIdentity = Effect.fn("keepsKeyedIdentity")(function* () {
   const original = rendered.querySelectorAll("li")[1]
 
   yield* RefSubject.set(items, [initial[1], initial[0]])
-  yield* Effect.yieldNow
-  expect(rendered.querySelectorAll("li")[0]?.textContent).toBe("B")
-  expect(rendered.querySelectorAll("li")[1]).toBe(original)
+  yield* Effect.promise(() => vi.waitFor(() => {
+    expect(rendered.querySelectorAll("li")[0]?.textContent).toBe("B")
+    expect(rendered.querySelectorAll("li")[0]).toBe(original)
+  }))
 })
 
 it.effect("keeps keyed DOM identity across a reorder", keepsKeyedIdentity)
@@ -149,7 +156,7 @@ import { Fx } from "@typed/fx"
 import { Navigation } from "@typed/navigation"
 import * as Matcher from "@typed/router/Matcher"
 import * as Route from "@typed/router/Route"
-import { TestRouter } from "@typed/router/Router"
+import { TestRouter } from "@typed/router/RouterTest"
 
 layer(TestRouter({ url: "http://localhost/users/1" }))("memory routing", (it) => {
   it.effect("matches a route and navigates in memory", Effect.fn("matchesMemoryRoute")(function* () {
@@ -190,6 +197,52 @@ The browser half places that string in a test document, renders the same templat
 the hydration attribute, and a later update after `RefSubject.set`. Test static SSR separately:
 `StaticHtmlRenderTemplate` intentionally omits interactive hydration metadata.
 
+### Keep deterministic ID providers in test imports
+
+Use `IdsTest` from its dedicated test entry point for programs that require ID services without a
+router. Each acquired layer owns its own sequence; do not compare two sequential calls as if they
+were expected to produce the same ID.
+
+```ts
+import { Effect } from "effect";
+import { expect, it } from "@effect/vitest";
+import { Ids } from "@typed/id/Ids";
+import { IdsTest } from "@typed/id/IdsTest";
+
+it.effect("creates distinct IDs from a deterministic provider", Effect.fn(function* () {
+  const ids = yield* Effect.gen(function* () {
+    return [yield* Ids.uuid7, yield* Ids.uuid7];
+  }).pipe(Effect.provide(IdsTest({ currentTime: 0 })));
+
+  expect(ids[0]).not.toBe(ids[1]);
+}));
+```
+
+Use `@typed/router/RouterTest` for `TestRouter` and `@typed/id/IdsTest` for `IdsTest`.
+Production Router and ID imports do not need the testing runtime. For tests that must start from
+the same history on every run, provide a new layer in each test rather than sharing mutable history
+with a suite-level `layer`. Shared layers are appropriate when that shared lifetime is intentional.
+
+## Choose assertions that survive implementation changes
+
+| Claim | Observe | Avoid |
+| --- | --- | --- |
+| A state transition preserves an invariant | The resulting decoded state | Markup for a state-only rule |
+| A producer releases resources | Cleanup after completion/interruption | A timeout that merely ends the test |
+| A keyed reorder retains the control | The same element reference, focus, and selection | Only the final HTML string |
+| A component is keyboard usable | Actual key dispatch and focused element | A role attribute alone |
+| A route handles a URL contract | Decoded output and typed failure | Coupling every test to browser history |
+| SSR and hydration agree | Serialized state, original node adoption, later updates | Two separately rendered trees that happen to look alike |
+
+Give tests an explicit ready point: a Deferred signaled by observation, a known subscriber count,
+or a DOM condition checked by `vi.waitFor`. For timing operators, advance the Effect test clock;
+for native browser events and layout, use the browser harness. Do not mix a fixed sleep with an
+assumption that a listener or render has already been installed.
+
+A component library should additionally test custom-host prop/ref forwarding and negative type
+contracts. An application should concentrate on its labels, state policy, request results, and
+integration boundaries rather than reproducing every primitive's own tests.
+
 ## Keep public type contracts executable
 
 Runtime tests cannot detect an erased error or service channel. Repository `.type-test.ts` files use
@@ -218,3 +271,9 @@ const _erased: Fx.Fx<unknown, never, Fx.Services<typeof view>> = view;
 
 An unused `@ts-expect-error` fails the type test. Add the same style of check for `many` keys,
 hydration codecs, and router registration requirements.
+
+Continue with [building UI components](/explore/building-ui-components),
+[route contracts](/explore/route-typed-url-inputs), and
+[Effect v4](https://effect.website/docs/v4) for the underlying Effect model.
+Public testing seams: [RouterTest](/reference/modules/%40typed%2Frouter%2FRouterTest),
+[IdsTest](/reference/modules/%40typed%2Fid%2FIdsTest).

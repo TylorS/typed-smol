@@ -1,8 +1,8 @@
 ---
 title: "Sink: write Fx values somewhere useful"
-summary: Give an Fx a typed consumer without coupling the producer to logging, storage, transport, or UI.
-section: Fx
-kind: guide
+summary: "Give an Fx a typed consumer without coupling the producer to logging, storage, transport, or UI."
+section: "Fx"
+kind: "guide"
 order: 1.16
 ---
 

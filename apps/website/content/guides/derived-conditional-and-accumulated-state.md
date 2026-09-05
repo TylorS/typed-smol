@@ -1,8 +1,8 @@
 ---
-title: Derived, conditional, and accumulated state
-summary: Build read-only views that keep current reads, pushed changes, absence, errors, and services explicit.
-section: State
-kind: guide
+title: "Derived, conditional, and accumulated state"
+summary: "Build read-only views that keep current reads, pushed changes, absence, errors, and services explicit."
+section: "State"
+kind: "guide"
 order: 2.15
 ---
 

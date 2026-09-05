@@ -1,7 +1,7 @@
 ---
 id: route
-term: Route
-definition: An immutable URL contract that parses a path and query into typed, validated parameters.
+term: "Route"
+definition: "An immutable URL contract that parses a path and query into typed, validated parameters."
 aliases: []
 related: [matcher, router, service]
 links: []

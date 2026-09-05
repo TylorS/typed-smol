@@ -1,27 +1,29 @@
-import { DateTime, Effect, Layer, Context } from "effect";
-import * as Option from "effect/Option";
+import { DateTime, Effect, Layer, Context, Schema } from "effect";
 import { Fx } from "@typed/fx";
 import * as Router from "@typed/router";
-import * as KeyValueStore from "effect/unstable/persistence/KeyValueStore";
 import * as App from "./application";
 import * as Domain from "./domain";
 
 const TODOS_STORAGE_KEY = `@typed/todomvc/todos`;
 
-class Todos extends Context.Service<Todos>()("TodosService", {
-  make: Effect.gen(function* () {
-    const kv = yield* KeyValueStore.KeyValueStore;
-    return KeyValueStore.toSchemaStore(kv, Domain.TodoList);
-  }),
-}) {
+const TodoListJson = Schema.fromJsonString(Schema.toCodecJson(Domain.TodoList));
+const decodeTodoList = Schema.decodeEffect(TodoListJson);
+const encodeTodoList = Schema.encodeEffect(TodoListJson);
+
+class Todos extends Context.Service<
+  Todos,
+  {
+    readonly load: Effect.Effect<Domain.TodoList, unknown>;
+    readonly save: (todos: Domain.TodoList) => Effect.Effect<void, unknown>;
+  }
+>()("TodosService") {
   static readonly get = Todos.pipe(
-    Effect.flatMap((service) => service.get(TODOS_STORAGE_KEY)),
-    Effect.map(Option.getOrElse(() => [])),
+    Effect.flatMap((service) => service.load),
     Effect.catchCause(() => Effect.succeed([])),
   );
 
   static readonly set = (todos: Domain.TodoList) =>
-    Effect.flatMap(Todos, (service) => service.set(TODOS_STORAGE_KEY, todos)).pipe(
+    Effect.flatMap(Todos, (service) => service.save(todos)).pipe(
       Effect.catchCause((cause) =>
         Effect.logError("Failed to write todos to key value store", cause),
       ),
@@ -29,9 +31,17 @@ class Todos extends Context.Service<Todos>()("TodosService", {
 
   static readonly replicateToStorage = App.TodoList.pipe(Fx.observeLayer(Todos.set));
 
-  static readonly local = Layer.effect(Todos, this.make).pipe(
-    Layer.provideMerge(KeyValueStore.layerStorage(() => localStorage)),
-  );
+  static readonly local = Layer.succeed(Todos, {
+    load: Effect.try(() => localStorage.getItem(TODOS_STORAGE_KEY)).pipe(
+      Effect.flatMap((value) =>
+        value === null ? Effect.succeed<Domain.TodoList>([]) : decodeTodoList(value),
+      ),
+    ),
+    save: (todos) =>
+      encodeTodoList(todos).pipe(
+        Effect.flatMap((value) => Effect.try(() => localStorage.setItem(TODOS_STORAGE_KEY, value))),
+      ),
+  });
 }
 
 const FilterState = Router.match(Router.Slash, "all")
@@ -39,7 +49,7 @@ const FilterState = Router.match(Router.Slash, "all")
   .match(Router.Parse("completed"), "completed")
   .pipe(
     Router.redirectTo("/"),
-    Fx.catchCause( ()=> Fx.succeed("all" as const))
+    Fx.catchCause(() => Fx.succeed("all" as const)),
   );
 
 const Model = Layer.mergeAll(
@@ -51,14 +61,12 @@ const Model = Layer.mergeAll(
 const CreateTodo = Layer.sync(
   App.CreateTodo,
   () => (text: string) =>
-    Effect.sync(
-      (): Domain.Todo => ({
-        id: Domain.TodoId.make(crypto.randomUUID()),
-        text,
-        completed: false,
-        timestamp: DateTime.makeUnsafe(new Date()),
-      }),
-    ),
+    Effect.sync((): Domain.Todo => ({
+      id: Domain.TodoId.make(crypto.randomUUID()),
+      text,
+      completed: false,
+      timestamp: DateTime.makeUnsafe(new Date()),
+    })),
 );
 
 export const Services = Layer.mergeAll(CreateTodo, Todos.replicateToStorage).pipe(

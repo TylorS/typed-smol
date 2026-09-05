@@ -2,7 +2,6 @@ import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import { dual } from "effect/Function";
 import * as Layer from "effect/Layer";
-import * as Random from "effect/Random";
 import * as Context from "effect/Context";
 import type { Cuid } from "./Cuid.js";
 import { cuid, CuidState } from "./Cuid.js";
@@ -19,13 +18,7 @@ import { uuid4 } from "./Uuid4.js";
 import { type Uuid5, uuid5, Uuid5Namespace } from "./Uuid5.js";
 import type { Uuid7 } from "./Uuid7.js";
 import { uuid7, Uuid7State } from "./Uuid7.js";
-import { TestClock } from "effect/testing";
-
-const testRandomValues = (): Layer.Layer<RandomValues> =>
-  Layer.effect(
-    RandomValues,
-    RandomValues.pipe(Effect.provide(RandomValues.Random), Random.withSeed("@typed/id/Ids.Test")),
-  );
+import { makeLazyIds } from "./internal/Ids.js";
 
 /**
  * Unified Effect service for every Typed ID generator.
@@ -226,101 +219,4 @@ export class Ids extends Context.Service<Ids>()("@typed/id/Ids", {
     Ids,
     makeLazyIds("node"),
   ).pipe(Layer.provideMerge([DateTimes.Default, RandomValues.Default]));
-
-  /**
-   * Provides deterministic Ids, time, entropy, and TestClock services.
-   * @remarks
-   * ## Why
-   * Reproducible generators make exact sequences testable; the deterministic entropy is for tests and simulations, not security.
-   * ## Ownership and lifetime
-   * Each Layer construction owns an independent clock, random sequence, and lazy CUID/UUIDv7 state for its Scope.
-   * @example
-   * ```ts
-   * import { Ids } from "@typed/id/Ids"
-   * import { Effect } from "effect"
-   * const deterministic = Ids.uuid7.pipe(Effect.provide(Ids.Test({ currentTime: 0 })))
-   * ```
-   * @category Testing
-   * @since 1.0.0
-   */
-  static readonly Test = (
-    options: TestOptions = {},
-  ): Layer.Layer<
-    Ids | DateTimes | RandomValues | TestClock.TestClock,
-    Cause.IllegalArgumentError
-  > => {
-    const services = Layer.mergeAll(
-      DateTimes.Fixed(options.currentTime ?? 1_400_000_000_000),
-      testRandomValues(),
-    );
-
-    return Layer.effect(Ids, makeLazyIds(options.envData ?? "node")).pipe(
-      Layer.provide(services),
-      Layer.provideMerge(services),
-      Layer.provideMerge(TestClock.layer({})),
-    );
-  };
 }
-
-function makeLazyIds(envData: string) {
-  return Effect.gen(function* () {
-    const services = yield* Effect.context<DateTimes | RandomValues>();
-    const getCuidState = yield* Effect.cached(Effect.provide(CuidState.make(envData), services));
-    const getUuid7State = yield* Effect.cached(Effect.provide(Uuid7State.make, services));
-
-    const uuid5_: {
-      (
-        namespace: Uuid5Namespace,
-      ): (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
-      (name: string, namespace: Uuid5Namespace): Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
-      readonly dns: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
-      readonly url: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
-      readonly oid: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
-      readonly x500: (name: string) => Effect.Effect<Uuid5, Cause.IllegalArgumentError>;
-    } = Object.assign(
-      dual(2, (name: string, namespace: Uuid5Namespace) =>
-        Effect.provide(uuid5(name, namespace), services),
-      ),
-      {
-        dns: uuid5(Uuid5Namespace.DNS),
-        url: uuid5(Uuid5Namespace.URL),
-        oid: uuid5(Uuid5Namespace.OID),
-        x500: uuid5(Uuid5Namespace.X500),
-      },
-    );
-
-    return {
-      cuid: Effect.flatMap(getCuidState, (state) => Effect.provideService(cuid, CuidState, state)),
-      ksuid: Effect.provide(ksuid, services),
-      nanoId: Effect.provide(nanoId, services),
-      ulid: Effect.provide(ulid, services),
-      uuid4: Effect.provide(uuid4, services),
-      uuid5: uuid5_,
-      uuid7: Effect.flatMap(getUuid7State, (state) =>
-        Effect.provideService(uuid7, Uuid7State, state),
-      ),
-    };
-  });
-}
-
-/**
- * Configuration for the deterministic Ids test Layer.
- * @remarks
- * ## Why
- * Explicit initial time and CUID environment data let tests reproduce generator sequences without ambient process state.
- * ## Ownership and lifetime
- * This plain configuration acquires no resources and is read only by Layer acquisition; TypeScript `readonly` does not freeze it at runtime.
- * @example
- * ```ts
- * import type { TestOptions } from "@typed/id/Ids"
- * const options: TestOptions = { currentTime: "2026-01-01T00:00:00Z", envData: "test-worker" }
- * ```
- * @category Testing
- * @since 1.0.0
- */
-export type TestOptions = {
-  /** Base time passed to `DateTimes.Fixed`; invalid dates fail Layer acquisition. @since 1.0.0 */
-  readonly currentTime?: number | string | Date;
-  /** CUID caller discriminator used when the test CuidState is created. @since 1.0.0 */
-  readonly envData?: string;
-};

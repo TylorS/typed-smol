@@ -1,0 +1,80 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import Article from "../../../layouts/Article.astro";
+import Demo from "../../../components/CurriculumDemo.js";
+import CurriculumDiff from "../../../components/CurriculumDiff.astro";
+import {
+  parseCurriculumFiles,
+  type CurriculumFile,
+} from "../../../../tutorial/Files.js";
+export async function getStaticPaths() {
+  const steps = (await getCollection("tutorial")).sort(
+    (a, b) => a.data.order - b.data.order,
+  );
+  const snapshots = new Map<string, CurriculumFile>();
+  return steps.map((entry, index) => {
+    const previousFiles = [...snapshots.values()];
+    const { files } = parseCurriculumFiles(entry.id, entry.body ?? "");
+    for (const file of files) snapshots.set(file.name, file);
+    return {
+      params: { slug: entry.data.slug },
+      props: {
+        entry,
+        previous: steps[index - 1],
+        next: steps[index + 1],
+        files,
+        previousFiles,
+      },
+    };
+  });
+}
+interface Props {
+  entry: CollectionEntry<"tutorial">;
+  previous?: CollectionEntry<"tutorial">;
+  next?: CollectionEntry<"tutorial">;
+  files: ReadonlyArray<CurriculumFile>;
+  previousFiles: ReadonlyArray<CurriculumFile>;
+}
+const { entry, previous, next, files, previousFiles } = Astro.props;
+const { Content, headings } = await render(entry);
+const link = (step?: CollectionEntry<"tutorial">) =>
+  step && {
+    href: `/explore/tutorial/${step.data.slug}`,
+    title: step.data.title,
+  };
+---
+
+<Article
+  title={entry.data.title}
+  summary={entry.data.summary}
+  section={`TUTORIAL / ${entry.data.order.toString().padStart(2, "0")}`}
+  current="tutorial"
+  headings={headings}
+  source={`content/tutorial/${entry.id}.md`}
+  previous={link(previous)}
+  next={link(next)}
+>
+  <p class="eyebrow">Working in: {entry.data.architecture.join(" → ")}</p>
+  {
+    previous && (
+      <CurriculumDiff
+        files={files}
+        previousFiles={previousFiles}
+        previousTitle={previous.data.title}
+      />
+    )
+  }
+  <Content />
+  {
+    entry.data.demo && (
+      <>
+        <>
+          <h2>Try this step</h2>
+          <Demo id={entry.data.demo} client:only="@typed/astro">
+            <p slot="fallback">The interactive example loads in the browser.</p>
+          </Demo>
+        </>
+      </>
+    )
+  }
+</Article>

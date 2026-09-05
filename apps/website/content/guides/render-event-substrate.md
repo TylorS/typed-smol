@@ -1,8 +1,8 @@
 ---
-title: RenderEvent: any UI can participate
-summary: Choose the output boundary that matches the renderer you already have.
-section: Integration
-kind: concept
+title: "RenderEvent: any UI can participate"
+summary: "Choose the output boundary that matches the renderer you already have."
+section: "Integration"
+kind: "concept"
 order: 10
 ---
 

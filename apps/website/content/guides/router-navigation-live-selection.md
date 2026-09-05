@@ -1,8 +1,8 @@
 ---
 title: "Router: live route selection"
-summary: Match typed Routes to values, Effects, Streams, or Fx with local guards, services, layouts, and recovery.
-section: Applications
-kind: guide
+summary: "Match typed Routes to values, Effects, Streams, or Fx with local guards, services, layouts, and recovery."
+section: "Applications"
+kind: "guide"
 order: 6.8
 ---
 
@@ -91,11 +91,41 @@ Use the RefSubject directly when the result can update in place. If a parameter 
 in-flight work, transform it with the appropriate Fx concurrency operator, such as `switchMap` for
 a stale request that should be interrupted.
 
+### Replace stale data requests without replacing the route
+
+Reading `yield* params` once gives a snapshot. A loader that must follow later parameter changes
+should consume the live RefSubject. Use `switchMapEffect` for latest-parameter requests:
+
+```ts
+import { Context, Effect } from "effect";
+import { Fx } from "@typed/fx";
+import * as Matcher from "@typed/router/Matcher";
+import * as Route from "@typed/router/Route";
+
+class Issues extends Context.Service<Issues, {
+  readonly load: (id: string) => Effect.Effect<{ readonly id: string; readonly title: string }>;
+}>()("app/Issues") {}
+
+const loadIssue = Effect.fn("loadIssue")(function* (issueId: string) {
+  const issues = yield* Issues;
+  return yield* issues.load(issueId);
+});
+
+const pages = Matcher.match(Route.Parse("/issues/:issueId"), (params) =>
+  params.pipe(Fx.switchMapEffect(({ issueId }) => loadIssue(issueId))),
+);
+```
+
+The Issues service remains in the Matcher's `R` channel until the application supplies it. A new
+parameter interrupts the previous load and waits for its finalizers before starting the replacement.
+That cancellation only reaches work implemented through the Effect lifetime; an unrelated Promise
+started outside it needs its own cancellation integration. Use an explicit loading/error model
+when the screen must distinguish pending, stale, failed, and successful data.
+
 ## Know which candidate wins
 
-Typed compiles Route paths into Effect's native `unstable/http/FindMyWay` matcher, the same routing
-engine behind `HttpRouter`. `HttpRouter` uses it to select an HTTP handler;
-Matcher uses it to select live Fx work from Navigation, then applies Route codecs and Guards.
+Typed compiles Route paths into a compact application matcher. Matcher uses it to select live Fx
+work from Navigation, then applies Route codecs and Guards.
 Matching is case-insensitive and ignores a trailing slash. Distinct path shapes use the router's
 structural precedence, so a literal such as `/issues/new` wins over `/issues/:issueId`.
 
@@ -412,7 +442,7 @@ stored and changed.
 ```ts
 import { Effect } from "effect";
 import { Navigation } from "@typed/navigation";
-import { TestRouter } from "@typed/router/Router";
+import { TestRouter } from "@typed/router/RouterTest";
 
 const inspectNavigation = Effect.fn("inspectNavigation")(function* () {
   yield* Navigation.navigate("/issues/42?tab=activity", { history: "push" });

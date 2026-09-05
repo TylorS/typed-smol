@@ -1,7 +1,7 @@
 ---
 id: refsubject
-term: RefSubject
-definition: A current value plus a pushed stream of changes.
+term: "RefSubject"
+definition: "A current value plus a pushed stream of changes."
 aliases: []
 related: [subject, fx, effect]
 links: []

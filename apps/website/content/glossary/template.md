@@ -1,7 +1,7 @@
 ---
 id: template
-term: Template
-definition: A renderer-neutral description of static markup and dynamic parts.
+term: "Template"
+definition: "A renderer-neutral description of static markup and dynamic parts."
 aliases: []
 related: [renderable, render-event, render-template]
 links: []

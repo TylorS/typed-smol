@@ -3,7 +3,8 @@ import * as Layer from "effect/Layer";
 import { TestClock } from "effect/testing";
 import { describe, expect, it, vi } from "vitest";
 import { DateTimes } from "../DateTimes.js";
-import { Ids, type TestOptions } from "../Ids.js";
+import { Ids } from "../Ids.js";
+import { IdsTest, type IdsTestOptions } from "../IdsTest.js";
 import { uuid7, Uuid7State } from "../Uuid7.js";
 import { seededRandomValues } from "./helpers.js";
 
@@ -30,13 +31,19 @@ const vector = Effect.gen(function* () {
   return [cuid, ksuid, nanoId, ulid, uuid4, uuid7] as const;
 });
 
-const runVector = (options: TestOptions) =>
-  Effect.runPromise(Effect.provide(vector, Ids.Test(options)));
+const runVector = (options: IdsTestOptions) =>
+  Effect.runPromise(Effect.provide(vector, IdsTest(options)));
 
 const uuid7OnlyTestLayer = (currentTime: number) => {
   const services = Layer.mergeAll(
-    DateTimes.Fixed(currentTime),
-    seededRandomValues("@typed/id/Ids.Test"),
+    Layer.succeed(
+      DateTimes,
+      DateTimes.of({
+        now: Effect.succeed(currentTime),
+        date: Effect.sync(() => new Date(currentTime)),
+      }),
+    ),
+    seededRandomValues("@typed/id/IdsTest"),
   ).pipe(Layer.provideMerge(TestClock.layer({})));
 
   return Layer.effect(Uuid7State, Uuid7State.make).pipe(
@@ -45,7 +52,7 @@ const uuid7OnlyTestLayer = (currentTime: number) => {
   );
 };
 
-describe("Ids.Test", () => {
+describe("IdsTest", () => {
   it("shares its fixed DateTimes service with facade time-based generators", async () => {
     const currentTime = 1_700_000_000_123;
     const program = Effect.gen(function* () {
@@ -55,7 +62,7 @@ describe("Ids.Test", () => {
       return { now, ulid, uuid7 };
     });
 
-    const result = await Effect.runPromise(Effect.provide(program, Ids.Test({ currentTime })));
+    const result = await Effect.runPromise(Effect.provide(program, IdsTest({ currentTime })));
 
     expect(result.now).toBe(currentTime);
     expect(decodeUlidTime(result.ulid)).toBe(currentTime);
@@ -72,7 +79,7 @@ describe("Ids.Test", () => {
 
   it("does not initialize Cuid state for a UUID7-only consumer", async () => {
     const currentTime = 1_700_000_000_123;
-    const facade = await Effect.runPromise(Effect.provide(Ids.uuid7, Ids.Test({ currentTime })));
+    const facade = await Effect.runPromise(Effect.provide(Ids.uuid7, IdsTest({ currentTime })));
     const direct = await Effect.runPromise(Effect.provide(uuid7, uuid7OnlyTestLayer(currentTime)));
 
     expect(facade).toBe(direct);

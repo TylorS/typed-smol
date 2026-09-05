@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import ts from "typescript-compiler";
 import { validateCoverage } from "../Coverage.js";
 import { extractPackage, extractPublicModules } from "../Extract.js";
 import type { DeclarationExposureRecord, PublicModuleTarget } from "../Model.js";
@@ -421,7 +422,7 @@ describe("public module extraction", () => {
       "/**",
     );
     expect(getDeclarationExposure("@fixture/exposure#default").signatures).toEqual([
-      "export default function default(value: string): string;",
+      "export default function (value: string): string;",
     ]);
     expect(getDeclarationExposure("@fixture/exposure#inferred").signatures).toEqual([
       `export declare const inferred = "value";`,
@@ -529,6 +530,45 @@ describe("public module extraction", () => {
       }
     }
     expect(facadeRun.sourceSpans[0].file).toBe("packages/exposure/src/facade.ts");
+  });
+
+  it.each([
+    ["named-default", "export default function typed(): string;", "function typed"],
+    ["anonymous-default", "export default function (): string;", "export default function"],
+    [
+      "default-object",
+      "declare const renderer: { render(input: string): string };\nexport default renderer;",
+      "const renderer",
+    ],
+  ])("preserves parseable default-export declarations for %s", (name, source, expected) => {
+    const fixture = makeExtractionFixture();
+    const target = writeDeclaration(fixture.packageRoot, name, source);
+    const result = extractPublicModules(
+      [moduleTarget(fixture.packageRoot, `@fixture/exposure/${name}`, target)],
+      { repositoryRoot: fixture.root },
+    );
+    expect(result.diagnostics).toEqual([]);
+    const exposure = result.exposures.find(({ id }) => id === `@fixture/exposure/${name}#default`);
+    expect(exposure).toMatchObject({
+      recordKind: "declaration",
+      exportName: "default",
+      qualifiedName: "default",
+    });
+    if (exposure?.recordKind !== "declaration") throw new Error("Missing default exposure");
+    expect(exposure.signatures.join("\n")).toContain(expected);
+    expect(exposure.signatures.join("\n")).toContain("export default");
+    const declaration = result.declarations.find(
+      ({ declarationKey }) => declarationKey === exposure.declarationKey,
+    )!;
+    for (const signature of [...exposure.signatures, ...declaration.signatures]) {
+      const parsed = ts.createSourceFile(
+        "default.d.ts", signature, ts.ScriptTarget.Latest, true,
+      ) as ts.SourceFile & { readonly parseDiagnostics: ReadonlyArray<ts.Diagnostic> };
+      expect(parsed.parseDiagnostics.map((diagnostic) =>
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, " "),
+      )).toEqual([]);
+    }
+    expect(validateCoverage(result.expectedExposures, result)).toEqual([]);
   });
 
   it("omits non-public declarations and facets while retaining public merge and overload facets", () => {
@@ -649,7 +689,7 @@ export = assigned;
           id: "@fixture/exposure/assignment#default",
           qualifiedName: "default",
           family: "variable",
-          signatures: [expect.stringContaining("const default")],
+          signatures: [expect.stringContaining("const assigned")],
         }),
       ]),
     );

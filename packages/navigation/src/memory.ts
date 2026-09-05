@@ -1,4 +1,4 @@
-import { Ids } from "@typed/id";
+import { Uuid7State, uuid7 } from "@typed/id/Uuid7";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
@@ -136,7 +136,7 @@ export interface MemoryOptions {
  * @remarks
  * ## Why
  * Most SSR and tests begin from one location and should not manufacture destination identity by
- * hand; this form creates its key and id through `Ids`.
+ * hand; this form creates its key and id through `Uuid7State`.
  *
  * ## Ownership and lifetime
  * The resulting Layer allocates one initial entry and delegates ownership to {@link memory} for the
@@ -248,7 +248,7 @@ const limitEntries =
  *
  * ## Ownership and lifetime
  * Layer acquisition creates the navigation state and handler registries; Layer release finalizes
- * their Scope. The Layer requires `Ids` for newly committed destinations and fails with
+ * their Scope. The Layer requires `Uuid7State` for newly committed destinations and fails with
  * `NavigationError` when identifier generation or a custom backend commit fails.
  *
  * @example
@@ -271,7 +271,7 @@ const limitEntries =
 export const memory = (options: MemoryOptions) =>
   Layer.effect(Navigation)(
     Effect.gen(function* () {
-      const ids = yield* Effect.service(Ids);
+      const ids = yield* Effect.service(Uuid7State);
       const origin = options.origin ?? "http://localhost";
       const base = options.base ?? "/";
       const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
@@ -291,7 +291,7 @@ export const memory = (options: MemoryOptions) =>
         ((
           before: BeforeNavigationEvent,
           runHandlers: (destination: Destination) => Effect.Effect<void>,
-        ) => Effect.provideService(defaultCommit(before, runHandlers), Ids, ids));
+        ) => Effect.provideService(defaultCommit(before, runHandlers), Uuid7State, ids));
 
       return yield* makeNavigationCore(origin, base, state, commit);
     }),
@@ -306,7 +306,7 @@ export const memory = (options: MemoryOptions) =>
  * same identity and transition semantics as {@link memory}.
  *
  * ## Ownership and lifetime
- * Layer acquisition uses `Ids` to create the initial key and id, then delegates state ownership to
+ * Layer acquisition uses `Uuid7State` to create the initial key and id, then delegates state ownership to
  * `memory`. The Navigation service and subscriptions live until the Layer Scope closes.
  *
  * @example
@@ -362,7 +362,7 @@ const defaultCommit = (
     return destination;
   });
 
-const navigationId = Ids.uuid7.pipe(Effect.mapError((error) => new NavigationError({ error })));
+const navigationId = uuid7.pipe(Effect.mapError((error) => new NavigationError({ error })));
 
 const proposedToDestination = (
   before: ProposedDestination,

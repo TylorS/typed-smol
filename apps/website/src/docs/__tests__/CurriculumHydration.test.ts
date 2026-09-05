@@ -1,74 +1,61 @@
-import { HtmlRenderTemplate, html, renderToHtmlString } from "@typed/template";
-import { Effect } from "effect";
+import client from "@typed/astro/client";
+import server from "@typed/astro/server";
 import { Window } from "happy-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { curriculumDemo } from "../../tutorial/Demos.js";
+import Demo from "../../site/components/CurriculumDemo.js";
 
-describe("curriculum hydration", () => {
-  afterEach(() => {
-    vi.resetModules();
+const cleanup: Array<() => void> = [];
+
+const island = (markup: string) => {
+  const window = new Window({ url: "https://example.test/typed-smol/explore/quick-start" });
+  const document = window.document as unknown as Document;
+  const host = document.createElement("astro-island");
+  host.innerHTML = markup;
+  document.body.append(host);
+  vi.stubGlobal("window", window);
+  vi.stubGlobal("document", document);
+  cleanup.push(() => {
+    host.dispatchEvent(new window.Event("astro:unmount") as unknown as Event);
+    host.remove();
+  });
+  return host;
+};
+
+describe("curriculum Astro islands", () => {
+  afterEach(async () => {
+    for (const unmount of cleanup.splice(0)) unmount();
+    await Promise.resolve();
     vi.unstubAllGlobals();
   });
 
   it("adopts the server Counter node, restores its value, and wires interaction", async () => {
-    const markup = await Effect.runPromise(
-      Effect.scoped(
-        renderToHtmlString(
-          html`<section data-curriculum-demo="counter-hydrated">
-            ${curriculumDemo("counter-hydrated")!}
-          </section>`,
-        ).pipe(Effect.provide(HtmlRenderTemplate)),
-      ),
-    );
-    const window = new Window({ url: "https://example.test/typed-smol/explore/quick-start" });
-    window.document.body.innerHTML = markup;
-    const document = window.document as unknown as Document;
-    const output = document.querySelector<HTMLOutputElement>("output")!;
-    const increase = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+    const { html } = await server.renderToStaticMarkup(Demo, { id: "counter-hydrated" });
+    const host = island(html);
+    const output = host.querySelector<HTMLOutputElement>("output")!;
+    const increase = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
       (button) => button.textContent === "Increase",
     )!;
 
     expect(output.textContent).toBe("7");
-    vi.stubGlobal("window", window);
-    vi.stubGlobal("document", document);
-
-    await import("../../client.js");
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    const adopted = document.querySelector<HTMLOutputElement>("output")!;
+    await client(host)(Demo, { id: "counter-hydrated" });
+    expect(host.querySelector("output")).toBe(output);
     increase.click();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    expect(adopted).toBe(output);
-    expect(adopted.textContent).toBe("8");
+    await vi.waitFor(() => expect(output.textContent).toBe("8"));
   });
 
-  it("removes the conditional Clear completed control when no completed Todos remain", async () => {
-    const markup = await Effect.runPromise(
-      Effect.scoped(
-        renderToHtmlString(
-          html`<section data-curriculum-demo="todo-8">${curriculumDemo("todo-8")!}</section>`,
-        ).pipe(Effect.provide(HtmlRenderTemplate)),
-      ),
-    );
-    const window = new Window({
-      url: "https://example.test/typed-smol/explore/tutorial/persist-the-list",
-    });
-    window.document.body.innerHTML = markup;
-    const document = window.document as unknown as Document;
-    vi.stubGlobal("window", window);
-    vi.stubGlobal("document", document);
-    vi.stubGlobal("crypto", window.crypto);
-
-    await import("../../client.js");
-    await new Promise((resolve) => setTimeout(resolve, 10));
+  it("mounts the client-only Todo preview and removes its conditional completed control", async () => {
+    const host = island("<p>The interactive example loads in the browser.</p>");
+    await client(host)(Demo, { id: "todo-8" }, {}, { client: "only" });
     const clearCompleted = () =>
-      [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+      [...host.querySelectorAll<HTMLButtonElement>("button")].find(
         (button) => button.textContent?.trim() === "Clear completed",
       );
-    await vi.waitFor(() => expect(clearCompleted()).toBeDefined());
+
+    expect(host.textContent).not.toContain("The interactive example loads in the browser.");
+    expect(host.innerHTML).not.toContain("data-typed-refsubject");
+    expect(clearCompleted()).toBeDefined();
     clearCompleted()!.click();
     await vi.waitFor(() => expect(clearCompleted()).toBeUndefined());
-
-    expect(document.querySelector(".todo-demo")?.textContent).toContain("2 items left");
+    expect(host.querySelector(".todo-demo")?.textContent).toContain("2 items left");
   });
 });

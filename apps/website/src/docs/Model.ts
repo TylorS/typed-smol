@@ -260,7 +260,7 @@ export const SymbolDocumentationSchema = Schema.Struct({
 });
 export type SymbolDocumentation = typeof SymbolDocumentationSchema.Type;
 
-/** Complete normalized payload returned by JSON, HTTP API, MCP, and WebMCP symbol lookups. */
+/** Complete normalized payload for generated symbol documentation and JSON artifacts. */
 export const ExposurePayloadSchema = Schema.Struct({
   id: Schema.String,
   canonicalId: Schema.String,

@@ -1,8 +1,8 @@
 ---
-title: Provide services and own subscriptions
-summary: Keep Effect requirements explicit while giving each Fx run a clear Layer, Scope, and shutdown boundary.
-section: Fx
-kind: guide
+title: "Provide services and own subscriptions"
+summary: "Keep Effect requirements explicit while giving each Fx run a clear Layer, Scope, and shutdown boundary."
+section: "Fx"
+kind: "guide"
 order: 1.9
 ---
 

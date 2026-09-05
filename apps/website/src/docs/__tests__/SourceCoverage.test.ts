@@ -40,7 +40,8 @@ describe("exhaustive source-first documentation coverage", () => {
       extraction.expectedExposures.map(({ id }) => id),
     );
     expect(inventory.exposures.length).toBeGreaterThan(1_000);
-    expect(inventory.packages).toHaveLength(9);
+    expect(inventory.packages).toHaveLength(10);
+    expect(inventory.packages.some(({ packageName }) => packageName === "@typed/astro")).toBe(true);
     expect(inventory.modules).toHaveLength(targets.length);
     expect(inventory.modules.length).toBeGreaterThan(100);
     expect(new Set(inventory.exposures.map(({ id }) => id)).size).toBe(inventory.exposures.length);
@@ -88,8 +89,7 @@ describe("exhaustive source-first documentation coverage", () => {
       "@typed/id/Cuid#CuidSeed",
       "@typed/id#Uuid7Seed",
       "@typed/id/Uuid7#Uuid7Seed",
-      "@typed/id#TestOptions",
-      "@typed/id/Ids#TestOptions",
+      "@typed/id/IdsTest#IdsTestOptions",
       "@typed/id#Ids",
       "@typed/id/Ids#Ids",
     ]) {
@@ -119,8 +119,8 @@ describe("exhaustive source-first documentation coverage", () => {
       "@typed/id/Cuid#CuidSeed.random",
       "@typed/id#Uuid7Seed.randomBytes",
       "@typed/id/Uuid7#Uuid7Seed.seq",
-      "@typed/id#TestOptions.currentTime",
-      "@typed/id/Ids#TestOptions.envData",
+      "@typed/id/IdsTest#IdsTestOptions.currentTime",
+      "@typed/id/IdsTest#IdsTestOptions.envData",
       "@typed/id#Ids.uuid5.[[call]]",
       "@typed/id#Ids.uuid5.dns",
       "@typed/id/Ids#Ids.uuid5.x500",

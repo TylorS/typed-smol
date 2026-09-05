@@ -1,8 +1,8 @@
 ---
-title: Reference the native element
-summary: Use ref for the small set of browser integrations that need the exact element, with an Effect-owned lifetime and explicit hydration behavior.
-section: Templates
-kind: guide
+title: "Reference the native element"
+summary: "Use ref for the small set of browser integrations that need the exact element, with an Effect-owned lifetime and explicit hydration behavior."
+section: "Templates"
+kind: "guide"
 order: 3.35
 ---
 

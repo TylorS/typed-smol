@@ -1,8 +1,8 @@
 ---
-title: Schedule DOM rendering
-summary: Change when local DOM work runs without changing what a template owns or how a dynamic part is updated.
-section: DOM and platform
-kind: deep-dive
+title: "Schedule DOM rendering"
+summary: "Change when local DOM work runs without changing what a template owns or how a dynamic part is updated."
+section: "DOM and platform"
+kind: "deep-dive"
 order: 5.5
 ---
 

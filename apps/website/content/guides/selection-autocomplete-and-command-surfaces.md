@@ -1,8 +1,8 @@
 ---
-title: Selection, autocomplete, and command surfaces
-summary: Choose Select, Listbox, Combobox, or Menu from the interaction people perform, then compose its public state and collection parts.
-section: UI
-kind: guide
+title: "Selection, autocomplete, and command surfaces"
+summary: "Choose Select, Listbox, Combobox, or Menu from the interaction people perform, then compose its public state and collection parts."
+section: "UI"
+kind: "guide"
 order: 4.5
 ---
 
@@ -31,6 +31,7 @@ the application keeps. The `collection` is the mounted-item registry that gives 
 typeahead, disabled-item handling, focus, and DOM order something concrete to operate on.
 
 ```ts
+import { RefSubject } from "@typed/fx";
 import { component } from "@typed/ui";
 import * as Select from "@typed/ui/Select";
 
@@ -39,7 +40,10 @@ export const EnvironmentPicker = component(function* () {
   const collection = yield* Select.makeCollection();
 
   return [
-    Select.Trigger({ state, content: "Production" }),
+    Select.Trigger({
+      state,
+      content: state.pipe(RefSubject.map(({ value }) => `Environment: ${value}`)),
+    }),
     Select.Content({
       state,
       collection,
@@ -225,3 +229,29 @@ patterns](https://www.w3.org/WAI/ARIA/apg/patterns/) define the interaction voca
 HTML and ARIA output is the implementation contract to assert.
 
 Shared collection and focus mechanics are covered in [UI collections, focus, and keyboard behavior](/explore/ui-collections-and-focus).
+
+## Make query, selection, and persistence explicit
+
+A filtered combobox has several distinct values: the current input text, the active keyboard
+candidate, the selected domain record, and possibly a persisted form value. Decide which change
+commits the domain value. Typing a city name is not proof that the person selected a city ID.
+Keep a selected ID in application state when the server requires one, and clear or revalidate it
+when the input changes. A popup choice also does not automatically become a native named form
+control; integrate its value with [Form](/explore/forms-as-a-browser-contract) deliberately.
+
+For remote suggestions, derive the query from state, suppress repeated queries, and use
+[Fx switching](/explore/fx-higher-order-and-concurrency) when a new query should interrupt an older
+request. Render loading, no matches, and request failure as distinct states. Keep non-option status
+text outside the option collection so keyboard movement cannot select “Loading…”. Do not hide a
+selected option and leave `activeId` pointing at an unrelated or missing element; reconcile active
+identity when the result set changes.
+
+When results reorder, render them with [keyed collections](/explore/keyed-template-collections).
+Use a domain ID for the key and a document-unique DOM ID for the option. Two city pickers on the
+same screen need different root and option IDs even if their result data is identical.
+
+See [Select](/reference/modules/%40typed%2Fui%2FSelect),
+[Listbox](/reference/modules/%40typed%2Fui%2FListbox),
+[Combobox](/reference/modules/%40typed%2Fui%2FCombobox), and
+[Menu](/reference/modules/%40typed%2Fui%2FMenu) for public state and part signatures.
+Their lazy work composes with [Effect v4](https://effect.website/docs/v4).

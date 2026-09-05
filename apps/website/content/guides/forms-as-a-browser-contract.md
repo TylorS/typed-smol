@@ -1,8 +1,8 @@
 ---
-title: Forms as a browser contract
-summary: Build schema-bound forms from native controls while keeping values, validation, submission, and accessibility relationships explicit.
-section: UI
-kind: guide
+title: "Forms as a browser contract"
+summary: "Build schema-bound forms from native controls while keeping values, validation, submission, and accessibility relationships explicit."
+section: "UI"
+kind: "guide"
 order: 4.3
 ---
 
@@ -144,6 +144,88 @@ submit/reset handling, `submitting` lifetime, and error attributes/alerts. Autho
 meaningful labels and instructions, stable IDs, appropriate native metadata, valid select options,
 a real success action, and useful recovery copy for server failures.
 
+### Keep submission state visible
+
+`submitting` describes work in progress; it does not itself disable controls or make the server
+operation idempotent. Bind it to the UI and put duplicate-write policy in the submit service when
+more than one action can reach that service.
+
+```ts
+import { Effect, Schema } from "effect";
+import { RefSubject } from "@typed/fx";
+import * as Form from "@typed/ui/Form";
+
+const Profile = Form.make(Schema.Struct({ name: Schema.String }));
+
+const profileView = Effect.gen(function* () {
+  const form = yield* Profile.state({ name: "Ada" }, { id: "profile" });
+  const submitting = form.pipe(RefSubject.map((current) => current.submitting));
+
+  return Profile.Root({
+    form,
+    props: { "aria-busy": submitting },
+    content: [
+      Profile.Label({ for: "profile-name", content: "Display name" }),
+      Profile.TextInput({ name: "name", props: { id: "profile-name" } }),
+      Profile.Error({ name: "name" }),
+      Profile.Submit({
+        content: "Save profile",
+        props: { "?disabled": submitting },
+      }),
+    ],
+    onValidSubmit: (values) => Effect.log(`Save ${values.name}`),
+  });
+});
+```
+
+A server rejection is different from a decoding error. Keep the entered values available for
+correction and show the server's useful explanation. The form does not infer field errors from an
+HTTP response or retry mutations on its own. Neither native input constraints nor client Schema
+validation replace validation and authorization at the server boundary.
+
+### Choose defaults, reset, and encoded values deliberately
+
+The initial object passed to `state` contains decoded values: `teamSize: 1`, not the string `"1"`.
+The field Codec bridges native strings and those values. This matters when editing an incomplete
+number: the browser can temporarily hold text that cannot be decoded, while the form keeps its last
+valid value and an error. Do not read the DOM's text as if it were validated domain state.
+
+Use `Form.setValue` for a programmatic field change and `Form.validate` when a non-submit command
+needs the same invariant. Keep whole-form defaults stable for the instance and distinguish “reset
+to the initial values” from “load another record”. A second record should get the intended state
+and IDs, rather than inheriting touched/error metadata from the previous record.
+
+For a reusable form field component, accept the bound factory or the explicit Form state that owns
+that field. Avoid introducing a second local RefSubject for the same value. Nested markup does not
+need nested `<form>` elements: compose groups and controls within one Root.
+
+### Choose a bound control from the field Codec
+
+The bound factory covers more than the controls used above:
+
+| Field contract | Bound parts |
+| --- | --- |
+| A string represented by a native string input | `TextInput`, `SearchInput`, `EmailInput`, `UrlInput`, `TelInput`, `PasswordInput`, `HiddenInput`, `ColorInput`, `TimeInput`, `DateTimeLocalInput`, `MonthInput`, `WeekInput` |
+| A number represented by a string Codec | `NumberInput`, `RangeInput` |
+| A Date represented by a string Codec | `DateInput` |
+| A custom string Codec | `MaskedInput` |
+| Boolean selection | `Checkbox` |
+| A string chosen from native options | `Select` |
+| An array field edited by explicit actions | `Push`, `Remove` |
+
+Choose both the decoded value and its encoded representation before choosing the input. A custom
+Codec still needs an input whose browser representation it understands. For arrays, `Push` and
+`Remove` change state; they do not render an entire repeated field editor. Compose the fields with
+[keyed templates](/explore/keyed-template-collections), give each logical item a stable identity,
+and keep labels/error relationships unique across rows. These helpers do not invent nested field
+paths; define how an item editor updates its parent array explicitly.
+
+The state-explicit API is useful when a library component receives state from its caller:
+`Form.makeState`, `Form.Form`, and controls with explicit `state` and `name` keep the same underlying
+contract. The schema-bound factory is usually shorter in application code because its Root
+provides the current form to its descendants. Do not place a bound input outside that Root unless
+you deliberately provide the required form context.
+
 ## Keep the server and browser on one boundary
 
 Create fresh form state in each runtime from the same factory, defaults, and explicit ID. Server
@@ -187,3 +269,7 @@ Then add a focused browser test for the platform-owned claim: a label focuses it
 alert, or an async submission keeps `submitting` true. Avoid duplicating those facts in every
 form's state test. [Testing Typed systems](/explore/testing-typed-systems) shows the renderer setup
 for those assertions.
+
+See [Form](/reference/modules/%40typed%2Fui%2FForm) for bound and state-explicit constructors,
+[RefSubject state composition](/explore/composing-refsubject-state) for derived views, and
+[Effect v4](https://effect.website/docs/v4) for Schema and Effect composition.

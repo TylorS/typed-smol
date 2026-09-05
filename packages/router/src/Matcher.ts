@@ -1,4 +1,3 @@
-import * as FindMyWay from "effect/unstable/http/FindMyWay";
 import type * as Arr from "effect/Array";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
@@ -25,7 +24,7 @@ import {
 } from "@typed/fx/Fx";
 import type * as Fx from "@typed/fx/Fx";
 import * as RefSubject from "@typed/fx/RefSubject";
-import { getGuard } from "@typed/guard";
+import { getGuard } from "@typed/guard/getGuard";
 import type { AsGuard, Guard as GuardType, GuardInput } from "@typed/guard";
 import { CurrentPath, Navigation } from "@typed/navigation/Navigation";
 import type { MatchAst, RouteAst } from "./AST.js";
@@ -44,6 +43,7 @@ import {
 } from "./RouteExecutor.js";
 import type { Router } from "./Router.js";
 import { Sink } from "@typed/fx";
+import { makePathRouter } from "./internal/PathRouter.js";
 
 /**
  * A function that wraps matched content using reactive params.
@@ -376,9 +376,9 @@ type ComputeMatchResult<E2, R2, D, LB, LE2, LR2, C, GE, GR> = ApplyCatch<
  * Building a Matcher is pure. Running it requires Router and Scope: it subscribes to CurrentPath,
  * switches selected handlers when the route changes, reuses the same handler for parameter-only
  * updates, and finalizes route/layout/layer scopes when selection changes or the consumer interrupts.
- * Matching is case-insensitive and ignores trailing slashes. Effect's native `FindMyWay` chooses among distinct
- * registered matcher paths using its path-shape precedence (for example, static versus parameter
- * shapes), not a global first-declared rule. Registration order matters among compiled entries that
+ * Matching is case-insensitive and ignores trailing slashes. Distinct registered matcher paths use
+ * structural precedence (literal, constrained parameter, parameter, then wildcard), not a global
+ * first-declared rule. Registration order matters among compiled entries that
  * share the same matcher path: their schemas and guards fall through in that order.
  *
  * @example
@@ -408,7 +408,7 @@ export interface Matcher<A, E = never, R = never>
    * @remarks
    * ## Why
    * Keeping cases visible preserves registration order for entries that compile to the same matcher
-   * path. Distinct matcher paths are still selected by `FindMyWay` path-shape precedence.
+   * path. Distinct matcher paths are still selected by structural path-shape precedence.
    *
    * ## Ownership and lifetime
    * The array is retained by the Matcher value and acquires no runtime resources.
@@ -428,7 +428,7 @@ export interface Matcher<A, E = never, R = never>
    * variants, and options without erasing their errors or service requirements. After path lookup,
    * candidates registered under the same matcher path are decoded and guarded in declaration order:
    * the first decoded guard `Some` wins; decode failure, guard `None`, or guard failure falls through.
-   * Distinct path shapes are prioritized by `FindMyWay`, not solely by this call's position.
+   * Distinct path shapes are prioritized structurally, not solely by this call's position.
    *
    * ## Ownership and lifetime
    * Registration is pure and returns a new Matcher. When run, candidate layers are prepared before
@@ -1212,24 +1212,21 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
           }),
       });
       const executor = yield* makeRouteExecutor<A, E, R>();
-      const router = FindMyWay.make<ReadonlyArray<CompiledEntry>>({
-        ignoreTrailingSlash: true,
-        caseSensitive: false,
-      });
+      const router = makePathRouter<ReadonlyArray<CompiledEntry>>();
       const handlersByPath = new Map<string, Array<CompiledEntry>>();
       for (const entry of entries) {
         for (const path of getMatcherPaths(entry.route.ast)) {
-          const existing = handlersByPath.get(path);
+          const existing = handlersByPath.get(path.key);
           if (existing !== undefined) {
             existing.push(entry);
           } else {
             const list: Array<CompiledEntry> = [entry];
-            handlersByPath.set(path, list);
+            handlersByPath.set(path.key, list);
             yield* Effect.try({
-              try: () => router.on("GET", path, list),
+              try: () => router.on(path.parts, list),
               catch: (error) =>
                 new RouteDecodeError({
-                  path,
+                  path: path.key,
                   cause: error instanceof Error ? error.message : String(error),
                 }),
             });
@@ -1240,7 +1237,7 @@ class MatcherImpl<A, E, R> implements Matcher<A, E, R> {
       const stream = CurrentPath.pipe(
         mapEffect(
           Effect.fn(function* (path) {
-            const result = router.find("GET", path);
+            const result = router.find(path);
             if (result === undefined) return yield* new RouteNotFound({ path });
             return yield* executor.transition({
               path,
@@ -1968,7 +1965,9 @@ export function compile(cases: ReadonlyArray<MatchAst>): ReadonlyArray<CompiledE
   return entries;
 }
 
-function getMatcherPaths(ast: RouteAst): ReadonlyArray<FindMyWay.PathInput> {
+function getMatcherPaths(
+  ast: RouteAst,
+): ReadonlyArray<{ readonly key: string; readonly parts: ReadonlyArray<AST.PathAst> }> {
   let variants: Array<Array<AST.PathAst>> = [[]];
   for (const part of Path.flattenRouteAst(ast)) {
     if (part.type === "query-params") continue;
@@ -1980,17 +1979,22 @@ function getMatcherPaths(ast: RouteAst): ReadonlyArray<FindMyWay.PathInput> {
     }
   }
 
-  return [...new Set(variants.map(formatMatcherPath))];
+  const paths = new Map<string, ReadonlyArray<AST.PathAst>>();
+  for (const variant of variants) {
+    const parts = normalizeMatcherPath(variant);
+    paths.set(Path.join(parts), parts);
+  }
+  return Array.from(paths, ([key, parts]) => ({ key, parts }));
 }
 
-function formatMatcherPath(parts: ReadonlyArray<AST.PathAst>): FindMyWay.PathInput {
+function normalizeMatcherPath(parts: ReadonlyArray<AST.PathAst>): ReadonlyArray<AST.PathAst> {
   const normalized: Array<AST.PathAst> = [];
   for (const part of parts) {
     if (part.type === "slash" && normalized.at(-1)?.type === "slash") continue;
     normalized.push(part);
   }
   if (normalized.at(-1)?.type === "slash") normalized.pop();
-  return Path.join(normalized);
+  return normalized;
 }
 
 function makeRouteDecoder(route: Route.Any): CompiledEntry["decode"] {

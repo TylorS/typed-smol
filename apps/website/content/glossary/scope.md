@@ -1,7 +1,7 @@
 ---
 id: scope
-term: Scope
-definition: The lifetime boundary for acquisition and finalization.
+term: "Scope"
+definition: "The lifetime boundary for acquisition and finalization."
 aliases: []
 related: [effect, fx, cooperative-ownership]
 links: [https://www.effect.website/docs/v4/resource-management/scope/]

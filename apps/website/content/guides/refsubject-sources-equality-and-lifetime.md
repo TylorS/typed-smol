@@ -1,8 +1,8 @@
 ---
-title: RefSubject inputs, equality, and lifetime
-summary: Use one constructor for values, Effects, Streams, and Fx while knowing when each source starts and stops.
-section: State
-kind: guide
+title: "RefSubject inputs, equality, and lifetime"
+summary: "Use one constructor for values, Effects, Streams, and Fx while knowing when each source starts and stops."
+section: "State"
+kind: "guide"
 order: 2.05
 ---
 

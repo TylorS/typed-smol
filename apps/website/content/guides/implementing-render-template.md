@@ -1,8 +1,8 @@
 ---
-title: Implement a RenderTemplate target
-summary: Build or decorate a renderer at the public RenderTemplate boundary while keeping parsing, output ownership, and platform policy inside the target.
-section: Integration
-kind: deep-dive
+title: "Implement a RenderTemplate target"
+summary: "Build or decorate a renderer at the public RenderTemplate boundary while keeping parsing, output ownership, and platform policy inside the target."
+section: "Integration"
+kind: "deep-dive"
 order: 10.1
 ---
 
@@ -41,11 +41,12 @@ import { DomRenderTemplate, RenderTemplate } from "@typed/template";
 
 const observedRenderTemplate = Layer.effect(
   RenderTemplate,
-  Effect.map(RenderTemplate, (renderTemplate) => (strings, values) =>
-    renderTemplate(strings, values).pipe(
+  Effect.gen(function* () {
+    const renderTemplate = yield* RenderTemplate;
+    return (strings, values) => renderTemplate(strings, values).pipe(
       Fx.tap(() => Effect.log("Template emitted rendered output")),
-    ),
-  ),
+    );
+  }),
 ).pipe(Layer.provide(DomRenderTemplate));
 
 export const BrowserRenderTarget = observedRenderTemplate;
@@ -54,7 +55,16 @@ export const BrowserRenderTarget = observedRenderTemplate;
 This is a complete public `RenderTemplate` implementation because it delegates all literal parsing,
 part interpretation, output ownership, and finalization to `DomRenderTemplate`. It is a useful first
 target extension: it preserves the full behavior of a proven target and makes one isolated policy
-change visible.
+change visible. `Layer.provide(DomRenderTemplate)` supplies the delegate while building the new
+service; callers receive the decorated service. Inside the returned function, call the captured
+`renderTemplate`, not `html` again, which would resolve the decorator recursively.
+
+This observes output, not every mutation. A DOM template usually emits its root output once and
+then changes retained parts without emitting another root. The HTML target emits ordered chunks.
+Counting these events cannot measure DOM write counts or compare work across the two targets.
+`Fx.tap` also participates in delivery: an expensive observer delays the downstream output. If the
+policy can fail or needs a new service, handle/provide that dependency inside the decorator or expose
+a different outer contract; the public service promises the input values' error and service channels.
 
 To implement a new medium rather than decorate one, use the same return contract. Parse/cache static
 literal structure per `TemplateStringsArray` identity, interpret each value according to its parsed
@@ -73,7 +83,7 @@ and renderable values.
 The author writes static markup and `Renderable` values; the target parses/caches that literal,
 normalizes the values without erasing their `E`/`R` channels, and emits owned DOM or HTML render
 events. It must close the per-render Scope on interruption, including subscriptions, listeners,
-queued work, and target resources. Effect's [Scope guide](https://www.effect.website/docs/v4/resource-management/scope/)
+queued work, and target resources. Effect's [Scope guide](https://effect.website/docs/v4/resource-management/scope/)
 is the resource model to use rather than inventing another teardown protocol.
 
 ## Make target behavior explicit
@@ -97,3 +107,32 @@ identity and native events for a browser target; escaping, ordering, finite comp
 compatibility for an HTML target. A decorator should run the same tests as its delegate plus one
 test for its added policy. Keep those tests at the public `html`/`RenderTemplate` boundary so an
 internal parser refactor cannot silently change observable behavior.
+
+
+## Keep a public library's contract smaller than its renderer
+
+A library that produces a map, editor, or a chart usually owns existing nodes rather than template
+parsing. Return an `Fx<RenderEvent, E, R>` from that adapter and let an ordinary template place it.
+A library that needs one browser capability, such as element measurement, can return a scoped ref
+callback instead. Implement `RenderTemplate` only when interpreting template syntax itself is part
+of the library's responsibility.
+
+| Library responsibility | Public boundary |
+| --- | --- |
+| Reusable markup and behavior | `html` plus renderable inputs |
+| Existing native output and its resource lifetime | scoped `Fx<RenderEvent, E, R>` |
+| One element's observer or imperative resource | `ref` callback with Effect finalization |
+| A policy around a shipped renderer | delegated `RenderTemplate` service |
+| A new template interpreter | `RenderTemplate`, public `Template` AST, and output contracts |
+
+A fresh interpreter needs more than a function that joins strings. Attributes, properties, sparse
+parts, namespaces, text-only elements, ordered nested output, and hydration each have different
+semantics. An interpreter that supports only a subset should reject unsupported parts explicitly
+and document that subset. It must not advertise compatibility with Typed hydration unless its
+metadata and adoption behavior actually match.
+
+Use [the compilation pipeline](/explore/template-compilation-pipeline) to inspect the published AST
+and HTML chunk contracts. Use [the RenderEvent substrate](/explore/render-event-substrate) when
+adapting another renderer's already-produced output. The
+[RenderTemplate reference](/reference/modules/%40typed%2Ftemplate%2FRenderTemplate) is the service
+contract to preserve in library types.

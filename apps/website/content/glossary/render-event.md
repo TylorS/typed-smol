@@ -1,7 +1,7 @@
 ---
 id: render-event
-term: RenderEvent
-definition: A value describing output a renderer can apply.
+term: "RenderEvent"
+definition: "A value describing output a renderer can apply."
 aliases: [render event]
 related: [dom-render-event, html-render-event, fx, render-template]
 links: []

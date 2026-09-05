@@ -1,7 +1,7 @@
 ---
 id: many
-term: many
-definition: A keyed Template collection that retains an item's rendered range and child scope while its key remains.
+term: "many"
+definition: "A keyed Template collection that retains an item's rendered range and child scope while its key remains."
 aliases: []
 related: [keyed-identity, local-reconciliation, template]
 links: []

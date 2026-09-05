@@ -1,8 +1,8 @@
 ---
-title: Subject: publish events to many consumers
-summary: Connect independently owned producers and consumers through one scoped, typed publication boundary.
-section: Fx
-kind: guide
+title: "Subject: publish events to many consumers"
+summary: "Connect independently owned producers and consumers through one scoped, typed publication boundary."
+section: "Fx"
+kind: "guide"
 order: 1.17
 ---
 
@@ -42,7 +42,7 @@ const program = Effect.scoped(
     const connectionEvents = yield* Subject.make<string>(1);
     const received = yield* Fx.collectAllFork(Fx.take(connectionEvents, 2));
 
-    yield* Effect.yieldNow;
+    while ((yield* connectionEvents.subscriberCount) < 1) yield* Effect.yieldNow;
     yield* connectionEvents.onSuccess("connected");
     yield* connectionEvents.onSuccess("ready");
 
@@ -82,7 +82,7 @@ const program = Effect.scoped(
     yield* Effect.forkScoped(
       Fx.observe(notifications, (message) => Ref.update(seen, (all) => [...all, message])),
     );
-    yield* Effect.yieldNow;
+    while ((yield* notifications.subscriberCount) < 1) yield* Effect.yieldNow;
     yield* notifications.onSuccess("saved");
 
     return yield* Ref.get(seen);
@@ -116,7 +116,7 @@ const program = Effect.scoped(
     );
 
     yield* Effect.forkScoped(events.run(sink));
-    yield* Effect.yieldNow;
+    while ((yield* events.subscriberCount) < 1) yield* Effect.yieldNow;
     yield* events.onFailure(Cause.fail(new ConnectionLost()));
     yield* events.onSuccess("reconnected");
 
@@ -147,7 +147,7 @@ const program = Effect.scoped(
   Effect.gen(function* () {
     const received = yield* Fx.collectAllFork(Fx.take(Notifications, 1));
 
-    yield* Effect.yieldNow;
+    while ((yield* Notifications.subscriberCount) < 1) yield* Effect.yieldNow;
     yield* Notifications.onSuccess("invoice saved");
     return yield* Fiber.join(received);
   }).pipe(Effect.provide(Notifications.make(1))),
@@ -184,8 +184,8 @@ const selectedPolicy = Subject.share(source, Subject.unsafeMake<string>(2));
 
 Use a scoped test and observe or collect a finite slice. `Fx.collectAllFork(Fx.take(subject, n))`
 starts the subscriber without making the test depend on a renderer, and `subscriberCount` makes the
-subscription boundary observable. Yield once after forking before asserting demand or publishing;
-that is synchronization, unlike a fixed sleep. Test replay, failure delivery, ordering, and cleanup
+subscription boundary observable. Wait until the expected subscriber count is present before
+publishing; a single scheduler yield does not establish that condition. Test replay, failure delivery, ordering, and cleanup
 at this boundary; test a `RefSubject` transition separately when the claim is about current state.
 
 ```ts
@@ -198,7 +198,7 @@ it.effect("publishes to the active subscriber", Effect.fn("publishesToActiveSubs
   const events = yield* Subject.make<number>()
   const received = yield* Fx.collectAllFork(Fx.take(events, 2))
 
-  yield* Effect.yieldNow
+  while ((yield* events.subscriberCount) < 1) yield* Effect.yieldNow
   expect(yield* events.subscriberCount).toBe(1)
   yield* events.onSuccess(1)
   yield* events.onSuccess(2)

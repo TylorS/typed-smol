@@ -1,8 +1,8 @@
 ---
-title: Handle native events with Effect
-summary: Attach real browser listeners whose work is an Effect, while keeping listener options, errors, services, and lifetime explicit.
-section: Templates
-kind: guide
+title: "Handle native events with Effect"
+summary: "Attach real browser listeners whose work is an Effect, while keeping listener options, errors, services, and lifetime explicit."
+section: "Templates"
+kind: "guide"
 order: 3.4
 ---
 
@@ -87,7 +87,8 @@ export const interactions = html`<section onscroll=${recordScroll}>
 ```
 
 A passive listener must not call `preventDefault`; that is a browser rule, not a Typed exception.
-`EventHandler.once` delegates one-time registration cleanup to the native listener option. Use
+`EventHandler.once` removes the delegated registration after the first matching event, across its
+active mounts. An unrelated event does not consume it. Use
 `EventHandler.preventDefault(handler)` when composing a reusable handler whose semantic choice is
 to prevent the native default action.
 

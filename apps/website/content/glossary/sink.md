@@ -1,7 +1,7 @@
 ---
 id: sink
-term: Sink
-definition: A consumer of pushed Fx values.
+term: "Sink"
+definition: "A consumer of pushed Fx values."
 aliases: []
 related: [fx, effect, scope]
 links: []

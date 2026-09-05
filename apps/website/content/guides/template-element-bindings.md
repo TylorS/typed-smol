@@ -1,8 +1,8 @@
 ---
-title: Attributes, properties, and boolean state
-summary: Choose the exact browser field a scalar interpolation owns, including sparse attributes and boolean presence.
-section: Templates
-kind: deep-dive
+title: "Attributes, properties, and boolean state"
+summary: "Choose the exact browser field a scalar interpolation owns, including sparse attributes and boolean presence."
+section: "Templates"
+kind: "deep-dive"
 order: 3.15
 ---
 

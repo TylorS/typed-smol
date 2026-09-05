@@ -1,8 +1,8 @@
 ---
-title: What a template can render
-summary: See how ordinary values, Effect values, streams, arrays, and renderer output become one template part without losing errors or requirements.
-section: Templates
-kind: concept
+title: "What a template can render"
+summary: "See how ordinary values, Effect values, streams, arrays, and renderer output become one template part without losing errors or requirements."
+section: "Templates"
+kind: "concept"
 order: 3.2
 ---
 
@@ -33,17 +33,31 @@ The same value means different work in a node position and a named element part.
 | Interpolated value | Node position | Attribute, property, class, or data part |
 | --- | --- | --- |
 | string, number, bigint | text | serialized value or direct property value |
-| `boolean`, `null`, `undefined` | empty or text according to the part | boolean presence / remove / clear as appropriate |
-| array | normalize entries in source order | normalize record entries for supported local fields |
+| `boolean` | text (`"true"` or `"false"`) | string for attributes; truthiness for a boolean part |
+| `null`, `undefined` | empty range | remove an attribute; direct assignment for a property |
+| array | combine normalized entries in source order | part-specific: class tokens or the property's array value |
+| `Option<A>` | `None` is empty; `Some` normalizes its value | normalize the selected value for the part |
 | `Effect<A, E, R>` | run once, then normalize `A` | run once, then update the field |
 | `Stream<A, E, R>` or `Fx<A, E, R>` | replace the local part per emission | update the named field per emission |
-| `RefSubject<E, R>` | live state source | live state source |
+| `RefSubject<A, E, R>` | live state source | live state source |
 | nested template / `RenderEvent` | render into this local range | use the matching part contract, not a generic attribute |
 
 The first emitted `notices` value appears in the `<p>`, then the second replaces that same local
 part. No sibling or parent tree is walked to find it. On an HTML target, a response needs a finite
 answer, so live sources are read as response data rather than kept open indefinitely; see
 [Rendering HTML on the server](/explore/rendering-html-on-the-server).
+
+A boolean in a node position is data, not conditional JSX. If a condition should choose a view,
+map it to the intended output, such as a nested template or `null`. Arrays are supported directly;
+a Set, generator, or arbitrary JavaScript iterable is not implicitly a rendered collection. Convert
+it to an array before interpolating it.
+
+A record is useful for `.data`, a spread, or a property that expects an object. That does not make
+an arbitrary object valid node output. Return a nested template or a `DomRenderEvent` when the value
+represents structure. At a root, array, Option, or Effect boundary the renderer can lift nested
+values; an ordinary Fx's emissions are its update payloads. Do not assume every emitted value is
+recursively subscribed as a new child Fx. Compose higher-order producers explicitly with the
+appropriate Fx switching operator before handing the result to a part.
 
 ## Errors and requirements compose
 
@@ -82,7 +96,7 @@ export const ProfilesLive = Layer.succeed(Profiles)({
 
 `accountBadge` retains `ProfileUnavailable` and `Profiles`, rather than converting either to an
 untyped promise or a hidden render-time global. Provide `ProfilesLive` with the DOM or HTML renderer
-at the application boundary, not inside the template module. Effect's [services guide](https://www.effect.website/docs/v4/requirements-management/services/)
+at the application boundary, not inside the template module. Effect's [services guide](https://effect.website/docs/v4/requirements-management/services/)
 explains this dependency channel in depth.
 
 ## Arrays describe output; streams describe change

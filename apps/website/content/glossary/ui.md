@@ -1,7 +1,7 @@
 ---
 id: ui
-term: UI
-definition: Typed's native-component layer for composing browser semantics around application-owned state.
+term: "UI"
+definition: "Typed's native-component layer for composing browser semantics around application-owned state."
 aliases: [typed ui]
 related: [accessibility, refsubject, template]
 links: []

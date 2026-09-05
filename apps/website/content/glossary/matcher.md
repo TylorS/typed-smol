@@ -1,7 +1,7 @@
 ---
 id: matcher
-term: Matcher
-definition: An immutable route table that selects reactive output for the current navigation location.
+term: "Matcher"
+definition: "An immutable route table that selects reactive output for the current navigation location."
 aliases: []
 related: [route, router, fx]
 links: []

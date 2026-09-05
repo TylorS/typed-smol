@@ -1,7 +1,7 @@
 ---
 id: subject
-term: Subject
-definition: A push-capable input that can receive values.
+term: "Subject"
+definition: "A push-capable input that can receive values."
 aliases: []
 related: [refsubject, fx, effect]
 links: []

@@ -1,8 +1,8 @@
 ---
-title: Hydrating Typed HTML
-summary: Adopt compatible Typed SSR output below one DOM host, or construct fresh output when the adoption contract does not match.
-section: DOM and platform
-kind: guide
+title: "Hydrating Typed HTML"
+summary: "Adopt compatible Typed SSR output below one DOM host, or construct fresh output when the adoption contract does not match."
+section: "DOM and platform"
+kind: "guide"
 order: 6.3
 ---
 
@@ -54,3 +54,36 @@ lifetime. It is not normal application state. Ordinary DOM code should call rend
 
 For SSR response modes and an identity-and-interaction test, see
 [Server rendering and hydration](/explore/server-rendering-and-hydration).
+
+## Diagnose an apparently successful fresh render
+
+Matching text is not enough to distinguish adoption from replacement. Before the client starts,
+retain a reference to a server element. After rendering, compare it with the element in the same
+position. If identity changed, inspect these boundaries in order:
+
+1. Confirm the server used `HtmlRenderTemplate`, not `StaticHtmlRenderTemplate`.
+2. Confirm the host contains the inner template's markers and the client renders that inner template.
+3. Confirm the server and client use the same authored template shape and compatible renderer code.
+4. Confirm HTML transformation, minification, or another owner did not remove or relocate the markers.
+5. For keyed lists, confirm the same stable keys identify the initial items on both sides.
+
+A template hash identifies authored structure, not your domain data. A server and browser can use
+the same literal with different initial values. Use a hydration ref when the client must resume
+server state, and test its schema decoding separately from DOM adoption. Do not catch invalid state
+and silently describe it as successful hydration.
+
+## Decide who owns pre-hydration edits
+
+A visitor can type into an input before JavaScript starts. Adopting that input preserves its node,
+but a `.value` part is still a writer for its live value and can apply the client state. Node identity
+alone does not decide whether the user's edit or serialized application state wins.
+
+For browser-owned initial editing, an authored `value` attribute supplies the default without making
+a reactive property the ongoing writer. For application-controlled editing, restore the intended
+state and explicitly decide how early edits are captured or reconciled. The same question applies
+to checked state, focus, selection, and widget state that another library initializes before Typed.
+
+Hydration refs run while the existing DOM is being wired. Ordinary refs may acquire browser resources
+at that point, but a ref is not an after-paint hook. Keep measurement or focus policy in an adapter
+that understands when its element is connected and laid out. See
+[Reference the native element](/explore/template-references-and-element-access).

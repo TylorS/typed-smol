@@ -1,0 +1,61 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { siteHref } from "../../../SiteHref.js";
+const guides = (await getCollection("guides")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const groups = Map.groupBy(guides, (entry) => entry.data.section);
+---
+
+<Base
+  title="Learn Typed"
+  description="Learn Typed by building: reactive state, templates, UI, routing, and the contracts behind your own libraries."
+>
+  <main class="page-container" id="main-content" tabindex="-1">
+    <header class="page-intro">
+      <p class="eyebrow">EXPLORE / FROM FIRST VIEW TO YOUR OWN LIBRARY</p><h1
+        class="page-title"
+      >
+        Learn one idea.<br />Put it to work.
+      </h1><p>
+        Start with a working application, then follow the parts you need. Each
+        guide connects a practical problem to the public APIs that solve it.
+      </p>
+    </header>
+    <div class="path-grid">
+      <article class="path-card">
+        <p class="eyebrow">START HERE</p><h3>Quick Start</h3><p>
+          Build a counter, derive state, and take the same template from the
+          browser to server rendering and hydration.
+        </p><a href={siteHref("/explore/quick-start")}
+          >Render your first view →</a>
+      </article>
+      <article class="path-card">
+        <p class="eyebrow">BUILD SOMETHING COMPLETE</p><h3>
+          The TodoMVC tutorial
+        </h3><p>
+          Grow a client application from domain rules to persistence. See the
+          files and try the running example at each step.
+        </p><a href={siteHref("/explore/tutorial")}>Build the application →</a>
+      </article>
+    </div>
+    {
+      [...groups].map(([section, entries]) => (
+        <section class="catalog-section">
+          <>
+            <h2>{section}</h2>
+            <div class="guide-list">
+              {entries.map((entry) => (
+                <a href={siteHref(`/explore/${entry.id}`)}>
+                  <strong>{entry.data.title} ↗</strong>
+                  <p>{entry.data.summary}</p>
+                </a>
+              ))}
+            </div>
+          </>
+        </section>
+      ))
+    }
+  </main>
+</Base>

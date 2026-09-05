@@ -1,8 +1,8 @@
 ---
-title: Preserve multi-node DOM output
-summary: Hand existing DOM output across a renderer boundary, including a stable multi-node range when one is genuinely needed.
-section: DOM and platform
-kind: deep-dive
+title: "Preserve multi-node DOM output"
+summary: "Hand existing DOM output across a renderer boundary, including a stable multi-node range when one is genuinely needed."
+section: "DOM and platform"
+kind: "deep-dive"
 order: 5.35
 ---
 

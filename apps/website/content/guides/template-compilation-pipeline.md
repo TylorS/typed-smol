@@ -1,8 +1,8 @@
 ---
-title: The template compilation pipeline
-summary: Build a renderer or framework target on the public Template, HtmlChunk, and RenderEvent contracts.
-section: Integration
-kind: deep-dive
+title: "The template compilation pipeline"
+summary: "Build a renderer or framework target on the public Template, HtmlChunk, and RenderEvent contracts."
+section: "Integration"
+kind: "deep-dive"
 order: 10.05
 ---
 
@@ -50,7 +50,7 @@ different `RenderTemplate` layer without changing the template or its `Fx` type.
 
 ## Parse once, retain part paths
 
-[`parse`](/reference/%40typed%2Ftemplate%2FParser%23parse) turns the literal strings into a public
+[`parse`](/reference/modules/%40typed%2Ftemplate%2FParser) turns the literal strings into a public
 [`Template`](/reference/modules/%40typed%2Ftemplate%2FTemplate) AST. The parser records the authored element
 tree and turns each interpolation into a typed part: text, node, attribute, boolean, property,
 class, data, event, ref, spread, or a sparse text/attribute value.
@@ -81,7 +81,7 @@ fresh, and resource-free; a renderer owns any cache keyed by literal identity.
 
 The DOM target compiles the AST into a namespace-correct `DocumentFragment`, captures dynamic part
 targets, and installs scoped updates. The HTML target compiles the same AST into ordered
-[`HtmlChunk`](/reference/%40typed%2Ftemplate%2FHtmlChunk%23HtmlChunk) values:
+[`HtmlChunk`](/reference/modules/%40typed%2Ftemplate%2FHtmlChunk) values:
 
 ```ts
 import { addTemplateHash, templateToHtmlChunks } from "@typed/template/HtmlChunk";
@@ -110,7 +110,7 @@ renderer-only properties are handled according to the HTML target's documented p
 
 ## Emit the RenderEvent your target owns
 
-The final boundary is [`RenderEvent`](/reference/%40typed%2Ftemplate%2FRenderEvent%23RenderEvent).
+The final boundary is [`RenderEvent`](/reference/modules/%40typed%2Ftemplate%2FRenderEvent).
 Use `DomRenderEvent` when the target already owns concrete DOM nodes; use `HtmlRenderEvent` when it
 already owns correctly serialized HTML. These constructors do not mount, subscribe, sanitize, or
 close anything. The producing `Fx` owns ordering, interruption, errors, and cleanup.

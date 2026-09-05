@@ -1,4 +1,3 @@
-import type * as Cause from "effect/Cause";
 import * as Layer from "effect/Layer";
 import { fromWindow } from "@typed/navigation/fromWindow";
 import {
@@ -10,7 +9,7 @@ import {
 import type { NavigationError } from "@typed/navigation/model";
 import type { Navigation } from "@typed/navigation/Navigation";
 import { CurrentRoute } from "./CurrentRoute.js";
-import { Ids } from "@typed/id";
+import { Uuid7State } from "@typed/id/Uuid7";
 
 /**
  * The service requirements shared by every Typed router runtime.
@@ -36,7 +35,7 @@ export type Router = CurrentRoute | Navigation;
  * and `popstate` as the platform authority.
  *
  * ## Ownership and lifetime
- * Layer acquisition installs the Navigation listener, provides random Ids, and creates the root
+ * Layer acquisition installs the Navigation listener, provides random Uuid7State, and creates the root
  * CurrentRoute. Layer release removes listeners and finalizes scoped registrations. Browser/history
  * failures surface as `NavigationError`.
  *
@@ -56,7 +55,7 @@ export type Router = CurrentRoute | Navigation;
 export const BrowserRouter = (window?: Window): Layer.Layer<Router, NavigationError> =>
   CurrentRoute.Default.pipe(
     Layer.provideMerge(fromWindow(window)),
-    Layer.provideMerge(Ids.Default),
+    Layer.provideMerge(Uuid7State.Default),
   );
 
 /**
@@ -67,7 +66,7 @@ export const BrowserRouter = (window?: Window): Layer.Layer<Router, NavigationEr
  * Server rendering can run the exact matcher program without evaluating browser globals.
  *
  * ## Ownership and lifetime
- * Layer acquisition owns memory history, random Ids, and the root CurrentRoute until the Layer Scope
+ * Layer acquisition owns memory history, random Uuid7State, and the root CurrentRoute until the Layer Scope
  * closes. Identifier and navigation failures remain in `NavigationError`.
  *
  * @example
@@ -85,34 +84,5 @@ export const ServerRouter = (
 ): Layer.Layer<Router, NavigationError> =>
   CurrentRoute.Default.pipe(
     Layer.provideMerge("url" in options ? initialMemory(options) : memory(options)),
-    Layer.provideMerge(Ids.Default),
-  );
-
-/**
- * Builds a deterministic in-memory Router Layer for tests.
- *
- * @remarks
- * ## Why
- * Tests need production transition semantics with reproducible identifier generation and no browser.
- *
- * ## Ownership and lifetime
- * The Layer Scope owns memory history and CurrentRoute. `Ids.Test()` supplies deterministic identity;
- * invalid generator configuration may additionally fail with `IllegalArgumentError`.
- *
- * @example
- * ```ts
- * import { TestRouter } from "@typed/router/Router"
- *
- * const RouterTest = TestRouter({ url: "/" })
- * ```
- *
- * @since 1.0.0
- * @category layers
- */
-export const TestRouter = (
-  options: (MemoryOptions | InitialMemoryOptions) & {},
-): Layer.Layer<Router, Cause.IllegalArgumentError | NavigationError> =>
-  CurrentRoute.Default.pipe(
-    Layer.provideMerge("url" in options ? initialMemory(options) : memory(options)),
-    Layer.provideMerge(Ids.Test()),
+    Layer.provideMerge(Uuid7State.Default),
   );

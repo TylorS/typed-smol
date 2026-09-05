@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import { constVoid, dual, flow, identity } from "effect/Function";
 import * as Layer from "effect/Layer";
-import { getOrUndefined, isNone, isOption, type Some } from "effect/Option";
+import { isNone, isOption, type Some } from "effect/Option";
 import { isFunction, isNullish, isObject } from "effect/Predicate";
 import { map as mapRecord } from "effect/Record";
 import * as Scope from "effect/Scope";
@@ -1195,7 +1195,8 @@ const makeTemplateContext = Effect.fn(function* <
         : Effect.provideContext(onCause(cause), servicesWithScope),
     expected: 0,
     dynamicIndex: values.length,
-    hydrateContext: getOrUndefined(hydrateContext),
+    // Completion belongs to this template instance; sibling consumers share only the parsed ranges.
+    hydrateContext: isNone(hydrateContext) ? undefined : { ...hydrateContext.value },
   };
 
   yield* Scope.addFinalizer(
@@ -1329,6 +1330,8 @@ export function attemptHydration(
       ctx.hydrateContext.hydrate = false;
       return;
     } else {
+      // Reserve before asynchronous setup so concurrent equal-hash siblings cannot adopt this range.
+      where.claimed = true;
       return { where, hydrateCtx: ctx.hydrateContext };
     }
   }

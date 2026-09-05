@@ -1,7 +1,7 @@
 ---
 id: fx
-term: Fx
-definition: A push-based stream of values with typed errors and requirements.
+term: "Fx"
+definition: "A push-based stream of values with typed errors and requirements."
 aliases: []
 related: [effect, render-event, sink]
 links: [https://www.effect.website/docs/v4/getting-started/the-effect-type/, https://www.effect.website/docs/v4/stream/introduction/]

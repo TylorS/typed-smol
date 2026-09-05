@@ -1,7 +1,7 @@
 ---
 id: dynamic-part
-term: Dynamic part
-definition: One interpolation target in a Template that retains the exact DOM field or node range it updates.
+term: "Dynamic part"
+definition: "One interpolation target in a Template that retains the exact DOM field or node range it updates."
 aliases: [template part]
 related: [dynamic-range, local-reconciliation, template]
 links: []

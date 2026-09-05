@@ -2,7 +2,7 @@ import { NodeHttpServer } from "@effect/platform-node";
 import { assert, describe, it } from "vitest";
 import { Effect, Layer } from "effect";
 import { Fx } from "@typed/fx";
-import { Ids } from "@typed/id";
+import { IdsTest } from "@typed/id/IdsTest";
 import * as Matcher from "@typed/router/Matcher";
 import * as Route from "@typed/router/Route";
 import { HtmlRenderTemplate, html, StaticHtmlRenderTemplate } from "@typed/template";
@@ -22,7 +22,7 @@ function ssrLiveWithRenderer(renderer: typeof StaticHtmlRenderTemplate | typeof 
   return EffectHttpRouter.use(ssrForHttp(matcher)).pipe(
     Layer.provide(renderer),
     EffectHttpRouter.serve,
-    Layer.provideMerge([Ids.Test(), NodeHttpServer.layerTest]),
+    Layer.provideMerge([IdsTest(), NodeHttpServer.layerTest]),
   );
 }
 

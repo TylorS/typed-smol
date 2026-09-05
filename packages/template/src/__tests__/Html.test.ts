@@ -13,6 +13,46 @@ import { escape } from "../internal/encoding.js";
 import { getHtmlRenderEvents, getStaticHtml } from "./helpers/html-output.js";
 
 describe("Html", () => {
+  it("omits absent attributes without putting node markers in attribute values", () =>
+    Effect.gen(function* () {
+      const output = (yield* getHtmlRenderEvents(html`<div
+        title=${undefined}
+        aria-label=${Effect.succeed(undefined)}
+        data-null=${null}
+        ...${{ "aria-describedby": undefined, "data-effect": Effect.succeed(null) }}
+        class="before ${undefined} after"
+      >
+        ${undefined}
+      </div>`)).join("");
+      expect(output).not.toContain("title=");
+      expect(output).not.toContain("aria-label=");
+      expect(output).not.toContain("aria-describedby=");
+      expect(output).not.toContain("data-null=");
+      expect(output).not.toContain("data-effect=");
+      expect(output).toContain('class="before  after"');
+      expect(output).toContain("<!--txt-->");
+      expect(output).not.toContain("&lt;!--txt--&gt;");
+    }).pipe(Effect.scoped, Effect.runPromise));
+
+  it.each([undefined, null])("omits nullish property attributes in static and hydratable HTML: %s", (absent) =>
+    Effect.gen(function* () {
+      const view = html`<input .disabled=${absent} .value=${absent} />`;
+      const staticOutput = yield* getStaticHtml(view);
+      const hydratableOutput = (yield* getHtmlRenderEvents(view)).join("");
+      for (const output of [staticOutput, hydratableOutput]) {
+        expect(output).not.toContain("disabled");
+        expect(output).not.toContain("value=");
+      }
+      const empty = html`<input .value=${""} />`;
+      expect(yield* getStaticHtml(empty)).toContain('value=""');
+      expect((yield* getHtmlRenderEvents(empty)).join("")).toContain('value=""');
+      const present = html`<input .value=${"ready"} .disabled=${true} />`;
+      for (const output of [yield* getStaticHtml(present), (yield* getHtmlRenderEvents(present)).join("")]) {
+        expect(output).toContain('value="ready"');
+        expect(output).toContain('disabled="true"');
+      }
+    }).pipe(Effect.scoped, Effect.runPromise));
+
   it("renders an array of RenderEvents without a hole-only template", () =>
     renderToHtmlString([html`<span>First</span>`, html`<span>Last</span>`]).pipe(
       Effect.provide(StaticHtmlRenderTemplate),

@@ -1,8 +1,8 @@
 ---
-title: Select values and bound cardinality
-summary: Keep, omit, gate, and stop pushed values without confusing selection with cancellation policy.
-section: Fx
-kind: guide
+title: "Select values and bound cardinality"
+summary: "Keep, omit, gate, and stop pushed values without confusing selection with cancellation policy."
+section: "Fx"
+kind: "guide"
 order: 1.6
 ---
 

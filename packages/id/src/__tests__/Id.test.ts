@@ -3,6 +3,7 @@ import * as FastCheck from "effect/testing/FastCheck";
 import { describe, expect, it } from "vitest";
 import * as Cuid from "../Cuid.js";
 import { Ids } from "../Ids.js";
+import { IdsTest } from "../IdsTest.js";
 import * as Ksuid from "../Ksuid.js";
 import * as NanoId from "../NanoId.js";
 import * as Ulid from "../Ulid.js";
@@ -11,7 +12,7 @@ import * as Uuid5 from "../Uuid5.js";
 import * as Uuid7 from "../Uuid7.js";
 
 const run = <A, E>(effect: Effect.Effect<A, E, Ids>) =>
-  Effect.runPromise(Effect.provide(effect, Ids.Test()));
+  Effect.runPromise(Effect.provide(effect, IdsTest()));
 
 describe("@typed/id", () => {
   describe("type guards (property-based)", () => {
@@ -188,7 +189,7 @@ describe("@typed/id", () => {
     });
   });
 
-  describe("Ids.Test", () => {
+  describe("IdsTest", () => {
     it("runs all generators with the test layer", async () => {
       const program = Effect.gen(function* () {
         const ids = yield* Ids;

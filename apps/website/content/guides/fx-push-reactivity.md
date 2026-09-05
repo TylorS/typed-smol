@@ -1,8 +1,8 @@
 ---
-title: Fx: work arrives
-summary: Build and run producer-driven work with Effect values, errors, services, and cleanup.
-section: Fx
-kind: concept
+title: "Fx: work arrives"
+summary: "Build and run producer-driven work with Effect values, errors, services, and cleanup."
+section: "Fx"
+kind: "concept"
 order: 1
 ---
 

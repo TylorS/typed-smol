@@ -1,3 +1,5 @@
+import type { CurriculumFile } from "./Files.js";
+
 export type CurriculumDiffLine =
   | {
       readonly kind: "context" | "add" | "remove";
@@ -88,4 +90,18 @@ export const curriculumDiff = (
     compact.push({ kind: "skip", text: `… ${index - start} unchanged lines …` });
   }
   return compact;
+};
+
+/** New files are already shown in full; compare only snapshots a reader has seen. */
+export const curriculumFileDiffs = (
+  previous: ReadonlyArray<CurriculumFile>,
+  current: ReadonlyArray<CurriculumFile>,
+) => {
+  const previousSources = new Map(previous.map(({ name, source }) => [name, source]));
+  return current.flatMap(({ name, source }) => {
+    const before = previousSources.get(name);
+    if (before === undefined) return [];
+    const lines = curriculumDiff(before, source);
+    return lines.length === 0 ? [] : [{ name, lines }];
+  });
 };

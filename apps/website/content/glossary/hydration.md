@@ -1,7 +1,7 @@
 ---
 id: hydration
-term: Hydration
-definition: Attaching behavior to server-rendered DOM while preserving its identity.
+term: "Hydration"
+definition: "Attaching behavior to server-rendered DOM while preserving its identity."
 aliases: []
 related: [ssr, dynamic-range, keyed-identity]
 links: []
